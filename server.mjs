@@ -5,14 +5,14 @@ import {fileURLToPath} from 'node:url';
 import {pipeline} from 'node:stream/promises';
 import {api} from './worker/index.mjs';
 import {localDB} from './scripts/local-db.mjs';
-import {createTurnProvider} from './scripts/turn.mjs';
+import {attachRelay} from './scripts/relay.mjs';
 
 const root=path.dirname(fileURLToPath(import.meta.url));
 const web=path.join(root,'web');
 const dataDir=process.env.DATA_DIR||path.join(root,'.data');
 fs.mkdirSync(dataDir,{recursive:true});
 const DB=localDB(path.join(dataDir,'rooms.sqlite'));
-const getIceServers=createTurnProvider();
+
 const types={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'application/javascript; charset=utf-8','.json':'application/json','.webmanifest':'application/manifest+json','.png':'image/png','.jpg':'image/jpeg','.svg':'image/svg+xml','.ico':'image/x-icon','.ogg':'audio/ogg','.mp3':'audio/mpeg','.wav':'audio/wav'};
 const server=http.createServer(async(req,res)=>{
  try{
@@ -24,14 +24,16 @@ const server=http.createServer(async(req,res)=>{
   res.setHeader('Referrer-Policy','same-origin');
   if(url.pathname==='/healthz'){
    res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});
-   res.end(JSON.stringify({ok:true,build:'6.17-turn1',transport:'webrtc',turnConfigured:!!(process.env.CLOUDFLARE_TURN_KEY_ID&&process.env.CLOUDFLARE_TURN_API_TOKEN)}));return;
+   res.end(JSON.stringify({ok:true,build:'6.18-ws1',transport:'websocket',turnRequired:false}));return;
   }
   if(url.pathname.startsWith('/api/')){
    if(req.method!=='POST'){res.writeHead(405);res.end();return;}
    const chunks=[];let size=0;
    for await(const chunk of req){size+=chunk.length;if(size>85000){res.writeHead(413,{'Connection':'close'});res.end();return;}chunks.push(chunk);}
    const request=new Request(url,{method:'POST',headers:req.headers,body:Buffer.concat(chunks)});
-   const response=await api(request,{DB,getIceServers});
+   const leaveBody=url.pathname==='/api/rooms/leave'?await request.clone().json().catch(()=>null):null;
+   const response=await api(request,{DB});
+   if(leaveBody&&response.ok)relay.roomClosed(leaveBody.code);
    res.writeHead(response.status,Object.fromEntries(response.headers));
    res.end(Buffer.from(await response.arrayBuffer()));return;
   }
@@ -50,10 +52,11 @@ const server=http.createServer(async(req,res)=>{
   res.end('Server error');
  }
 });
+const relay=attachRelay(server,DB);
 server.requestTimeout=15000;
 server.headersTimeout=10000;
-server.listen(Number(process.env.PORT||3000),'0.0.0.0',()=>console.log('Saga Fight 6.17 listening on port '+server.address().port));
+server.listen(Number(process.env.PORT||3000),'0.0.0.0',()=>console.log('Saga Fight 6.18 WebSocket listening on port '+server.address().port));
 for(const signal of ['SIGTERM','SIGINT'])process.on(signal,()=>{
- server.close(()=>{DB.close();process.exit(0);});
+ relay.close();server.close(()=>{DB.close();process.exit(0);});
  setTimeout(()=>process.exit(0),8000).unref();
 });

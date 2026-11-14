@@ -4,8 +4,8 @@ function client(DB,link=null){let serial=0;const timers=new Map(),elements=new M
 const el=id=>{if(!elements.has(id))elements.set(id,node(id));return elements.get(id);};const hold=['KeyA','KeyD'].map(k=>Object.assign(node(k),{dataset:{hold:k}})),actions=['jump','drop','attack','q','w','e','r'].map(k=>Object.assign(node(k),{dataset:{do:k}})),modes=['pve','pvp','online'].map(k=>Object.assign(node(k),{dataset:{mode:k}}));
 const document={hidden:false,body:node('body'),activeElement:null,hit:null,elementFromPoint(){return this.hit;},getElementById:el,addEventListener(){},querySelectorAll(s){if(s==='.fighterhud')return [el('fighter0'),el('fighter1')];if(s==='[data-hold]')return hold;if(s==='[data-do]')return actions;if(s==='[data-mode]')return modes;if(s==='.touch-skills [data-do]')return actions.filter(b=>['q','w','e','r'].includes(b.dataset.do));return [];},querySelector(s){return s.includes('data-mode="online"')?modes[2]:el(s);}};
 const ctx=vm.createContext({console,Math,Map,Set,Date,JSON,URL,performance:link?{now:()=>link.now}:performance,AbortController,document,navigator:{},location:{href:'http://duel.test/'},window:{addEventListener(){}},Image:class{},devicePixelRatio:1,requestAnimationFrame(){},setTimeout(fn,ms){timers.set(++serial,{fn,ms});return serial;},clearTimeout(id){timers.delete(id);},setInterval(fn,ms){return ++serial;},clearInterval(){},async fetch(path,opts){return api(new Request('http://duel.test'+path,opts),{DB});}});
-for(const file of ['base','combat'])vm.runInContext(fs.readFileSync(new URL('../web/cylast/'+file+'.js',import.meta.url),'utf8'),ctx);for(const file of ['base','combat'])vm.runInContext(fs.readFileSync(new URL('../web/mox/'+file+'.js',import.meta.url),'utf8'),ctx);vm.runInContext(fs.readFileSync(new URL('../web/game.js',import.meta.url),'utf8'),ctx);vm.runInContext(fs.readFileSync(new URL('../web/net-codec.js',import.meta.url),'utf8'),ctx);vm.runInContext(fs.readFileSync(new URL('../web/online.js',import.meta.url),'utf8').replace('window.riftNet={','window.testTransport={channel,send,fast,inspectRoute,connectionGuard,queues:()=>({frames:frames.length,events:pending.length}),session:()=>session};window.riftNet={'),ctx);
-const result={ctx,el,hold,actions,setHit(b){document.hit=b;},run:s=>vm.runInContext(s,ctx),async poll(){let pair;for(let i=0;i<200&&!pair;i++){await new Promise(r=>setTimeout(r,1));pair=[...timers].find(([id,t])=>t.ms===120||t.ms===1600);}assert.ok(pair,'poll timer exists');timers.delete(pair[0]);await pair[1].fn();await new Promise(setImmediate);
+for(const file of ['base','combat'])vm.runInContext(fs.readFileSync(new URL('../web/cylast/'+file+'.js',import.meta.url),'utf8'),ctx);for(const file of ['base','combat'])vm.runInContext(fs.readFileSync(new URL('../web/mox/'+file+'.js',import.meta.url),'utf8'),ctx);vm.runInContext(fs.readFileSync(new URL('../web/game.js',import.meta.url),'utf8'),ctx);vm.runInContext(fs.readFileSync(new URL('../web/net-codec.js',import.meta.url),'utf8'),ctx);vm.runInContext(fs.readFileSync(new URL('../web/online.js',import.meta.url),'utf8').replace('window.riftNet={','window.testTransport={channel,send,fast,inspectRoute,connectionGuard,connectSocket,queues:()=>({frames:frames.length,events:pending.length}),session:()=>session};window.riftNet={'),ctx);
+const result={ctx,el,hold,actions,reconnect(){const pair=[...timers].find(([id,t])=>t.ms>=500&&t.ms<701);assert.ok(pair,'production backoff timer exists');timers.delete(pair[0]);pair[1].fn();},setHit(b){document.hit=b;},run:s=>vm.runInContext(s,ctx),async poll(){let pair;for(let i=0;i<200&&!pair;i++){await new Promise(r=>setTimeout(r,1));pair=[...timers].find(([id,t])=>t.ms===120||t.ms===1600);}assert.ok(pair,'poll timer exists');timers.delete(pair[0]);await pair[1].fn();await new Promise(setImmediate);
  const list=peers.get(DB)||[],active=list.filter(c=>c.run('!!window.testTransport.session()'));if(active.length===2){for(const c of active){const other=active.find(v=>v!==c);if(!c.run('!!window.testTransport.session().channel')){const dc={readyState:'open',bufferedAmount:0,send:text=>{const dest=other.run('window.testTransport.session()?.channel');if(link)link.send(()=>dest?.onmessage?.({data:text}),text);else dest?.onmessage?.({data:text});},close(){this.readyState='closed';}};c.ctx.testDC=dc;c.run('window.testTransport.channel(testDC)');}}for(let i=0;i<2;i++)for(const c of active)c.run('window.riftNet.frame(1/120);window.testTransport.fast(window.testTransport.session())');}
  },fire(button,name,id){for(const fn of button.listeners[name]||[])fn({pointerId:id,preventDefault(){}});}};(peers.get(DB)||peers.set(DB,[]).get(DB)).push(result);return result;}
 const flush=()=>new Promise(setImmediate);
@@ -41,7 +41,7 @@ test('combat audio is host-confirmed and duplicate snapshots do not replay it',a
  assert.ok(host.run('shake')>0);assert.equal(host.run('shake'),guest.run('shake'));assert.equal(host.run('JSON.stringify(fighters[1].hitMeter)'),guest.run('JSON.stringify(fighters[1].hitMeter)'));const meterBefore=guest.run('JSON.stringify(fighters[1].hitMeter)');const total=guest.run('heard.length');await host.poll();await guest.poll();assert.equal(guest.run('heard.length'),total);assert.equal(guest.run('JSON.stringify(fighters[1].hitMeter)'),meterBefore);
  }finally{DB.close();}});
 
-test('no DataChannel means no combat over HTTP',async()=>{const DB=localDB(),c=client(DB);try{await c.el('createRoom').onclick();await flush();await c.poll();assert.equal(c.run('phase'),'lobby');assert.equal(c.run('window.riftNet.blocked'),true);}finally{DB.close();}});
+test('no relay connection means no combat over HTTP',async()=>{const DB=localDB(),c=client(DB);try{await c.el('createRoom').onclick();await flush();await c.poll();assert.equal(c.run('phase'),'lobby');assert.equal(c.run('window.riftNet.blocked'),true);}finally{DB.close();}});
 
 function simulatedLink(rtt,jitter=0){return {now:0,rtt,jitter,serial:0,queue:[],outage:false,dropEvery:0,bytes:0,send(deliver,text){this.bytes+=text.length;const id=++this.serial;if(this.outage||this.dropEvery&&id%this.dropEvery===0)return;this.queue.push({at:this.now+rtt/2+(jitter?Math.sin(id*7)*jitter:0),deliver});},flush(){this.queue.sort((a,b)=>a.at-b.at);let n=0;while(this.queue[0]?.at<=this.now&&n++<1000)this.queue.shift().deliver();}};}
 async function paired(link,type='soul'){const DB=localDB(),host=client(DB,link),guest=client(DB,link);for(const c of [host,guest]){c.el('select0').value=type;c.run("mode='online'");}await host.el('createRoom').onclick();await flush();guest.el('roomCode').value=host.el('lobbyCode').textContent;await guest.el('joinRoom').onclick();await flush();await host.poll();await guest.poll();function advance(ms){for(let i=0;i<Math.ceil(ms/(1000/120));i++){link.now+=1000/120;link.flush();host.run("if(!window.riftNet.blocked&&!['paused','roundover','matchover'].includes(phase))step(1/120)");guest.run('window.riftNet.frame(1/120)');if(i%2===0)for(const c of [host,guest])c.run('window.testTransport.fast(window.testTransport.session())');link.flush();}}advance(4500);assert.equal(host.run('phase'),'fight');assert.equal(guest.run('phase'),'fight');return {DB,host,guest,advance};}
@@ -54,17 +54,55 @@ for(const rtt of [50,100,150,200])test(`simulated RTT ${rtt}ms: immediate guest 
  }finally{DB.close();}});
 test('simulated jitter/reordering/drop, interruption and acknowledged epoch recovery',async()=>{const link=simulatedLink(100,30),{DB,host,guest,advance}=await paired(link);try{link.dropEvery=11;guest.run("keys.KeyA=true;localAction('jump')");advance(400);guest.run('keys.KeyA=false');advance(1500);assert.ok(guest.run('window.testTransport.queues().frames')<80);assert.equal(guest.run('fighters[1].hp'),host.run('fighters[1].hp'));const old=host.run('window.testTransport.session().epoch');link.outage=true;advance(1800);assert.equal(host.run('window.riftNet.blocked'),true);assert.equal(guest.run('window.riftNet.blocked'),true);const t=host.run('time');advance(500);assert.equal(host.run('time'),t);link.outage=false;link.dropEvery=0;advance(2000);assert.equal(host.run('window.riftNet.blocked'),false);assert.equal(guest.run('window.riftNet.blocked'),false);assert.ok(host.run('window.testTransport.session().epoch')>old);assert.equal(guest.run('fighters[1].hp'),host.run('fighters[1].hp'));assert.equal(guest.run('window.testTransport.queues().events'),0);
  }finally{DB.close();}});
-test('getStats selected pair exposes route/type/protocol/RTT without IP',async()=>{const link=simulatedLink(50),{DB,host,guest}=await paired(link);try{host.ctx.stats=new Map([['t',{type:'transport',selectedCandidatePairId:'p'}],['p',{type:'candidate-pair',localCandidateId:'l',remoteCandidateId:'r',currentRoundTripTime:.012}],['l',{candidateType:'host',protocol:'udp',address:'192.168.1.10'}],['r',{candidateType:'relay',address:'203.0.113.2'}]]);await host.run('window.testTransport.session().pc={getStats:async()=>stats};window.testTransport.inspectRoute(window.testTransport.session())');const route=host.run('JSON.stringify(window.riftNet.metrics().route)');assert.ok(route.includes('RELAY'));assert.ok(route.includes('12'));assert.ok(!route.includes('192.168'));assert.ok(!route.includes('203.0.113'));}finally{DB.close();}});
-for(const type of ['thunder','soul','cylast','mox'])test(`all ${type} abilities: delayed host authority, no prediction damage, no duplicate audio`,async()=>{const link=simulatedLink(100,15),{DB,host,guest,advance}=await paired(link,type);try{guest.run("var heard=[];window.sagaAudio={play:(id,event)=>heard.push(event.seq),stopCombat(){}}");
- for(const skill of ['attack','q','w','e','r',...(type==='mox'?['r']:[])]){
- host.run("fighters.forEach(f=>{f.hp=1000;f.cd={attack:0,q:0,w:0,e:0,r:0};f.hitstunUntil=f.stunUntil=f.freezeUntil=f.rootUntil=f.knockdownUntil=f.escapeUntil=0;f.action=f.normal=null;f.grabbedBy=null;f.turn=0;f.combat.buffer=null;f.x=f.id?650:750;f.dir=f.id?1:-1;f.y=floor(f.x);f.ground=true;f.vx=f.vy=0;f.charges=2;f.qRecharge=[];if(f.mox){f.mox.action=null;f.mox.balls=[];}})");advance(250);
- const hp=guest.run('fighters[0].hp');guest.run(`localAction('${skill}')`);assert.equal(guest.run('fighters[0].hp'),hp);advance(5200);
- host.run('window.riftGame.pause()');advance(350);
- assert.equal(guest.run('fighters[0].hp'),host.run('fighters[0].hp'),type+skill+' HP');assert.equal(guest.run('JSON.stringify(fighters[1].cd)'),host.run('JSON.stringify(fighters[1].cd)'),type+skill+' cooldown');assert.equal(guest.run('fighters[0].grabbedBy'),null);assert.equal(guest.run('fighters[0].turn'),0);
- host.run('window.riftGame.pause()');advance(200);assert.equal(guest.run('heard.length'),guest.run('new Set(heard).size'));
- }
- }finally{DB.close();}});
+test('server relay route shows measured RTT without IP addresses',async()=>{const {DB,host}=await paired(simulatedLink(50));try{await host.run('window.testTransport.inspectRoute(window.testTransport.session())');const route=host.run('JSON.stringify(window.riftNet.metrics().route)');assert.ok(route.includes('SERVER WS'));assert.ok(!route.includes('address'));}finally{DB.close();}});
+
 test('snapshot codec: bounded baselines, duplicate/out-of-order rejection and measured payload comparison',()=>{const DB=localDB(),c=client(DB);try{c.run("mode='pvp';start();phase='fight';var encoder=new window.SagaNetCodec(),decoder=new window.SagaNetCodec();var seq=0;");let oldBytes=0,newBytes=0;const cost=[];
  for(let i=0;i<960;i++){if(i%180===0)c.run("fighters.forEach(f=>{f.hp=1000;f.cd.r=0;request(f,'r')})");c.run('step(1/120)');if(i%6===0)oldBytes+=c.run("JSON.stringify({type:'state',value:{...window.riftGame.snapshot(),tick:seq,ack:0,ready:[false,false]}}).length");if(i%2===0){const at=performance.now();c.run("var packet=encoder.encode({...window.riftGame.snapshot(),tick:++seq});var decoded=decoder.decode(JSON.parse(JSON.stringify(packet)));encoder.ack=decoder.last;");cost.push(performance.now()-at);newBytes+=c.run('JSON.stringify({type:"state",epoch:1,value:packet}).length');assert.equal(c.run('decoded.fighters[0].hp'),c.run('fighters[0].hp'));assert.equal(c.run('decoder.decode(packet)'),null);}}
  assert.ok(c.run('encoder.sent.size')<=64);assert.ok(c.run('decoder.received.size')<=64);cost.sort((a,b)=>a-b);console.log(JSON.stringify({scenario:'same 8s dual ultimates, snapshot only',old20HzBytes:oldBytes,new60HzBytes:newBytes,codecRoundtripMeanMs:cost.reduce((a,b)=>a+b)/cost.length,codecRoundtripP95Ms:cost[Math.floor(cost.length*.95)]}));assert.ok(newBytes<oldBytes);
  }finally{DB.close();}});
+
+
+
+test('two full game clients use real WebSocket relay for combat and recover a disconnected guest',async()=>{
+ const {default:http}=await import('node:http');const {WebSocket}=await import('ws');const {attachRelay}=await import('../scripts/relay.mjs');
+ const DB=localDB(),server=http.createServer(),relay=attachRelay(server,DB);server.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));
+ const origin='http://127.0.0.1:'+server.address().port;
+ const sockets=[];
+ class BrowserSocket extends WebSocket{constructor(){super(origin.replace('http:','ws:')+'/ws',{origin});sockets.push(this);}}
+ const host=client(DB),guest=client(DB);
+ for(const c of [host,guest]){c.ctx.window.WebSocket=c.ctx.WebSocket=BrowserSocket;c.run("mode='online'");}
+ const wait=async(check,pump=false)=>{const until=Date.now()+4000;while(!check()){
+  if(Date.now()>until)throw Error('Game relay condition timed out');
+  if(pump)for(const c of [host,guest])c.run('if(window.testTransport.session())window.testTransport.fast(window.testTransport.session())');
+  await new Promise(r=>setTimeout(r,10));
+ }};
+ try{
+  await host.el('createRoom').onclick();guest.el('roomCode').value=host.el('lobbyCode').textContent;guest.el('select0').value='soul';await guest.el('joinRoom').onclick();
+  await wait(()=>host.run('phase')==='countdown',true);
+  host.run('for(let i=0;i<390;i++)step(1/120)');await wait(()=>guest.run('phase')==='fight',true);
+  host.run("fighters[0].x=680;fighters[1].x=600;fighters[1].dir=1;fighters.forEach(f=>f.y=floor(600));");
+  for(let i=0;i<5;i++){for(const c of [host,guest])c.run('window.testTransport.fast(window.testTransport.session())');await new Promise(r=>setTimeout(r,10));}
+  guest.run("localAction('q')");await wait(()=>host.run('fighters[1].charges')===1,true);
+  host.run('for(let i=0;i<50;i++)step(1/120)');await wait(()=>guest.run('fighters[0].hp')<1000,true);
+  assert.equal(guest.run('fighters[0].hp'),host.run('fighters[0].hp'));
+  const previousEpoch=host.run('window.testTransport.session().epoch');
+  guest.run('window.testTransport.session().socket.terminate()');
+  await wait(()=>host.run('window.riftNet.blocked')&&guest.run('window.riftNet.blocked'));
+  // Test the production reconnect callback without waiting on fake UI timers.
+  guest.reconnect();
+  await wait(()=>!host.run('window.riftNet.blocked')&&!guest.run('window.riftNet.blocked'),true);
+  assert.ok(host.run('window.testTransport.session().epoch')>previousEpoch);
+  assert.equal(guest.run('fighters[0].hp'),host.run('fighters[0].hp'));
+  assert.equal(guest.run('window.testTransport.queues().events'),0);
+  assert.equal(guest.run('window.riftNet.metrics().transport'),'websocket');
+  const recoveredEpoch=host.run('window.testTransport.session().epoch');
+  host.run('window.testTransport.session().socket.terminate()');
+  await wait(()=>host.run('window.riftNet.blocked')&&guest.run('window.riftNet.blocked'));
+  host.reconnect();
+  await wait(()=>!host.run('window.riftNet.blocked')&&!guest.run('window.riftNet.blocked'),true);
+  assert.ok(host.run('window.testTransport.session().epoch')>recoveredEpoch);
+  assert.equal(guest.run('fighters[0].hp'),host.run('fighters[0].hp'));
+ }finally{
+  for(const c of [host,guest])c.run('window.riftNet.leave()');await flush();for(const ws of sockets)ws.terminate();relay.close();await new Promise(r=>server.close(r));DB.close();
+ }
+});

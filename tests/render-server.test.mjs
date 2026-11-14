@@ -20,7 +20,7 @@ test('Render adapter: HTTPS proxy, room lifecycle, assets and bounded requests',
    return {status:r.status,body:await r.json()};
   };
   assert.equal((await (await fetch(base+'/healthz')).json()).ok,true);
-  assert.match(await (await fetch(base+'/')).text(),/6\.17/);
+  assert.match(await (await fetch(base+'/')).text(),/6\.18/);
   const audio=await fetch(base+'/audio/bgm/does-not-exist.ogg');assert.equal(audio.status,404);
   assert.equal((await fetch(base+'/server.mjs')).status,404);
   assert.equal((await call('create',{},null,'https://other.example')).status,403);

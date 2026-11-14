@@ -1,78 +1,76 @@
-# Saga Fight 6.17 — GitHub + Render
+# Saga Fight 6.18 — PvP Online qua Render WebSocket
 
-Gói xuất từ nguồn Saga Fight Build 6.17, commit `76afb6b0bc90d8386b35e3553cb9a4edfb8999d6`.
-Giữ nguyên visual, combat, PvE, PvP cùng máy, âm thanh và WebRTC PvP.
-Server Node.js thay phần chạy Cloudflare/D1 bằng SQLite cho API phòng; không thay giao thức combat.
+Bản cập nhật dành cho game Saga Fight 6.17 đang chạy trên Render. Không cần Cloudflare, TURN, STUN hoặc WebRTC.
+Giữ nguyên bộ nhân vật, visual, sát thương, kỹ năng, AI và cơ chế dự đoán chuyển động hiện có.
 
-## 1. Đưa lên GitHub
+## Cập nhật GitHub — quan trọng
 
-1. Giải nén gói này.
-2. Tạo repository GitHub, ví dụ `saga-fight` (có thể chọn Private).
-3. Upload toàn bộ **nội dung trong thư mục** `saga-fight-render`, không upload nguyên ZIP.
-4. Đảm bảo `package.json`, `package-lock.json`, `server.mjs` và `render.yaml` ở ngay gốc repository, cùng cấp với `web/`.
-5. Không cần bật GitHub Pages: Render sẽ phục vụ cả game và API trên cùng một link HTTPS.
+1. Giải nén ZIP trên máy tính.
+2. Mở **gốc repository Saga-Fight** trên GitHub, chọn Add file → Upload files.
+3. Kéo **nội dung bên trong ZIP**, gồm các file ở gốc và các thư mục `scripts`, `worker`, `web` vào trang upload. Không upload nguyên ZIP và không tạo thêm thư mục cha.
+4. Bấm Commit changes. Việc upload cập nhật các file trùng tên, giữ nguyên những file game cũ khác. Không xóa thư mục web hiện có.
 
-## 2. Triển khai Render
+Kiểm tra đủ 7 đường dẫn sau sau khi commit:
 
-### Cách A — Blueprint
+| Đường dẫn | Vai trò |
+|---|---|
+| `package.json` | Khai báo thư viện WebSocket |
+| `package-lock.json` | Khóa phiên bản để npm ci cài đúng |
+| `server.mjs` | HTTP và WebSocket trên cùng cổng Render |
+| `scripts/relay.mjs` | Server relay; đây là file mới, bắt buộc có |
+| `worker/index.mjs` | API tạo/vào/đóng phòng |
+| `web/online.js` | Kết nối WebSocket và khôi phục trận |
+| `web/index.html` | Nhãn BUILD 6.18 · ONLINE WS |
 
-1. Đăng nhập https://dashboard.render.com và kết nối GitHub.
-2. Chọn **New → Blueprint**, chọn repository vừa tạo.
-3. Kiểm tra cấu hình: Node, Singapore, `npm ci`, `npm start`, health check `/healthz`.
-4. `render.yaml` mặc định chọn **Free** để thử; xem gói và chi phí trên Render trước khi đổi sang gói trả phí.
-5. Triển khai và mở URL HTTPS Render cấp.
+Không đặt file mới thành `scripts/scripts/relay.mjs` hoặc `web/web/online.js`.
+Không upload node_modules; Render cài ws bằng npm ci.
 
-### Cách B — Web Service thủ công
+## Cài đặt Render
+
+Giữ service Web Service hiện có, khu vực Singapore, một instance:
 
 | Mục | Giá trị |
 |---|---|
-| Service type | Web Service, không phải Static Site |
-| Runtime | Node |
-| Region | Singapore |
-| Root Directory | Để trống nếu package.json ở gốc |
 | Build Command | `npm ci` |
-| Start Command | `npm start` |
+| Start Command | `node server.mjs` hoặc `npm start` |
 | Health Check Path | `/healthz` |
-| Environment | `NODE_VERSION=24`, `NODE_ENV=production` |
+| NODE_VERSION | `24` |
+| Root Directory | Để trống nếu package.json ở gốc repository |
 
-Không đặt PORT cố định trên Render; server dùng PORT do host cấp.
-Không cần nhập URL API vào game: game gọi `/api/rooms/...` trên cùng domain.
+Không cần API Token, không thêm cổng WebSocket riêng. Có thể xóa các biến CLOUDFLARE_TURN_KEY_ID, CLOUDFLARE_TURN_API_TOKEN, TURN_RELAY_ONLY; nếu giữ, bản mới cũng không đọc hay gọi chúng.
+Chọn Manual Deploy → Deploy latest commit và chờ Live. Sau khi deploy, phòng của phiên bản cũ cần được tạo lại.
 
-## 3. Kiểm tra sau khi host
+## Kiểm tra đúng bản
 
-1. Mở `/healthz`: phải có `ok: true` và build `6.17`.
-2. Hai máy mở **cùng URL Render**, tải lại để cùng phiên bản.
-3. Máy 1 chọn PvP Online → tạo phòng. Máy 2 nhập mã để vào.
-4. Kiểm tra badge `DIRECT` và ping thực; thử đi lại, nhảy, đánh và kết thúc hiệp trên cả hai máy.
-5. Thử riêng chung Wi-Fi và khác mạng. Nếu lỗi, lưu dòng trạng thái ICE và log Render để chẩn đoán.
+Mở link Render + `/healthz`, kết quả phải có:
 
-## 4. Giới hạn cần biết
-
-- Combat dùng WebRTC DataChannel trực tiếp giữa hai trình duyệt. Render phục vụ game và signaling, không xử lý combat hoặc chuyển tiếp toàn bộ dữ liệu trận đấu.
-- Chuyển host không đảm bảo giảm ping combat, giật hình hoặc độ trễ input. Cần đo trên hai thiết bị thật.
-- Bản hiện tại chỉ có STUN, chưa có TURN dự phòng. Mạng chặn UDP, NAT hạn chế hoặc Wi-Fi cô lập thiết bị có thể không kết nối được. Khi đó cần tích hợp TURN có cấp credential phù hợp; không đặt TURN secret cố định trong mã frontend.
-- Chỉ chạy **một instance**. SQLite nằm trên ổ tạm mặc định; restart/redeploy làm mất phòng hiện có, người chơi cần tạo phòng mới. Không dùng cấu hình này để scale nhiều instance.
-- Free có thể ngủ sau thời gian không nhận lưu lượng; dùng gói không ngủ nếu cần mở phòng ổn định. Chọn gói trả phí là quyết định riêng trên Render.
-- HTTP nhận phòng kiểm tra same-origin. Hai máy cần dùng cùng domain, không chia một máy GitHub Pages và một máy Render.
-- Source export chưa triển khai lên tài khoản Render của bạn và chưa xác minh WebRTC trên hai thiết bị thật tại host đó.
-
-## 5. Chạy trên máy tính
-
-Cài Node.js 24, mở terminal trong thư mục dự án:
-
-```sh
-npm ci
-npm start
+```json
+{"ok":true,"build":"6.18-ws1","transport":"websocket","turnRequired":false}
 ```
 
-Mở http://localhost:3000. Kiểm thử tự động: `npm test`.
-WebRTC trên điện thoại truy cập địa chỉ LAN HTTP có thể bị giới hạn; dùng link HTTPS Render để thử online.
+Hai máy mở cùng link Render, tải lại trang. Menu phải có **BUILD 6.18 · ONLINE WS**.
+Một máy tạo phòng, máy còn lại nhập mã. Trong trận badge hiển thị **SERVER WS** cùng ping đo thực tế.
+Ping là RTT từ máy qua relay tới đối thủ và quay lại; không phải ping riêng đến Render.
 
-## Tài liệu chính thức
+Không có bước tạo Cloudflare TURN hoặc kiểm tra ICE nữa. Nếu còn thấy lỗi ICE/DataChannel hoặc lỗi API Token, ít nhất một máy hoặc bản server vẫn chưa nhận đủ file mới.
 
-- https://render.com/docs/web-services
-- https://render.com/docs/blueprint-spec
-- https://render.com/docs/regions
-- https://render.com/docs/free
+## Cách hoạt động và giới hạn
 
-`docs/PROJECT_HISTORY.md` là lịch sử phát triển; hướng dẫn triển khai hiện hành là README này.
+- Hai máy kết nối WSS tới `/ws` trên cùng domain Render. Server chỉ chuyển tiếp giữa hai thành viên đã xác thực trong cùng phòng. Room token gửi trong frame xác thực, không đưa vào URL.
+- Host vẫn quyết định combat, sát thương, HP và kết quả. Guest giữ dự đoán di chuyển và hòa giải với snapshot host; đây chưa phải server authoritative chống gian lận từ host.
+- Giữ mô phỏng 120 Hz, truyền dữ liệu tối đa khoảng 60 Hz. Snapshot delta, ACK, heartbeat và giới hạn buffer được giữ. Server giới hạn payload 85 KB và số message; cắt kết nối chậm thay vì xếp hàng vô hạn.
+- Mất kết nối ngắn: tạm dừng, thử lại với backoff, xóa lệnh cũ và đồng bộ snapshot/epoch trước khi tiếp tục. Sau khoảng 15 giây không khôi phục được, trở về menu với hướng dẫn tạo phòng mới.
+- WebSocket dùng TCP. Khi mạng mất gói, có thể tăng trễ do truyền lại; chuyển sang WebSocket không đảm bảo mọi mạng mượt hoặc không bao giờ mất kết nối.
+- Chỉ dùng một instance. Các socket/phòng relay nằm trong bộ nhớ instance, DB SQLite mặc định nằm trên ổ tạm. Redeploy/restart có thể kết thúc phòng, cần tạo mới.
+- Mọi dữ liệu trận đấu đi qua Render, tiêu thụ tài nguyên và băng thông Render. Gói Free vẫn có giới hạn và có thể ngủ khi không hoạt động; việc bỏ TURN không đồng nghĩa host miễn phí vô hạn.
+- Chưa triển khai vào tài khoản GitHub/Render của người dùng và chưa đo trên hai thiết bị thật khác mạng. Cần thử thực tế sau khi cập nhật.
+
+## Nếu deploy lỗi
+
+- Cannot find package `ws`: kiểm tra đã cập nhật cả package.json và package-lock.json; Build Command phải là npm ci.
+- Cannot find module scripts/relay.mjs: upload file này vào đúng thư mục scripts ở gốc repository.
+- Healthz vẫn là 6.17/6.17-turn1: chưa deploy commit mới hoặc đang mở nhầm link service.
+- Healthz đúng nhưng menu cũ: kiểm tra web/index.html và web/online.js đã được ghi đè, tải lại cả hai máy.
+- WebSocket kết nối thất bại: kiểm tra service đang Live, cả hai máy cùng URL, Node.js server đang chạy. Gửi log/ảnh lỗi đã che token; không gửi API token Cloudflare.
+
+Tài liệu Render: https://render.com/docs/websocket

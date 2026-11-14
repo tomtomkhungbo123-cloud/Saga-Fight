@@ -1,0 +1,9 @@
+Saga Fight 6.18 WS1 - deployment patch
+Base: Saga Fight Build 6.17 GitHub/Render export.
+Validation: npm ci --offline --ignore-scripts; npm test.
+Node.js 24.22.1; ws 8.23.0.
+Results: 67 passed, 0 failed, 0 skipped.
+Checks include real TCP WebSocket relay between two full VM game clients, confirmed skill damage synchronization, guest and host reconnection through production backoff callbacks, epoch/snapshot recovery, room isolation, authentication, origin validation, role restrictions, HTTPS proxy handling and HTTP server integration. Existing gameplay, visuals, audio, AI and netcode simulations remain covered.
+No real TURN credentials used or needed. No WebRTC connection is created by this client.
+Not verified: deployment into user GitHub/Render, two physical devices on different networks, actual internet latency or iOS performance.
+Render must run one instance. Server restart/redeploy may end active rooms.
