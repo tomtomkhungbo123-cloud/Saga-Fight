@@ -14,7 +14,7 @@ async function fixture(){
  async function call(name,data,token){const r=await api(new Request(origin+'/api/rooms/'+name,{method:'POST',headers:{'Content-Type':'application/json',Origin:origin,...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify(data)}),{DB});return r.json();}
  async function socket(session,options={}){
   const ws=new WebSocket(origin.replace('http:','ws:')+'/ws',{origin,...options});sockets.push(ws);const messages=[];ws.on('message',data=>messages.push(JSON.parse(data)));
-  await once(ws,'open');if(session)ws.send(JSON.stringify({type:'auth',version:79,code:session.code,token:session.token}));
+  await once(ws,'open');if(session)ws.send(JSON.stringify({type:'auth',version:80,code:session.code,token:session.token}));
   return {ws,messages};
  }
  async function wait(check){const end=Date.now()+3000;while(!check()){if(Date.now()>end)throw Error('Timed out waiting for relay');await new Promise(r=>setTimeout(r,5));}}
@@ -63,5 +63,18 @@ test('direct server probe is echoed locally and never forwarded to opponent',asy
   h.ws.send(JSON.stringify({type:'server-ping',id:123}));
   await f.wait(()=>h.messages.some(m=>m.event==='server-pong'&&m.id===123));
   assert.equal(g.messages.some(m=>m.type==='server-ping'||m.event==='server-pong'),false);
+ }finally{await f.close();}
+});
+
+test('direct signaling is restricted to room peers and only host can select a route',async()=>{
+ const f=await fixture();try{
+  const host=await f.call('create',{}),guest=await f.call('join',{code:host.code}),other=await f.call('create',{});
+  const h=await f.socket(host),g=await f.socket(guest),o=await f.socket(other);await f.wait(()=>h.messages.some(m=>m.event==='ready'));
+  h.ws.send(JSON.stringify({type:'direct',kind:'offer',description:{type:'offer',sdp:'private-room-offer'}}));
+  await f.wait(()=>g.messages.some(m=>m.type==='direct'&&m.kind==='offer'));
+  assert.equal(o.messages.some(m=>m.type==='direct'),false);
+  g.ws.send(JSON.stringify({type:'direct',kind:'select',id:1,mode:'direct'}));
+  await f.wait(()=>g.ws.readyState===WebSocket.CLOSED);
+  assert.equal(h.messages.some(m=>m.type==='direct'&&m.kind==='select'),false);
  }finally{await f.close();}
 });

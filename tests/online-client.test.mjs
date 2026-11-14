@@ -5,7 +5,7 @@ const el=id=>{if(!elements.has(id))elements.set(id,node(id));return elements.get
 const document={hidden:false,body:node('body'),activeElement:null,hit:null,elementFromPoint(){return this.hit;},getElementById:el,addEventListener(){},querySelectorAll(s){if(s==='.fighterhud')return [el('fighter0'),el('fighter1')];if(s==='[data-hold]')return hold;if(s==='[data-do]')return actions;if(s==='[data-mode]')return modes;if(s==='.touch-skills [data-do]')return actions.filter(b=>['q','w','e','r'].includes(b.dataset.do));return [];},querySelector(s){return s.includes('data-mode="online"')?modes[2]:el(s);}};
 const ctx=vm.createContext({console,Math,Map,Set,Date,JSON,URL,performance:link?{now:()=>link.now}:performance,AbortController,document,navigator:{},location:{href:'http://duel.test/'},window:{addEventListener(){}},Image:class{},devicePixelRatio:1,requestAnimationFrame(){},setTimeout(fn,ms){timers.set(++serial,{fn,ms});return serial;},clearTimeout(id){timers.delete(id);},setInterval(fn,ms){return ++serial;},clearInterval(){},async fetch(path,opts){return api(new Request('http://duel.test'+path,opts),{DB});}});
 for(const file of ['base','combat'])vm.runInContext(fs.readFileSync(new URL('../web/cylast/'+file+'.js',import.meta.url),'utf8'),ctx);for(const file of ['base','combat'])vm.runInContext(fs.readFileSync(new URL('../web/mox/'+file+'.js',import.meta.url),'utf8'),ctx);vm.runInContext(fs.readFileSync(new URL('../web/game.js',import.meta.url),'utf8'),ctx);vm.runInContext(fs.readFileSync(new URL('../web/net-codec.js',import.meta.url),'utf8'),ctx);vm.runInContext((netSource||fs.readFileSync(new URL('../web/online.js',import.meta.url),'utf8')).replace('window.riftNet={','window.testTransport={channel,send,sendState,sendInput,fast,inspectRoute,connectionGuard,connectSocket,queues:()=>({frames:frames.length,events:pending.length,hostFrames:hostFrames.length}),session:()=>session};window.riftNet={'),ctx);
-const result={ctx,el,hold,actions,reconnect(){const pair=[...timers].find(([id,t])=>t.ms>=500&&t.ms<701);assert.ok(pair,'production backoff timer exists');timers.delete(pair[0]);pair[1].fn();},setHit(b){document.hit=b;},run:s=>vm.runInContext(s,ctx),async poll(){let pair;for(let i=0;i<200&&!pair;i++){await new Promise(r=>setTimeout(r,1));pair=[...timers].find(([id,t])=>t.ms===120||t.ms===1600);}assert.ok(pair,'poll timer exists');timers.delete(pair[0]);await pair[1].fn();await new Promise(setImmediate);
+const result={ctx,el,hold,actions,expireDirect(){const pair=[...timers].find(([id,t])=>t.ms===4000);assert.ok(pair,'direct timeout exists');timers.delete(pair[0]);pair[1].fn();},reconnect(){const pair=[...timers].find(([id,t])=>t.ms>=500&&t.ms<701);assert.ok(pair,'production backoff timer exists');timers.delete(pair[0]);pair[1].fn();},setHit(b){document.hit=b;},run:s=>vm.runInContext(s,ctx),async poll(){let pair;for(let i=0;i<200&&!pair;i++){await new Promise(r=>setTimeout(r,1));pair=[...timers].find(([id,t])=>t.ms===120||t.ms===1600);}assert.ok(pair,'poll timer exists');timers.delete(pair[0]);await pair[1].fn();await new Promise(setImmediate);
  const list=peers.get(DB)||[],active=list.filter(c=>c.run('!!window.testTransport.session()'));if(active.length===2){for(const c of active){const other=active.find(v=>v!==c);if(!c.run('!!window.testTransport.session().channel')){const sender=c.run('window.testTransport.session().role');const dc={readyState:'open',get bufferedAmount(){return link?.buffered?.(sender)||0;},send:text=>{const dest=other.run('window.testTransport.session()?.channel');if(link)link.send(()=>dest?.onmessage?.({data:text}),text,sender);else dest?.onmessage?.({data:text});},close(){this.readyState='closed';}};c.ctx.testDC=dc;c.run('window.testTransport.channel(testDC)');}}for(let i=0;i<2;i++)for(const c of active)c.run('window.riftNet.frame(1/120);window.testTransport.fast(window.testTransport.session());if(window.testTransport.session().role==="host")window.testTransport.sendState();else window.testTransport.sendInput();');}
  },fire(button,name,id){for(const fn of button.listeners[name]||[])fn({pointerId:id,preventDefault(){}});}};(peers.get(DB)||peers.set(DB,[]).get(DB)).push(result);return result;}
 const flush=()=>new Promise(setImmediate);
@@ -163,4 +163,75 @@ test('guest display interpolates opponent position while gameplay state remains 
   guest.run('advanceGuest(1/60)');assert.ok(guest.run('fighters[0].netDrawX')>actual);
   assert.equal(guest.run('fighters[0].x'),actual+80);
  }finally{DB.close();}
+});
+
+async function hybridPair(connects=true){
+ const {default:http}=await import('node:http');const {WebSocket}=await import('ws');const {attachRelay}=await import('../scripts/relay.mjs');
+ const DB=localDB(),server=http.createServer(),relay=attachRelay(server,DB);server.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));
+ const origin='http://127.0.0.1:'+server.address().port,sockets=[],pcs=new Map(),wireCounts={wsCombat:0,directCombat:0};let serial=0;
+ class DirectChannel{
+  constructor(){this.readyState='connecting';this.bufferedAmount=0;}
+  send(data){if(this.readyState!=='open')throw Error('closed');const message=JSON.parse(data);if(['state','input'].includes(message.type))wireCounts.directCombat++;queueMicrotask(()=>{if(this.other?.readyState==='open')this.other.onmessage?.({data});});}
+  close(){if(this.readyState==='closed')return;this.readyState='closed';const other=this.other;if(other)other.readyState='closed';queueMicrotask(()=>{this.onclose?.();other?.onclose?.();});}
+ }
+ class Peer{
+  constructor(config){assert.equal(config.iceServers.length,0);this.id=++serial;pcs.set(this.id,this);this.iceConnectionState='new';this.remoteDescription=null;this.candidates=[];}
+  createDataChannel(name,config){assert.equal(config.ordered,true);return this.dc=new DirectChannel();}
+  async createOffer(){return {type:'offer',sdp:'offer:'+this.id};}
+  async createAnswer(){return {type:'answer',sdp:'answer:'+this.id};}
+  async setLocalDescription(description){this.localDescription={...description,toJSON:()=>description};queueMicrotask(()=>this.onicecandidate?.({candidate:{candidate:'candidate:fake 1 udp 1 host.local 5000 typ host',sdpMid:'0',sdpMLineIndex:0}}));}
+  async setRemoteDescription(description){
+   this.remoteDescription=description;
+   if(description.type==='offer')this.host=pcs.get(Number(description.sdp.split(':')[1]));
+   else if(connects){const guest=pcs.get(Number(description.sdp.split(':')[1]));const remote=new DirectChannel();guest.dc=remote;guest.ondatachannel?.({channel:remote});this.dc.other=remote;remote.other=this.dc;this.dc.readyState=remote.readyState='open';this.iceConnectionState=guest.iceConnectionState='connected';queueMicrotask(()=>this.dc.onopen?.());queueMicrotask(()=>remote.onopen?.());}
+  }
+  async addIceCandidate(candidate){assert.ok(this.remoteDescription,'candidate waits for remote description');this.candidates.push(candidate);}
+  async getStats(){return new Map([['transport',{type:'transport',selectedCandidatePairId:'pair'}],['pair',{localCandidateId:'local',remoteCandidateId:'remote'}],['local',{candidateType:'host',protocol:'udp'}],['remote',{candidateType:'host',protocol:'udp'}]]);}
+  close(){this.dc?.close();this.iceConnectionState='closed';}
+ }
+ class BrowserSocket extends WebSocket{
+  constructor(){super(origin.replace('http:','ws:')+'/ws',{origin});sockets.push(this);}
+  send(text,...args){const message=JSON.parse(text);if(['state','input'].includes(message.type))wireCounts.wsCombat++;return super.send(text,...args);}
+ }
+ const host=client(DB),guest=client(DB);
+ for(const c of [host,guest]){c.ctx.window.WebSocket=c.ctx.WebSocket=BrowserSocket;c.ctx.window.RTCPeerConnection=c.ctx.RTCPeerConnection=Peer;c.run("mode='online'");}
+ const wait=async(check)=>{const end=Date.now()+4000;while(!check()){if(Date.now()>end)throw Error('Hybrid condition timed out');for(const c of [host,guest])c.run('if(window.testTransport.session())window.testTransport.fast(window.testTransport.session())');await new Promise(r=>setTimeout(r,5));}};
+ await host.el('createRoom').onclick();guest.el('roomCode').value=host.el('lobbyCode').textContent;guest.el('select0').value='soul';await guest.el('joinRoom').onclick();
+ return {DB,host,guest,wait,pcs,wireCounts,async close(){for(const c of [host,guest])c.run('window.riftNet.leave()');await flush();for(const ws of sockets)ws.terminate();relay.close();await new Promise(r=>server.close(r));DB.close();}};
+}
+
+test('hybrid selects DIRECT after both probes; combat bypasses real WebSocket relay then safely falls back',async()=>{
+ const f=await hybridPair();const {host,guest}=f;try{
+  await f.wait(()=>host.run('phase')==='countdown');assert.equal(host.run('window.riftNet.metrics().transport'),'webrtc-direct');assert.equal(guest.run('window.riftNet.metrics().transport'),'webrtc-direct');
+  assert.ok([...f.pcs.values()].every(pc=>pc.candidates.length>0));
+  host.run('for(let i=0;i<390;i++)step(1/120)');await f.wait(()=>guest.run('phase')==='fight');
+  host.run('fighters[0].x=680;fighters[1].x=600;fighters[1].dir=1;fighters.forEach(f=>f.y=floor(600))');
+  host.run('window.testTransport.sendState()');await flush();guest.run("localAction('q')");await f.wait(()=>host.run('fighters[1].charges')===1);
+  host.run('for(let i=0;i<50;i++)step(1/120)');await f.wait(()=>guest.run('fighters[0].hp')<1000);
+  const hp=host.run('fighters[0].hp');assert.equal(guest.run('fighters[0].hp'),hp);assert.equal(f.wireCounts.wsCombat,0);assert.ok(f.wireCounts.directCombat>0);
+  const epoch=host.run('window.testTransport.session().epoch');guest.run('window.testTransport.session().directChannel.close()');
+  await f.wait(()=>host.run('window.riftNet.metrics().transport')==='websocket'&&guest.run('window.riftNet.metrics().transport')==='websocket'&&!host.run('window.riftNet.blocked')&&!guest.run('window.riftNet.blocked'));
+  assert.ok(host.run('window.testTransport.session().epoch')>epoch);assert.equal(host.run('fighters[0].hp'),hp);assert.equal(guest.run('fighters[0].hp'),hp);assert.equal(guest.run('window.testTransport.queues().events'),0);assert.ok(f.wireCounts.wsCombat>0);
+  for(const c of [host,guest])assert.equal(c.run('window.testTransport.session().pendingRoute||null'),null);
+ }finally{await f.close();}
+});
+
+test('blocked direct connection times out to WebSocket and starts the same room without ICE error',async()=>{
+ const f=await hybridPair(false);try{
+  await f.wait(()=>f.host.run('!!window.testTransport.session().pc?.remoteDescription'));
+  assert.equal(f.host.run('phase'),'lobby');f.host.expireDirect();await f.wait(()=>f.host.run('phase')==='countdown');
+  assert.equal(f.host.run('window.riftNet.metrics().transport'),'websocket');assert.equal(f.guest.run('window.riftNet.metrics().transport'),'websocket');
+  assert.equal(f.host.el('netError').textContent,'');assert.equal(f.guest.el('netError').textContent,'');assert.equal(f.wireCounts.directCombat,0);
+ }finally{await f.close();}
+});
+
+test('WebSocket reconnect during direct negotiation completes in server mode instead of stranding lobby',async()=>{
+ const f=await hybridPair(false);try{
+  await f.wait(()=>f.host.run('!!window.testTransport.session().pc?.remoteDescription'));
+  f.host.run('window.testTransport.session().socket.terminate()');
+  await f.wait(()=>f.host.run('window.testTransport.session().reconnectAt>0'));
+  f.host.reconnect();await f.wait(()=>f.host.run('phase')==='countdown');
+  assert.equal(f.host.run('window.riftNet.metrics().transport'),'websocket');
+  assert.equal(f.guest.run('window.riftNet.metrics().transport'),'websocket');
+ }finally{await f.close();}
 });
