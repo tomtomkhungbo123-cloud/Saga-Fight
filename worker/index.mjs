@@ -35,6 +35,10 @@ export async function api(request,env){
   }
   const secret=(request.headers.get('Authorization')||'').replace(/^Bearer /,'');if(!secret||secret.length>200)fail('Phiên chơi không hợp lệ.',401);
   const key=await hash(secret),role=key===room.host_key?'host':key===room.guest_key?'guest':null;if(!role)fail('Phiên chơi không hợp lệ.',401);
+  if(url.pathname==='/api/rooms/ice'){
+   if(!env.getIceServers)return json({iceServers:[{urls:['stun:stun.l.google.com:19302','stun:stun.cloudflare.com:3478']}],iceTransportPolicy:'all',turnConfigured:false});
+   return json(await env.getIceServers(code+':'+role));
+  }
   if(url.pathname==='/api/rooms/leave'){
    await env.DB.prepare("UPDATE duel_rooms SET status='closed' WHERE code=?").bind(code).run();return json({closed:true});
   }
