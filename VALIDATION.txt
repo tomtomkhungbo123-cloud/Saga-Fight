@@ -1,8 +1,13 @@
-Saga Fight 6.17 - Render export
-Source commit: 76afb6b0bc90d8386b35e3553cb9a4edfb8999d6
-Runtime tested: Node.js 24.22.1
-Result: npm test - 67 passed, 0 failed, 0 skipped.
-Includes HTTP server integration: HTTPS proxy same-origin validation, page serving, health check, room create/join, offer/answer exchange, leave, request limit, cross-origin denial.
-The historical audio regression test uses a checked-in manifest and SHA-256 baseline extracted from original commit 7d33ca59bd238abde0f9f577f7be63a762a7c8ca, replacing its dependency on private Git history.
-Source web/ and worker/ are unchanged. Node HTTP adapter and Render deployment files added.
-Not verified: actual Render deployment, two-device WebRTC, iOS performance or improved latency. No TURN fallback included.
+Saga Fight 6.22 - symmetric full-world rollback export
+Date: 2026-11-14
+Runtime: Node.js 24.22.1
+Final command: npm test
+Result: 121 passed; 0 failed; 0 skipped; 0 cancelled.
+34 tests exercise the NEW rollback path (31 state/simulation/render tests, 2 transport integration tests, 1 performance/history measurement).
+87 earlier regression tests remain; legacy online-client tests explicitly load the 6.21 online fixture, not the new production protocol. Do not interpret those as new rollback coverage.
+Production tests cover all 25 fighter pairings, input delay/reorder, both-side rollback/convergence, object aliases/prototype, audio confirmation/deduplication, pause and next round, numerical normalization, native rendering, real WS relay, mocked DIRECT failure/fallback, reconnect and deliberate divergence repair.
+Representative delayed-input run: P1 38 rollbacks/255 replayed ticks; P2 36/254; both converged, maximum replay 12 ticks, no forced wait in that scenario.
+Performance sample during full parallel test suite, on this machine only: mean 1.499 ms, p95 3.962 ms for advance+confirmation; peak sampled checkpoint 15,971 bytes; retained state frames 181. Not a mobile FPS benchmark.
+Native-canvas dev dependency is pinned in package.json/lock; tests no longer require a runtime-specific canvas path. Render production runtime only needs ws.
+Full test log: docs/validation-6.22.txt.
+Not verified: the user's GitHub/Render deployment, physical device pairs, native browser WebRTC, real Wi-Fi/internet jitter, Safari/Chrome bit-identical execution or mobile FPS. Rollback reduces perceived input delay but cannot guarantee zero lag. See docs/rollback-6.22.md.
