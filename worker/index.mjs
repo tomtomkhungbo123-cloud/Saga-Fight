@@ -16,7 +16,7 @@ export async function api(request,env){
   if(url.pathname==='/api/rooms/create'){
    // Expired rooms are disposable; bounded cleanup keeps the live table small.
    await env.DB.prepare('DELETE FROM duel_rooms WHERE code IN (SELECT code FROM duel_rooms WHERE expires_at < ? LIMIT 100)').bind(now).run();
-   const secret=token(),key=await hash(secret),config={p1:fighter(data.p1),p2:fighter(data.p2)},alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+   const secret=token(),key=await hash(secret),config={p1:fighter(data.p1),p2:fighter(data.p2),connection:data.connection==='direct'?'direct':'auto'},alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
    for(let attempt=0;attempt<4;attempt++){
     const bytes=crypto.getRandomValues(new Uint8Array(6)),code=Array.from(bytes,b=>alphabet[b%alphabet.length]).join('');
     try{await env.DB.prepare('INSERT INTO duel_rooms(code,host_key,config,status,host_seen,expires_at) VALUES(?,?,?,?,?,?)').bind(code,key,JSON.stringify(config),'waiting',now,now+7200000).run();return json({code,token:secret,role:'host',config},201);}catch(e){if(!String(e).includes('UNIQUE'))throw e;}

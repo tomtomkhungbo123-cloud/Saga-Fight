@@ -26,7 +26,7 @@ export function attachRelay(server,DB,{heartbeatMs=10000,authTimeoutMs=5000}={})
    let message;try{message=JSON.parse(bytes.toString());}catch{return close(ws,4003,'Invalid JSON');}
    if(!message||typeof message!=='object'||Array.isArray(message))return close(ws,4003,'Invalid message');
    if(!member){
-    if(authenticating||message.type!=='auth'||message.version!==85||typeof message.token!=='string'||message.token.length>200||!/^[A-Z2-9]{6}$/.test(message.code||''))return close(ws,4001,'Invalid session or version');
+    if(authenticating||message.type!=='auth'||message.version!==86||typeof message.token!=='string'||message.token.length>200||!/^[A-Z2-9]{6}$/.test(message.code||''))return close(ws,4001,'Invalid session or version');
     authenticating=true;
     try{
      const row=await DB.prepare('SELECT * FROM duel_rooms WHERE code=? AND expires_at>?').bind(message.code,Date.now()).first();
@@ -35,7 +35,7 @@ export function attachRelay(server,DB,{heartbeatMs=10000,authTimeoutMs=5000}={})
      const role=hash===row.host_key?'host':hash===row.guest_key?'guest':null;
      if(!role)return close(ws,4001,'Invalid session');
      if(ws.readyState!==WebSocket.OPEN)return;
-     let room=rooms.get(row.code);if(!room){room={code:row.code,host:null,guest:null};rooms.set(row.code,room);}
+     let room=rooms.get(row.code);if(!room){room={code:row.code,host:null,guest:null,connection:JSON.parse(row.config).connection};rooms.set(row.code,room);}
      const old=room[role];room[role]=ws;member={room,role};clearTimeout(authTimer);
      if(old&&old!==ws)close(old,4004,'Session replaced');
      control(ws,'authenticated',{role});
@@ -58,6 +58,7 @@ export function attachRelay(server,DB,{heartbeatMs=10000,authTimeoutMs=5000}={})
    const allowed=member.role==='host'?['hello','ping','pong','state','rb-init','rb-start','rb-input','rb-hash']:['hello','ping','pong','input','stateAck','resync','rb-ack','rb-input','rb-hash','rb-resync'];
    if(bytes.length>(message.type==='rb-init'?512000:85000))return close(ws,4003,'Message too large');
    if(!allowed.includes(message.type))return close(ws,4003,'Invalid player message');
+   if(member.room.connection==='direct'&&['rb-input','rb-hash','input','state'].includes(message.type))return close(ws,4003,'DIRECT-only room forbids relayed combat');
    const peer=member.room[member.role==='host'?'guest':'host'];
    if(peer?.readyState!==WebSocket.OPEN)return;
    // Never keep an unbounded queue of old game snapshots behind a slow peer.

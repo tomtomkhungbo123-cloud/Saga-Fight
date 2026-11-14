@@ -1,0 +1,331 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> saga-fight@6.22.5 test
+> node --test tests/*.test.*
+
+PASS actual hit/miss/dedup/DOT, three Thunder bolts, single bleed/shatter, Mox capture/slam/barrage, one-shot combo thresholds and network replay/stale suppression
+PASS V2 Mox hit/whiff routing, Soul blink/cast/burst separation, Cylast actual zone lifetime/interrupt/removal/pause/menu
+✔ tests/audio-combat.test.cjs (411.251498ms)
+✔ audio unlock, cached decode, voice limits, priority, persisted controls and mute cleanup (59.577561ms)
+✔ every cue maps to a valid supplied 48kHz mono PCM WAV (21.526511ms)
+✔ V2 patch merge preserves every unrelated entry and WAV; all 26 patch checksums match (59.228093ms)
+PASS confirmed Soul N1-Q-N2-Q-N3: eleven true hits, scaling per use, two charges/two points and protected finish
+PASS whiff cannot chain or cancel, buffered input expires during whiff recovery
+PASS 150ms one-slot buffer consumes once, repeated early taps never auto-create N3
+PASS soul N1-N2-N3 at close range: no gap and no N3-N1 recapture
+PASS thunder N1-N2-N3 at close range: no gap and no N3-N1 recapture
+PASS mox N1-N2-N3 at close range: no gap and no N3-N1 recapture
+PASS Thunder R-N1-N2-Q-N3: seven true hits at150, two extensions, shared R scaling, no stun-budget reset
+PASS Thunder N1-Q alone has a real startup gap; defensive dummy detects it
+PASS Mox N1-W(two orbs)-N2-N3 at80: five true hits, W charged/scaled once, knockback retained
+PASS Cylast Q→beam normal confirms and shatters once; following slow projectile has a real defensive gap at80, no artificial hitstun extension
+PASS Mox ranged normal waits for actual projectile flight, not cast time
+PASS hit IDs suppress duplicate damage; non-stunning DOT never increments or retains combo
+PASS form switch preserves uses/points and keeps 2s cooldown / 1s CC immunity
+PASS insufficient grab budget selects a short finisher, never a long partial capture
+PASS root prevents movement, not attacks or skills
+PASS Cylast storm ticks have one-second interval, no hitstun/count, scaled damage
+PASS low-budget Thunder R keeps all three animation beats and uses a protected short ending
+PASS zero remaining extension points converts a holding special into an ender
+PASS a configured relaunch charges two points once per skill, never once per hit
+PASS Soul W throw/teleport without a hit adds no hit or extension cost, cooldown only on reactivation
+PASS Soul bleed stores scaling at creation, accepts actual later damage, and never recurses/reopens a combo
+PASS Mox full grab counts capture time, records one slam hit and cannot recapture after finisher
+PASS real accumulator at30/60/120/144fps: identical scaling/damage, no defense gaps or duplicate buffered inputs
+PASS full-spin Soul route:11 true hits, four quarter-turn contacts per Q, five scaling uses, total damage preserved
+PASS soul cooldown-free stress: no infinite control, bounded input/hit IDs and online snapshot
+PASS thunder cooldown-free stress: no infinite control, bounded input/hit IDs and online snapshot
+PASS mox cooldown-free stress: no infinite control, bounded input/hit IDs and online snapshot
+PASS cylast cooldown-free stress: no infinite control, bounded input/hit IDs and online snapshot
+PASS immunity blocks new hitstun/finisher displacement while damage still applies
+PASS fully absorbed hit does not open hit-confirm cancel or add combo hits
+PASS four ranged R projectiles share one95% scaling use and unique hit IDs
+PASS seven separate uses apply100/95/85/75/65/50/50%, not per-hit scaling
+PASS Thunder reposition utility adds no COMBO hit or hitstun
+PASS buffered inputs cannot spawn a new attack after a lethal hit or during finisher slow motion
+✔ tests/chain-cancel.test.cjs (1085.127169ms)
+START-GAP 0 samples [
+  0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0
+]
+✔ DIRECT clients with delayed server signaling start and remain at comparable simulation ticks (3512.102405ms)
+✔ clock pacing corrects device 0 running ahead without a recovery reset (2752.787123ms)
+✔ clock pacing corrects device 1 running ahead without a recovery reset (2686.194693ms)
+✔ DIRECT-only room fails explicitly on unavailable ICE and never starts WS gameplay (55.423674ms)
+✔ DIRECT-only room pauses on direct loss instead of falling back to relayed gameplay (1439.992152ms)
+✔ partial backend update cannot silently turn a requested DIRECT-only room into auto (21.219144ms)
+✔ DIRECT-only coordinator disconnect stays paused and cannot start a WS repair epoch (413.615318ms)
+PASS Q independent charges + damage
+PASS Soul Q 300ms repeat gate survives action interruption, charges once and resets
+PASS E 80% mitigation and cooldown after end
+PASS W delayed throw and teleport
+PASS R landing-only impact + delayed bleed
+PASS Thunder projectile windup and collision
+PASS platform landing and drop-through
+PASS round progression and match win
+PASS 30 seconds AI combat, finite physics
+PASS PvE ArrowRight moves P1 even after SELECT focus
+PASS A/D move and release stops
+PASS PvE ArrowUp jumps P1
+PASS PvP arrows remain exclusive to P2
+PASS held key carries through countdown
+PASS ultimate stun blocks movement, jump, skill for 1.5s and restores control
+PASS second strike refreshes stun without stacking
+PASS missed R applies no stun, normal hitstun is distinct from ultimate stun
+PASS AI respects ultimate stun
+PASS lethal hit: 0.18x animation for 3 real seconds, delayed win, single score
+PASS timeout has no kill slow motion
+PASS finisher pause/resume
+PASS online remote movement replaces AI
+PASS slightly early combo input waits for cooldown instead of disappearing
+PASS Thunder W landing-only damage and 100-unit outward push
+PASS Thunder W pushes away on either side, 0.2s stun blocks inputs then expires
+PASS Thunder W arena boundary and missed AoE
+PASS Thunder R three separate 100-damage strikes, buffered combo cannot skip third strike
+PASS Soul bleed counts direct-hit stacks, explosion60*1.06=63.6 independent of hit damage
+PASS bleed ignores invulnerable damage, survives snapshot and resets on new match
+PASS 3-2-1-FIGHT locks actions, respects pause and hides after start
+✔ tests/combat.test.cjs (566.111397ms)
+✔ size changes apply immediately, persist across reload, reset from either settings entry (13.895797ms)
+✔ large buttons fit narrow portrait; invalid storage and denied storage retain usable defaults (11.277499ms)
+✔ Cylast handoff renderer, silhouettes and cached VFX remain unmodified (1.295725ms)
+PASS Cylast Q windup, entry and release range check, 1s freeze
+PASS Cylast W fixed zone, four ticks, no stacking and delayed cooldown
+PASS Cylast E 300 shield, overflow, actual damage return, soft fade and 1.2s expiry
+PASS Cylast R anchored radius400, no root, movement and jump allowed, heal20 per tick capped by damage and missing HP
+PASS Cylast native staff projectile, bounded combo buffer and cast interruption
+PASS Cylast mirror match, serialized states, pause guide and fresh-round cleanup
+PASS owned frozen normal: one beam, single 110% scaled hit, no projectile, immediate shatter
+PASS foreign/expired freeze keeps the 600-unit/s projectile
+PASS actual arena dispatcher renders 32px halo/16px beam/6px core, fades out cleanly
+✔ tests/cylast.test.cjs (888.167015ms)
+PASS damage armor whitelist all requested skills/both forms: HP retained damage, no flinch/push, active use retained, expiry, unlisted skill still interrupted
+✔ tests/damage-armor.test.cjs (459.364046ms)
+PASS Cylast300/240/180, W30/radius200, shield1.2; Melanta Q→R true hits plus13cast hits; MoxN1cancel→Rsingle scaledslam
+✔ tests/expanded-combo.test.cjs (913.951775ms)
+✔ mirror palettes preserve alpha, cache sprite recolors and tint gradients without arena filters (3.633456ms)
+✔ production symmetric rollback over DIRECT, checkpoint fallback to real WS and desync repair (3042.168323ms)
+✔ blocked DIRECT starts both clients over WS; socket reconnect resumes a confirmed checkpoint (1825.950154ms)
+symmetric replay stats {"rollbacks":38,"replayedTicks":255,"maxReplay":12,"waits":0} {"rollbacks":36,"replayedTicks":254,"maxReplay":12,"waits":0}
+✔ graph preserves aliases, cycles and non-finite values, rejects prototype keys (36.739836ms)
+✔ full-world restore/replay thunder/thunder, all actions (394.870873ms)
+✔ full-world restore/replay thunder/soul, all actions (367.928912ms)
+✔ full-world restore/replay thunder/cylast, all actions (364.268136ms)
+✔ full-world restore/replay thunder/mox, all actions (456.482508ms)
+✔ full-world restore/replay thunder/melanta, all actions (364.392909ms)
+✔ full-world restore/replay soul/thunder, all actions (342.696945ms)
+✔ full-world restore/replay soul/soul, all actions (312.485615ms)
+✔ full-world restore/replay soul/cylast, all actions (393.156761ms)
+✔ full-world restore/replay soul/mox, all actions (486.05231ms)
+✔ full-world restore/replay soul/melanta, all actions (464.445649ms)
+✔ full-world restore/replay cylast/thunder, all actions (362.196381ms)
+✔ full-world restore/replay cylast/soul, all actions (386.733378ms)
+✔ full-world restore/replay cylast/cylast, all actions (409.635744ms)
+✔ full-world restore/replay cylast/mox, all actions (524.372666ms)
+✔ full-world restore/replay cylast/melanta, all actions (445.156794ms)
+✔ full-world restore/replay mox/thunder, all actions (437.341903ms)
+✔ full-world restore/replay mox/soul, all actions (417.400936ms)
+✔ full-world restore/replay mox/cylast, all actions (434.494178ms)
+✔ full-world restore/replay mox/mox, all actions (475.861009ms)
+✔ full-world restore/replay mox/melanta, all actions (488.868317ms)
+✔ full-world restore/replay melanta/thunder, all actions (863.343421ms)
+✔ full-world restore/replay melanta/soul, all actions (826.126571ms)
+✔ full-world restore/replay melanta/cylast, all actions (868.752222ms)
+✔ full-world restore/replay melanta/mox, all actions (987.91402ms)
+✔ full-world restore/replay melanta/melanta, all actions (671.365679ms)
+✔ both peers converge under delayed/reordered inputs with bounded history (5191.839581ms)
+✔ stall bound, immutable confirmed input and confirmed sound plays once (22.241611ms)
+✔ pause freezes time, results require commit and both players ready (65.306728ms)
+✔ native rendering and confirmed UI do not mutate deterministic world; Thunder pose blend persists (842.53036ms)
+✔ normalization absorbs small trig rounding differences between independent JS contexts (708.455436ms)
+✔ different graphics/FPS settings paint at 30/60 while online combat remains synchronized (2648.506203ms)
+✔ graphics preferences survive reload; corrupt or unavailable storage safely defaults (64.256243ms)
+PASS 3HIT/200, overkill, duplicate IDs, shield/overflow, invulnerability, DOT boundaries, sandboxcap, hold/fade/reset, real4hitQ
+✔ tests/hit-meter.test.cjs (643.13195ms)
+✔ Home Screen app declares standalone scope, iOS metadata and valid install icons (2.668357ms)
+✔ iOS legacy flag and modern display-mode enable app layout; ordinary Safari retains browser layout (6.442254ms)
+✔ defeated vector/gradient/sprite pixels are achromatic, alpha and cache preserved (6.148699ms)
+PASS KO gray context all5characters,3real seconds at30/60/120Hz,Melanta timeline,delayed single result,draw,pause/reset/menucolor cleanup
+PASS local loser-only perspective: PvE player vs CPU, online host/guest either winner, shared local PvP stays colored
+✔ tests/knockout.test.cjs (632.003005ms)
+PASS Q locks shared visual/hitbox point and teleport escapes; W/E damage armor; E400 bothways; R13x65/heal130 and13metercommits, overkillcap/KO
+✔ tests/melanta-6.6.test.cjs (812.405627ms)
+PASS jump E→normals, mirror/directions, finite flight timing; ground stop without air/knockback changes
+✔ tests/melanta-air-render.test.cjs (8505.586104ms)
+PASS native idle ground, W wrap, E afterimages, normal/R90frame rendering and lazy finisher
+✔ tests/melanta-render.test.cjs (4343.608443ms)
+PASS2400fullrenderframes
+✔ tests/melanta-scene.test.cjs (12008.505285ms)
+PASS Q/R immunity lifecycle/plunge/damage, Qmist timing, delayedround healing visual clock, slope gait
+✔ tests/melanta-status.test.cjs (1123.615268ms)
+PASS Melanta R13 real hits and130 heal
+PASS Melanta Q impact100/stun1
+PASS W root-only, arrival80, buffered W→R
+PASS airborne R plunge precedes dance
+PASS KO cinematic freezes combat and ends once
+PASS swept blade normal damage and recovery
+PASS airborne E gravity and speed boost
+PASS R20percent reduction and serializable snapshot
+✔ tests/melanta.test.cjs (831.565181ms)
+PASS Mox continuous motion, momentum, soft rotation/settle, 30/60/120Hz impact/release and W knockback
+✔ tests/mox-motion.test.cjs (192.895371ms)
+✔ Mox original character paths, punch renderer, ribbons and soft slam effects are preserved (2.968432ms)
+PASS Mox alternating confirmed N1/N2 punches, spring retained, per-use scaling
+PASS Mox Q blocks new CC only, takes damage, cannot cleanse existing stun
+PASS Mox E 0.5s immunity and approximately500 dash, normal damage after expiry
+PASS Mox W crossing pair: 200 direct plus nonstacking150 burn
+PASS Mox W misses outside500 and still consumes cooldown
+PASS Mox melee R full grab/flip/400 impact/1s stun and recovery cleanup
+PASS Mox interrupted grab releases both entities and resets rotations
+PASS Mox target death during capture cannot leave a stuck grab
+PASS Mox ranged R four homing87.5 hits =350, large sparks and shared cooldown
+PASS Mox rejected R range, ranged basic60, serializable state, pause guide and fresh-round reset
+PASS Mox source death cleanup, platform landing, mirror immunity and sustained AI combat
+PASS Mox W swept hit while crossing curve, one hit per orb, launch-direction knockback
+PASS Mox Q 2-second cooldown and 1-second CC immunity
+✔ tests/mox.test.cjs (349.868681ms)
+✔ multitouch independent fingers, release/cancel and repeated hold pointers (28.160822ms)
+✔ two independent clients: DataChannel sync, guest controls/skill, both ready and leave (217.059522ms)
+✔ movement slide and skill sweep keep one next input without duplicate casts (9.731406ms)
+✔ home button is in pause menu, control pad disappears until resume (6.160255ms)
+✔ pause guide follows the player, live charges and local PvP selection (7.161462ms)
+✔ Cylast online selection, host casts and guest receives full frost state (131.946962ms)
+✔ Mox online character, form, immunity and native pose survive host/guest sync (89.204762ms)
+✔ mirror identity and combo counts remain consistent for host and guest (41.40757ms)
+✔ keyboard and iOS pointer taps share the same confirmed chain/cancel engine (42.797304ms)
+✔ online guest eleven-hit chain uses host-confirmed scaling, charges and extension budget (209.014625ms)
+✔ owned freeze/shatter and its single bonus hit synchronize from host to guest (94.801536ms)
+✔ bleed stacks, captured factor and independent burst remain host authoritative (75.486326ms)
+✔ combat audio is host-confirmed and duplicate snapshots do not replay it (80.064106ms)
+✔ no relay connection means no combat over HTTP (8.920112ms)
+{"scenario":"simulated movement","configuredRTT":50,"measuredRTT":66.66666666666424,"localResponseUpperMs":8.333333333333334,"bytes":120806,"elapsedMs":6599.999999999939}
+✔ simulated RTT 50ms: immediate guest movement, jump, authority, bounded reconciliation (291.183487ms)
+{"scenario":"simulated movement","configuredRTT":100,"measuredRTT":116.66666666666242,"localResponseUpperMs":8.333333333333334,"bytes":145506,"elapsedMs":6599.999999999939}
+✔ simulated RTT 100ms: immediate guest movement, jump, authority, bounded reconciliation (325.191953ms)
+{"scenario":"simulated movement","configuredRTT":150,"measuredRTT":166.6666666666606,"localResponseUpperMs":8.333333333333334,"bytes":147859,"elapsedMs":6599.999999999939}
+✔ simulated RTT 150ms: immediate guest movement, jump, authority, bounded reconciliation (358.203804ms)
+{"scenario":"simulated movement","configuredRTT":200,"measuredRTT":216.66666666665878,"localResponseUpperMs":8.333333333333334,"bytes":153077,"elapsedMs":6599.999999999939}
+✔ simulated RTT 200ms: immediate guest movement, jump, authority, bounded reconciliation (246.050172ms)
+✔ simulated jitter/reordering/drop, interruption and acknowledged epoch recovery (281.950558ms)
+{"scenario":"same 8s dual ultimates, snapshot only","old20HzBytes":803200,"new60HzBytes":256633,"codecRoundtripMeanMs":1.1651956562499965,"codecRoundtripP95Ms":2.2569179999995868}
+✔ server relay route shows measured RTT without IP addresses (169.95711ms)
+✔ snapshot codec: bounded baselines, duplicate/out-of-order rejection and measured payload comparison (665.16287ms)
+✔ two full game clients use real WebSocket relay for combat and recover a disconnected guest (244.645527ms)
+{"scenario":"8s alternating movement at simulated RTT 200ms; JSON payload only","measured":[{"version":"6.18","bytes":1427416,"maxHostBacklog":1,"staleMovesSkipped":0},{"version":"6.19","bytes":394754,"maxHostBacklog":0,"staleMovesSkipped":630}]}
+✔ WS2 reduces traffic against WS1 at 200ms RTT and keeps input processing recent (2114.098312ms)
+✔ WS2 never requeues sent TCP input events and measures direct server RTT (201.35895ms)
+{"scenario":"WS2 ordered 24KB/s per direction, RTT 200ms, alternating movement","maxBufferedBytes":9636,"hostBlocked":false}
+✔ WS2 stays playable on a bandwidth-limited ordered link and bounds TCP queues (548.676818ms)
+✔ guest display interpolates opponent position while gameplay state remains authoritative (232.122037ms)
+✔ hybrid selects DIRECT after both probes; combat bypasses real WebSocket relay then safely falls back (70.634123ms)
+✔ blocked direct connection times out to WebSocket and starts the same room without ICE error (37.495436ms)
+{"scenario":"isolated skill prediction vs host, 45 fixed steps without snapshot correction","comparison":[{"type":"melanta","skill":"q","previousMaxError":110.83878400000003,"currentMaxError":0,"previousRigError":0,"currentRigError":0},{"type":"mox","skill":"e","previousMaxError":0,"currentMaxError":0,"previousRigError":374.9999999999968,"currentRigError":0},{"type":"soul","skill":"w","previousMaxError":0,"currentMaxError":0,"previousRigError":0,"currentRigError":0},{"type":"thunder","skill":"w","previousMaxError":0,"currentMaxError":0,"previousRigError":0,"currentRigError":0}]}
+✔ WebSocket reconnect during direct negotiation completes in server mode instead of stranding lobby (54.517486ms)
+✔ guest shared-step prediction matches host thunder movement, jump and normal without mutating authority (28.354071ms)
+✔ guest shared-step prediction matches host soul movement, jump and normal without mutating authority (65.045441ms)
+✔ guest shared-step prediction matches host cylast movement, jump and normal without mutating authority (48.520306ms)
+✔ guest shared-step prediction matches host mox movement, jump and normal without mutating authority (45.191188ms)
+✔ guest shared-step prediction matches host melanta movement, jump and normal without mutating authority (86.658073ms)
+✔ input rollback advances its own clock, replays cooldowns and preserves global clock/sound/HP (7.444283ms)
+✔ shared-step replay fixes Melanta hop and Mox rig mismatch against 6.20 (57.911627ms)
+✔ guest replay predicts gravity while stunned and resumes movement at the same tick as host (5.57781ms)
+{"scenario":"DIRECT cadence, 120Hz harness/60Hz timer, RTT20ms","snapshots":59}
+{"scenario":"Node VM CPU only; 30 runs per character; replay 24 frames per snapshot","report":[{"type":"thunder","frames":24,"medianMs":0.21312599999964732,"p95Ms":1.8175700000001598},{"type":"soul","frames":24,"medianMs":0.21985700000004726,"p95Ms":0.49396900000010646},{"type":"cylast","frames":24,"medianMs":0.28921300000001793,"p95Ms":0.9753319999999803},{"type":"mox","frames":24,"medianMs":0.44147199999952136,"p95Ms":4.768970000000081},{"type":"melanta","frames":24,"medianMs":0.42741099999966536,"p95Ms":1.3331650000000081}]}
+✔ DIRECT fixed scheduler sends near 60 snapshots per second without timer-rounding slowdown (207.540908ms)
+✔ rollback input history is bounded and replay does not duplicate HP, sound, projectiles or camera (27.304459ms)
+✔ bounded guest replay cost is measured for all five character updates (125.120919ms)
+PASS high-refresh rendering cap retains real-time 120Hz combat
+PASS pause skips repeated rendering; resizing still redraws
+PASS resolution adapts within bounds and recovers gradually
+PASS viewport read once per resize, large displays have a bounded pixel budget
+PASS bolt bloom reused between frames with bounded memory
+PASS sustained slow frame delivery reduces GPU load even with cheap draw submission
+PASS manual profiles progressively reduce raster pixels; auto tuning cannot override choice
+PASS 30/60 rendering produces identical movement and simulation time, lower paint count only
+PASS settings persist locally, UI reflects choice, resize redraw and invalid values safely default
+PASS intentional 30FPS cap is not misclassified as frame drops by auto quality
+✔ tests/performance.test.cjs (210.857535ms)
+✔ compact badge shows measured peer RTT and color without server RTT (145.485789ms)
+✔ initial DIRECT timeout retries in background and upgrades WS once (1472.850408ms)
+✔ failed background DIRECT retry leaves WS gameplay running without a new epoch (1426.096299ms)
+PASS sandbox idle/AI, no KO/timer, optional free cooldown, HP refill and complete reset
+PASS popup threshold5, increment, timeout reset and gradual fade
+PASS retaliation breaks a chain, absorbed hits do not count, exit clears popup
+PASS mirror palette always belongs to P2 for every character and round reset
+✔ tests/practice-combo.test.cjs (774.431778ms)
+PASS all four reaction ranges, bounded delayed perception
+PASS stunned bot clears only its own inputs and cannot escape stun
+PASS whiff stops sequence, confirmed legal window links without reaction penalty
+PASS live range adapters and Mox long-range form transition
+PASS debug toggle and round reset
+PASS HELLMODE survives next round/restart/character change; PvP never runs bot controller
+PASS a genuinely selected bot normal can be baited/evaded by player teleport; no phantom chain after miss
+✔ tests/pve-ai.test.cjs (792.390629ms)
+{"level":"easy","trials":100,"actualHits":49,"meanHpLoss":44.1,"defenses":69}
+{"level":"normal","trials":100,"actualHits":14,"meanHpLoss":12.6,"defenses":82}
+{"level":"hard","trials":100,"actualHits":13,"meanHpLoss":11.7,"defenses":78}
+{"level":"hell","trials":100,"actualHits":0,"meanHpLoss":0,"defenses":108}
+PASS400controlled projectile trials, strict damage-hit accounting, improved avoidance thresholds
+✔ tests/pve-defense.test.cjs (3513.171197ms)
+PASS5xperception/think/rest tuning, native evade during AI rest, instant Mox form accepted exactly once, geometry rejects receding/off-height projectiles
+✔ tests/pve-pressure.test.cjs (722.767086ms)
+{"pairedLevel":"hard","cases":45,"meanDamage":699.57,"meanTaken":73.65,"links":193,"defenses":139}
+{"pairedLevel":"hell","cases":45,"meanDamage":717.87,"meanTaken":78.68,"links":198,"defenses":152}
+{"level":"easy","cases":54,"meanActions":11.67,"meanDamage":689.09,"meanIdle":0.18,"links":273,"defenses":21,"directionChanges":89}
+{"level":"normal","cases":54,"meanActions":11.52,"meanDamage":634.03,"meanIdle":0.14,"links":230,"defenses":61,"directionChanges":151}
+{"level":"hard","cases":124,"meanActions":13.03,"meanDamage":683.43,"meanIdle":0.16,"links":543,"defenses":293,"directionChanges":428}
+{"level":"hell","cases":134,"meanActions":13.22,"meanDamage":659.57,"meanIdle":0.16,"links":583,"defenses":366,"directionChanges":467}
+PASS 366 real simulation scenarios, every character/form/difficulty; finite state, range gates, stun buffer, corner action; all25matchups hard/hell and30/60/120Hz
+✔ tests/pve-scenarios.test.cjs (13327.664934ms)
+✔ control latency 45ms/dropStart 0: one checkpoint completes without recovery loop (3371.10976ms)
+✔ control latency 120ms/dropStart 0: one checkpoint completes without recovery loop (4237.462468ms)
+✔ control latency 45ms/dropStart 1: one checkpoint completes without recovery loop (3497.859105ms)
+✔ mixed game/core/client versions stop before room creation with an actionable error (22.953917ms)
+✔ Render adapter: HTTPS proxy, room lifecycle, assets and bounded requests (575.886687ms)
+RB performance (this test machine; not an iOS FPS claim) {"meanMs":1.4866893491666655,"p95Ms":3.5485240000000147,"maxCheckpointBytes":15971,"historyFrames":181}
+✔ active full-world rollback history stays bounded; measure capture and confirmation cost (1855.242776ms)
+✔ create/join, peer sync, role isolation and room close (26.560624ms)
+✔ invalid room, expired room, stale host and guest cannot overwrite snapshot (8.137602ms)
+✔ bounded body, malformed JSON and unavailable database (1.943046ms)
+PASS ultimate impact beats, no grab-stage shake, bounded reused camera offset, no extra effects, menu/pause cleanup and time-based decay30/60/120/144Hz
+✔ tests/shake.test.cjs (221.443595ms)
+✔ remote motion remains smooth at 30 FPS, local player 0, without changing simulation (173.542208ms)
+✔ remote motion remains smooth at 59 FPS, local player 0, without changing simulation (283.054601ms)
+✔ remote motion remains smooth at 60 FPS, local player 0, without changing simulation (294.573579ms)
+✔ remote motion remains smooth at 75 FPS, local player 0, without changing simulation (264.248455ms)
+✔ remote motion remains smooth at 120 FPS, local player 0, without changing simulation (396.781425ms)
+✔ remote motion remains smooth at 144 FPS, local player 0, without changing simulation (274.693777ms)
+✔ remote motion remains smooth at 30 FPS, local player 1, without changing simulation (140.291424ms)
+✔ remote motion remains smooth at 59 FPS, local player 1, without changing simulation (158.137333ms)
+✔ remote motion remains smooth at 60 FPS, local player 1, without changing simulation (165.509274ms)
+✔ remote motion remains smooth at 75 FPS, local player 1, without changing simulation (187.770031ms)
+✔ remote motion remains smooth at 120 FPS, local player 1, without changing simulation (376.287562ms)
+✔ remote motion remains smooth at 144 FPS, local player 1, without changing simulation (373.469444ms)
+✔ soft rollback keeps Melanta animation cache; hard correction resets only affected actor (24.076944ms)
+✔ teleport, hit and grab do not interpolate through invalid intermediate positions (8.907813ms)
+PASS bleed 3% per hit, cap10, immutable3s expiry, 60*1.30*.5=39, no second explosion or old-combo revival
+PASS duplicate IDs, DOT, reflected hits, other character/owner add no bleed stacks
+PASS burst adds one fifth hit to a currently continuous combo without stun/scaling/extension refresh
+PASS delayed bleed applies captured50% scaling once, then active80% mitigation once
+PASS two near-simultaneous normal projectiles: only first deals110% before scaling, one hit each, freeze removed immediately
+PASS other skills, DOT and a non-owner normal cannot shatter owned freeze
+PASS real Mox N1-Link-R: same combo/scaling/points/deadline through capture, exactly one scaled slam hit
+PASS death, mid-grab exit and reset remove effects/capture state and rotations
+✔ tests/status-combat.test.cjs (267.808494ms)
+✔ rapid gamepad taps and pinch gestures are cancelled without duplicate actions (3.954594ms)
+✔ normal UI buttons still work on rapid touch; noncancelable clicks are not duplicated (1.661762ms)
+✔ menu, help and text entry retain normal browser interactions (1.406239ms)
+✔ real WebSockets relay host state and guest input, isolate rooms and recover a new socket (113.667324ms)
+✔ relay rejects bad credentials, unauthenticated sockets and guest state injection (144.962786ms)
+✔ relay rejects cross-origin upgrade and handles HTTPS proxy origin (18.165327ms)
+✔ direct server probe is echoed locally and never forwarded to opponent (23.181848ms)
+✔ direct signaling is restricted to room peers and only host can select a route (21.684033ms)
+✔ DIRECT-only room inherits owner policy and relay rejects game inputs (15.231906ms)
+ℹ tests 152
+ℹ suites 0
+ℹ pass 152
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 20967.335546

@@ -1,7 +1,6 @@
-Saga Fight 6.22.4 — graphics settings export
-2026-11-14; Node 24.22.1; npm test: 144 passed, 0 failed, 0 skipped, 0 cancelled.
-Ported graphics from Site Build 6.18 source f4c71ac7ffe3ecb608b5e2e9dce252ce62feb205 into Render 6.22.3.
-Checked: auto/high/balanced/low raster profiles, separate 30/60 paint cap, fixed combat timing, saved preferences/reload, invalid/blocked storage, mixed low30/high60 peers synchronized without recovery.
-Preserves rollback, DIRECT preference, compact ping and smooth presentation. Protocol 85 unchanged.
-BUILD 6.22.4; health 6.22.4-graphics1.
-Actual mobile/native-browser performance and the user's deployment not verified; graphics settings do not lower network ping.
+Saga Fight 6.22.5 — clock alignment and DIRECT-only rooms
+2026-11-14; Node 24.22.1; npm test: 152 passed, 0 failed, 0 skipped, 0 cancelled.
+Before fix, delayed WS control / fast DIRECT test reproduced a 19–20 tick host lead. Representative after-fix run: 0 tick gap. Leading host/guest drift tests converge within three ticks without epoch reset and retain shared checksums.
+DIRECT-only tests: inherited host policy, unavailable ICE, direct loss, no WS gameplay, relay rejects injected game input, missing backend policy is reported and stale room closed.
+Preserves graphics settings, rollback, interpolation, compact ping and auto-mode fallback/recovery.
+BUILD 6.22.5; health 6.22.5-clock1; protocol 86. Native WebRTC/physical devices are not verified.

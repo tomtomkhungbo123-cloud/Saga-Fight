@@ -14,7 +14,7 @@ async function fixture(){
  async function call(name,data,token){const r=await api(new Request(origin+'/api/rooms/'+name,{method:'POST',headers:{'Content-Type':'application/json',Origin:origin,...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify(data)}),{DB});return r.json();}
  async function socket(session,options={}){
   const ws=new WebSocket(origin.replace('http:','ws:')+'/ws',{origin,...options});sockets.push(ws);const messages=[];ws.on('message',data=>messages.push(JSON.parse(data)));
-  await once(ws,'open');if(session)ws.send(JSON.stringify({type:'auth',version:85,code:session.code,token:session.token}));
+  await once(ws,'open');if(session)ws.send(JSON.stringify({type:'auth',version:86,code:session.code,token:session.token}));
   return {ws,messages};
  }
  async function wait(check){const end=Date.now()+3000;while(!check()){if(Date.now()>end)throw Error('Timed out waiting for relay');await new Promise(r=>setTimeout(r,5));}}
@@ -78,3 +78,5 @@ test('direct signaling is restricted to room peers and only host can select a ro
   assert.equal(h.messages.some(m=>m.type==='direct'&&m.kind==='select'),false);
  }finally{await f.close();}
 });
+
+test('DIRECT-only room inherits owner policy and relay rejects game inputs',async()=>{const f=await fixture();try{const host=await f.call('create',{connection:'direct'}),guest=await f.call('join',{code:host.code,connection:'auto'});assert.equal(host.config.connection,'direct');assert.equal(guest.config.connection,'direct');const h=await f.socket(host),g=await f.socket(guest);await f.wait(()=>g.messages.some(m=>m.event==='ready'));g.ws.send(JSON.stringify({type:'rb-input',epoch:2,tick:1,ack:1,frames:[]}));await f.wait(()=>g.ws.readyState===WebSocket.CLOSED);assert.equal(h.messages.some(m=>m.type==='rb-input'),false);}finally{await f.close();}});
