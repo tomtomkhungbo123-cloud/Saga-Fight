@@ -1,9 +1,7 @@
-Saga Fight 6.22.3 — smoother opponent presentation
-2026-11-14; Node 24.22.1.
-Full npm test: 142 passed, 0 failed, 0 skipped, 0 cancelled.
-Two transport tests rerun after passive render-metrics wiring: 2 passed.
-New coverage: both roles at simulated 30/59/60/75/120/144 paint FPS, transform interpolation without world mutation, reduced motion variation at uneven render cadence, preservation of Melanta animation across soft rollback, targeted hard reset, exact teleport/hit/grab display.
-Keeps prior compact ping, preferred DIRECT, background retry, ACK/START recovery and deterministic combat tests.
-Protocol 85; BUILD 6.22.3; health 6.22.3-view1.
-Not a physical-device/browser-network or mobile-FPS verification; exact cause of the user's device-specific report remains unmeasured.
-See docs/smooth-view-6.22.3.md and docs/validation-6.22.3.txt.
+Saga Fight 6.22.4 — graphics settings export
+2026-11-14; Node 24.22.1; npm test: 144 passed, 0 failed, 0 skipped, 0 cancelled.
+Ported graphics from Site Build 6.18 source f4c71ac7ffe3ecb608b5e2e9dce252ce62feb205 into Render 6.22.3.
+Checked: auto/high/balanced/low raster profiles, separate 30/60 paint cap, fixed combat timing, saved preferences/reload, invalid/blocked storage, mixed low30/high60 peers synchronized without recovery.
+Preserves rollback, DIRECT preference, compact ping and smooth presentation. Protocol 85 unchanged.
+BUILD 6.22.4; health 6.22.4-graphics1.
+Actual mobile/native-browser performance and the user's deployment not verified; graphics settings do not lower network ping.

@@ -1,0 +1,7 @@
+# Build 6.18 — Device-local graphics settings
+
+Settings on home/pause exposes Auto / High / Balanced / Low plus a separate 60/30 FPS render cap. Auto retains the previous adaptive resolution, now comparing frame delivery against the selected cap so intentional 30 FPS is not treated as overload. High uses the previous 1.3M pixel budget at scale1; balanced uses .85 scale and .85M pixels; low uses .75 scale and .48M pixels. Manual profiles disable automatic overrides. User choices persist under saga.graphics.v1 and apply immediately via viewport/cache invalidation.
+
+Only canvas raster resolution and paint cadence change. All character art, particles, skill readability, animation clocks, audio and combat simulation remain; UI explains the reduced sharpness and 30FPS visual smoothness tradeoff. Fixed 120Hz simulation, networking, hitstun/cooldowns/hitboxes remain unchanged and no graphics state is sent in snapshots.
+
+Validation: manual levels reduce actual raster dimensions progressively; low uses <30% of high's pixels on a large viewport. This is a workload comparison, not a measured device FPS gain. Tests verify fixed profiles cannot auto-drop, 30 and 60 paints retain identical movement/simulation timing, settings persistence/validation/UI state and immediate resize invalidation. Added explicit stable30FPS auto-quality regression. Existing performance tests pass. Full suite result in delivery. Physical mobile FPS/thermal performance not tested.

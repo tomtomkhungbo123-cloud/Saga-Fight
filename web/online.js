@@ -1,6 +1,6 @@
  'use strict';
 (()=>{
- const G=window.riftGame,el=id=>document.getElementById(id),HZ=60,STEP=1/120,BUILD='6.22.3';
+ const G=window.riftGame,el=id=>document.getElementById(id),HZ=60,STEP=1/120,BUILD='6.22.4';
  if(window.SagaGameBuild!==BUILD||window.SagaRollback?.build!==BUILD){el('netError').textContent='Các file game khác phiên bản hoặc thiếu rollback-core.js. Hãy cập nhật đầy đủ bản '+BUILD+' và tải lại cả hai máy.';el('createRoom').disabled=el('joinRoom').disabled=true;return;}
  let session=null;
  function paintPing(n){const node=el('netBadge'),value=Number.isFinite(n?.peerPing)?Math.max(0,Math.round(n.peerPing)):null;node.textContent=(value??'—')+' ms';const jitter=n?.jitter||0;node.dataset.quality=n?.suspended?'bad':value===null?'pending':value>150||jitter>80?'bad':value>80||jitter>40?'fair':'good';node.hidden=!n;node.setAttribute?.('aria-label','Ping '+(value===null?'đang đo':value+' mili giây')+' · '+{good:'tốt',fair:'trung bình',bad:'yếu hoặc gián đoạn',pending:'đang đo'}[node.dataset.quality]);}

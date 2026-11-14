@@ -24,7 +24,7 @@ const server=http.createServer(async(req,res)=>{
   res.setHeader('Referrer-Policy','same-origin');
   if(url.pathname==='/healthz'){
    res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});
-   res.end(JSON.stringify({ok:true,build:'6.22.3-view1',clientBuild:'6.22.3',protocol:85,transport:'hybrid',turnRequired:false}));return;
+   res.end(JSON.stringify({ok:true,build:'6.22.4-graphics1',clientBuild:'6.22.4',protocol:85,transport:'hybrid',turnRequired:false}));return;
   }
   if(url.pathname.startsWith('/api/')){
    if(req.method!=='POST'){res.writeHead(405);res.end();return;}
@@ -55,7 +55,7 @@ const server=http.createServer(async(req,res)=>{
 const relay=attachRelay(server,DB);
 server.requestTimeout=15000;
 server.headersTimeout=10000;
-server.listen(Number(process.env.PORT||3000),'0.0.0.0',()=>console.log('Saga Fight 6.22.3 Rollback listening on port '+server.address().port));
+server.listen(Number(process.env.PORT||3000),'0.0.0.0',()=>console.log('Saga Fight 6.22.4 Rollback listening on port '+server.address().port));
 for(const signal of ['SIGTERM','SIGINT'])process.on(signal,()=>{
  relay.close();server.close(()=>{DB.close();process.exit(0);});
  setTimeout(()=>process.exit(0),8000).unref();

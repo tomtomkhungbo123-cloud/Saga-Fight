@@ -1,16 +1,30 @@
 'use strict';
-window.SagaGameBuild='6.22.3';
+window.SagaGameBuild='6.22.4';
 const $=id=>document.getElementById(id),canvas=$('game'),ctx=canvas.getContext('2d'),W=1600,H=1117,clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 // Keep layout reads and static scenery out of the animation hot path.
 const arenaBackground=$('arenaBackground'),backgroundContext=arenaBackground?.getContext?.('2d');
 const separateBackground=typeof backgroundContext?.setTransform==='function';
 let backdrop=null,backdropKey='',viewport=null,viewportDirty=true,renderScale=1;
 let renderAverage=0,frameAverage=16.67,qualityClock=0,qualityHeadroom=0,slowWindows=0;
+// Device-local rendering only; never serialized into combat/network state.
+const GRAPHICS_PROFILES={auto:{pixels:1300000,scale:1},high:{pixels:1300000,scale:1},balanced:{pixels:850000,scale:.85},low:{pixels:480000,scale:.75}};
+let graphicsQuality='auto',graphicsFps=60;
+try{const v=JSON.parse(localStorage.getItem('saga.graphics.v1'));if(v){if(Object.hasOwn(GRAPHICS_PROFILES,v.quality))graphicsQuality=v.quality;if([30,60].includes(v.fps))graphicsFps=v.fps;}}catch{}
+function setGraphics(quality=graphicsQuality,fps=graphicsFps,save=true){
+ graphicsQuality=Object.hasOwn(GRAPHICS_PROFILES,quality)?quality:'auto';graphicsFps=Number(fps)===30?30:60;
+ renderScale=1;qualityClock=qualityHeadroom=slowWindows=0;backdropKey='';invalidateViewport();
+ $('graphicsQuality').value=graphicsQuality;$('graphicsFps').value=String(graphicsFps);
+ $('graphicsNote').textContent=graphicsQuality==='auto'?'Tự cân độ phân giải theo tải máy. Giữ đầy đủ nhân vật và hiệu ứng.':'Áp dụng ngay: '+({high:'độ nét cao',balanced:'giảm độ phân giải vừa phải',low:'độ phân giải thấp để giảm tải GPU'}[graphicsQuality])+'. Giữ đầy đủ nhân vật và hiệu ứng.';
+ if(save)try{localStorage.setItem('saga.graphics.v1',JSON.stringify({quality:graphicsQuality,fps:graphicsFps}));}catch{}
+}
+$('graphicsQuality').addEventListener('change',()=>setGraphics($('graphicsQuality').value));
+$('graphicsFps').addEventListener('change',()=>setGraphics(graphicsQuality,$('graphicsFps').value));
+setGraphics(graphicsQuality,graphicsFps,false);
 function invalidateViewport(){viewportDirty=true;}
 window.addEventListener('resize',invalidateViewport);window.addEventListener('orientationchange',invalidateViewport);
 if(typeof ResizeObserver!=='undefined')new ResizeObserver(invalidateViewport).observe(canvas);
-function renderViewport(){if(viewportDirty||!viewport){const r=canvas.getBoundingClientRect();viewport={width:r.width,height:r.height};viewportDirty=false;}const maxPixels=1300000,area=viewport.width*viewport.height;const factor=Math.min(1,Math.sqrt(maxPixels/Math.max(1,area)))*renderScale;return {width:Math.max(1,Math.round(viewport.width*factor)),height:Math.max(1,Math.round(viewport.height*factor))};}
-function tuneRender(cost,dt){renderAverage=renderAverage?renderAverage*.94+cost*.06:cost;frameAverage=frameAverage*.95+Math.min(80,dt*1000)*.05;qualityClock+=dt;if(qualityClock<1)return;qualityClock=0;slowWindows=!document.hidden&&frameAverage>27?slowWindows+1:0;if((renderAverage>12||slowWindows>=3)&&renderScale>.65){renderScale=Math.max(.65,renderScale-.1);qualityHeadroom=0;slowWindows=0;}else if(renderAverage<6&&frameAverage<20&&renderScale<1){if(++qualityHeadroom>=5){renderScale=Math.min(1,renderScale+.05);qualityHeadroom=0;}}else qualityHeadroom=0;}
+function renderViewport(){if(viewportDirty||!viewport){const r=canvas.getBoundingClientRect();viewport={width:r.width,height:r.height};viewportDirty=false;}const profile=GRAPHICS_PROFILES[graphicsQuality],maxPixels=profile.pixels,area=viewport.width*viewport.height;const factor=Math.min(1,Math.sqrt(maxPixels/Math.max(1,area)))*profile.scale*renderScale;return {width:Math.max(1,Math.round(viewport.width*factor)),height:Math.max(1,Math.round(viewport.height*factor))};}
+function tuneRender(cost,dt){renderAverage=renderAverage?renderAverage*.94+cost*.06:cost;frameAverage=frameAverage*.95+Math.min(80,dt*1000)*.05;if(graphicsQuality!=='auto')return;qualityClock+=dt;if(qualityClock<1)return;qualityClock=0;const budget=1000/graphicsFps;slowWindows=!document.hidden&&frameAverage>Math.max(27,budget*1.6)?slowWindows+1:0;if((renderAverage>budget*.72||slowWindows>=3)&&renderScale>.65){renderScale=Math.max(.65,renderScale-.1);qualityHeadroom=0;slowWindows=0;}else if(renderAverage<budget*.36&&frameAverage<budget*1.2&&renderScale<1){if(++qualityHeadroom>=5){renderScale=Math.min(1,renderScale+.05);qualityHeadroom=0;}}else qualityHeadroom=0;}
 function textIfChanged(node,value){if(node.textContent!==value)node.textContent=value;}
 
 const art={},map=new Image();map.src='assets/arena.png';for(const k of ['idle','charge','shoot','lift','slam','dash','appear','ultimate']){art[k]=new Image();art[k].src='assets/'+k+'.png?v=11';}
@@ -581,7 +595,7 @@ let acc=0,hudClock=0,paintClock=0,lastPaintPhase='',lastPaintNow=0;
 function frame(now){const dt=Math.min((now-last)/1000||.016,.08);last=now;
 if(onlineActive()&&window.riftNet.fullRollback){acc=0;}else if(onlineGuest()){advanceGuest(dt);acc=0;}else if(!['paused','roundover','matchover'].includes(phase)){acc+=dt;let count=0;while(acc>=1/120&&count++<10){step(1/120);acc-=1/120;}}else acc=0;
 window.riftNet?.frame?.(dt);hitMeterHUD();if(!window.riftNet?.fullRollback)syncZoneSound();hudClock+=dt;if(hudClock>.1){hud();hudClock=0;touchHUD();textIfChanged($('fps'),Math.round(fps)+' FPS');if(canvas.dataset){canvas.dataset.renderMs=renderAverage.toFixed(2);canvas.dataset.renderScale=renderScale.toFixed(2);}}
-paintClock+=dt;const frozen=['paused','roundover','matchover','lobby'].includes(phase);if((paintClock>=1/60-.001||viewportDirty||lastPaintPhase!==phase)&&(!frozen||lastPaintPhase!==phase||viewportDirty)){if(lastPaintNow)fps+=(1000/Math.max(1,now-lastPaintNow)-fps)*.08;lastPaintNow=now;const begin=performance.now();render();tuneRender(performance.now()-begin,paintClock);paintClock=Math.max(0,paintClock-1/60);if(paintClock>1/60)paintClock=0;lastPaintPhase=phase;comboHUD();}else if(frozen)paintClock=0;
+paintClock+=dt;const frozen=['paused','roundover','matchover','lobby'].includes(phase);if((paintClock>=1/graphicsFps-.001||viewportDirty||lastPaintPhase!==phase)&&(!frozen||lastPaintPhase!==phase||viewportDirty)){if(lastPaintNow)fps+=(1000/Math.max(1,now-lastPaintNow)-fps)*.08;lastPaintNow=now;const begin=performance.now();render();tuneRender(performance.now()-begin,paintClock);paintClock=Math.max(0,paintClock-1/graphicsFps);if(paintClock>1/graphicsFps)paintClock=0;lastPaintPhase=phase;comboHUD();}else if(frozen)paintClock=0;
 requestAnimationFrame(frame);}
 const mapping={Space:[0,'attack'],KeyQ:[0,'q'],KeyW:[0,'w'],KeyE:[0,'e'],KeyR:[0,'r'],KeyJ:[0,'jump'],Enter:[1,'attack'],Digit1:[1,'q'],Digit2:[1,'w'],Digit3:[1,'e'],Digit4:[1,'r'],Numpad1:[1,'q'],Numpad2:[1,'w'],Numpad3:[1,'e'],Numpad4:[1,'r'],ArrowUp:[1,'jump']};
 // Capture game keys independently of the last menu/select/button focus.
@@ -705,7 +719,7 @@ const rollbackAdapter={
  corrected(){for(const f of fighters){const old=rollbackPrevious?.[f.id],dx=old?old.x-f.x:0,dy=old?old.y-f.y:0;const soft=old&&f.lastHurt<=old.lastHurt&&f.hp>0&&f.grabbedBy==null&&!f.mox?.action?.grab&&!rollbackView[f.id]?.snap&&Math.hypot(dx,dy)<140;rollbackDraw[f.id]={x:soft?dx:0,y:soft&&old.ground===f.ground?dy:0};if(!soft&&f.melanta)window.MelantaVisual?.reset(f.id);}},
  present(dt=0,alpha=1){rollbackAlpha=clamp(alpha,0,1);for(const o of rollbackDraw){o.x*=Math.exp(-dt*26);o.y*=Math.exp(-dt*26);}const s=rollbackCommitted;if(!s)return;const currentPhase=phase,currentScore=score,currentMessage=rollbackMessage;phase=s.phase;score=s.score;try{document.body.classList.toggle('paused',phase==='paused');syncKOVisual();updateCountdownBanner();if(['paused','roundover','matchover'].includes(phase)&&s.rollbackMessage){const m=s.rollbackMessage;showMessage(m.sub,m.title,m.detail,phase==='paused'?'TIẾP TỤC':'SẴN SÀNG');const id=localId();$('continue').disabled=s.rollbackReady[id];$('continue').textContent=s.rollbackReady[id]?'ĐANG CHỜ ĐỐI THỦ…':phase==='paused'?'TIẾP TỤC':'SẴN SÀNG';}else $('message').hidden=true;hud();const liveFighters=fighters;fighters=s.fighters;try{syncZoneSound();}finally{fighters=liveFighters;}}finally{phase=currentPhase;score=currentScore;rollbackMessage=currentMessage;}},
 };
-window.riftGame={rollback:rollbackAdapter,renderMetrics:()=>({paintFps:fps,renderMs:renderAverage,renderScale,frameMs:frameAverage}),
+window.riftGame={rollback:rollbackAdapter,renderMetrics:()=>({paintFps:fps,renderMs:renderAverage,renderScale,frameMs:frameAverage,quality:graphicsQuality,fpsCap:graphicsFps}),
  surface:(x,y)=>cylastEnv(fighters[0]).surface(x,y),simulationTick:()=>simTick,predictAction,predictStep,reconcilePrediction,predictionMetrics:()=>({...predictionStats,clock:predictionTime}),resetPrediction(){predicted=null;predictionEnemy=null;predictionTime=0;predictionHistory=[];predictionStats.historyFrames=0;predictionOffset={x:0,y:0};keys={};},
  getPhase:()=>phase,getMode:()=>mode,getMove:()=>((keys.KeyD||keys.ArrowRight)?1:0)-((keys.KeyA||keys.ArrowLeft)?1:0),
  configure(config){$('select0').value=config.p1;$('select1').value=config.p2;mode='online';},

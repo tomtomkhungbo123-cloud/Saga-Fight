@@ -99,3 +99,5 @@ body.scene-changing #sceneFade{pointer-events:auto;touch-action:none}
 #netBadge[data-quality="fair"]::before{background:#f4cc67}
 #netBadge[data-quality="bad"]::before{background:#ff747f}
 #netBadge[hidden]{display:none}
+
+.graphics-settings{border-bottom:1px solid #ffffff20;padding:0 0 18px;margin-bottom:18px}.graphics-settings h3{margin-top:0}.graphics-settings label{display:block;font-size:12px;margin:16px 0 8px}.graphics-settings select{display:block;width:100%;min-height:44px;background:#211a2b;color:#eee5f4;border:1px solid #ffffff30;padding:10px 12px;border-radius:6px;font:inherit}.graphics-settings select:focus-visible{outline:2px solid #edcf88;outline-offset:2px}.graphics-settings p{font-size:11px;line-height:1.6;color:#b7a9bb}.graphics-settings .graphics-hint{color:#988b9d}
