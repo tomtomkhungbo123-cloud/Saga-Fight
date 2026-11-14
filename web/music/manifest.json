@@ -1,0 +1,27 @@
+{
+  "id": "bgm_forgotten_cavern_v1",
+  "map_display_name": "HANG ĐÁ LÃNG QUÊN",
+  "title": "Dư Âm Dưới Đá",
+  "version": 1,
+  "duration": 80.0,
+  "bpm": 72,
+  "key": "D minor",
+  "loop": true,
+  "loopStart": 0,
+  "loopEnd": 80.0,
+  "gain": 0.35,
+  "fadeInMs": 1500,
+  "fadeOutMs": 1200,
+  "preferred_loop_source": "Hang_Da_Lang_Quen_Loop.ogg",
+  "sources": [
+    {
+      "file": "Hang_Da_Lang_Quen_Loop.ogg",
+      "sha256": "1c347b2e94bdcadb3726716c5ec08f37157132d045312ef3b898eebacf70093e"
+    },
+    {
+      "file": "Hang_Da_Lang_Quen_Loop.mp3",
+      "sha256": "b25227083d6c44a9c256113222064ed58860c650120b5c274bc6bcfe345efe83"
+    }
+  ],
+  "map_asset": "assets/arena.png"
+}
