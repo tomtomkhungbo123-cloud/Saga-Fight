@@ -26,7 +26,7 @@ export function attachRelay(server,DB,{heartbeatMs=10000,authTimeoutMs=5000}={})
    let message;try{message=JSON.parse(bytes.toString());}catch{return close(ws,4003,'Invalid JSON');}
    if(!message||typeof message!=='object'||Array.isArray(message))return close(ws,4003,'Invalid message');
    if(!member){
-    if(authenticating||message.type!=='auth'||message.version!==78||typeof message.token!=='string'||message.token.length>200||!/^[A-Z2-9]{6}$/.test(message.code||''))return close(ws,4001,'Invalid session or version');
+    if(authenticating||message.type!=='auth'||message.version!==79||typeof message.token!=='string'||message.token.length>200||!/^[A-Z2-9]{6}$/.test(message.code||''))return close(ws,4001,'Invalid session or version');
     authenticating=true;
     try{
      const row=await DB.prepare('SELECT * FROM duel_rooms WHERE code=? AND expires_at>?').bind(message.code,Date.now()).first();
@@ -45,12 +45,14 @@ export function attachRelay(server,DB,{heartbeatMs=10000,authTimeoutMs=5000}={})
     }catch{close(ws,1011,'Room service unavailable');}
     return;
    }
+   if(message.type==='server-ping'){if(Number.isSafeInteger(message.id))control(ws,'server-pong',{id:message.id});return;}
    const allowed=member.role==='host'?['hello','ping','pong','state']:['hello','ping','pong','input','stateAck','resync'];
    if(!allowed.includes(message.type))return close(ws,4003,'Invalid player message');
    const peer=member.room[member.role==='host'?'guest':'host'];
    if(peer?.readyState!==WebSocket.OPEN)return;
    // Never keep an unbounded queue of old game snapshots behind a slow peer.
    if(peer.bufferedAmount>262144){peer.terminate();return;}
+   if(message.type==='state'&&peer.bufferedAmount>8192)return;
    peer.send(bytes,{binary:false});
   });
   ws.on('close',()=>{

@@ -1,12 +1,12 @@
 import test from 'node:test';import assert from 'node:assert/strict';import vm from 'node:vm';import fs from 'node:fs';import {api} from '../worker/index.mjs';import {localDB} from '../scripts/local-db.mjs';
 const peers=new WeakMap();
-function client(DB,link=null){let serial=0;const timers=new Map(),elements=new Map();function node(id=''){const classes=new Set();return {id,value:id==='select0'?'thunder':id==='select1'?'soul':'normal',textContent:'',style:{},hidden:false,disabled:false,dataset:{},children:[],listeners:{},classList:{add:x=>classes.add(x),remove:x=>classes.delete(x),contains:x=>classes.has(x),toggle(x,b){b??=!classes.has(x);b?classes.add(x):classes.delete(x);return b;}},firstChild:{textContent:''},parentElement:{firstChild:{textContent:''}},addEventListener(k,fn){(this.listeners[k]??=[]).push(fn);},querySelector(k){return this.parts[k]??=(node('part'));},parts:{},closest(s){if(s==='[data-do]')return this.dataset.do?this:null;if(s==='[data-hold]')return this.dataset.hold?this:null;if(s==='.touch-move')return this.dataset.hold?this:null;return null;},focus(){},setPointerCapture(){},getContext(){return {};},getBoundingClientRect(){return {width:1200,height:800};},click(){return this.onclick?.();}};}
+function client(DB,link=null,netSource=null){let serial=0;const timers=new Map(),elements=new Map();function node(id=''){const classes=new Set();return {id,value:id==='select0'?'thunder':id==='select1'?'soul':'normal',textContent:'',style:{},hidden:false,disabled:false,dataset:{},children:[],listeners:{},classList:{add:x=>classes.add(x),remove:x=>classes.delete(x),contains:x=>classes.has(x),toggle(x,b){b??=!classes.has(x);b?classes.add(x):classes.delete(x);return b;}},firstChild:{textContent:''},parentElement:{firstChild:{textContent:''}},addEventListener(k,fn){(this.listeners[k]??=[]).push(fn);},querySelector(k){return this.parts[k]??=(node('part'));},parts:{},closest(s){if(s==='[data-do]')return this.dataset.do?this:null;if(s==='[data-hold]')return this.dataset.hold?this:null;if(s==='.touch-move')return this.dataset.hold?this:null;return null;},focus(){},setPointerCapture(){},getContext(){return {};},getBoundingClientRect(){return {width:1200,height:800};},click(){return this.onclick?.();}};}
 const el=id=>{if(!elements.has(id))elements.set(id,node(id));return elements.get(id);};const hold=['KeyA','KeyD'].map(k=>Object.assign(node(k),{dataset:{hold:k}})),actions=['jump','drop','attack','q','w','e','r'].map(k=>Object.assign(node(k),{dataset:{do:k}})),modes=['pve','pvp','online'].map(k=>Object.assign(node(k),{dataset:{mode:k}}));
 const document={hidden:false,body:node('body'),activeElement:null,hit:null,elementFromPoint(){return this.hit;},getElementById:el,addEventListener(){},querySelectorAll(s){if(s==='.fighterhud')return [el('fighter0'),el('fighter1')];if(s==='[data-hold]')return hold;if(s==='[data-do]')return actions;if(s==='[data-mode]')return modes;if(s==='.touch-skills [data-do]')return actions.filter(b=>['q','w','e','r'].includes(b.dataset.do));return [];},querySelector(s){return s.includes('data-mode="online"')?modes[2]:el(s);}};
 const ctx=vm.createContext({console,Math,Map,Set,Date,JSON,URL,performance:link?{now:()=>link.now}:performance,AbortController,document,navigator:{},location:{href:'http://duel.test/'},window:{addEventListener(){}},Image:class{},devicePixelRatio:1,requestAnimationFrame(){},setTimeout(fn,ms){timers.set(++serial,{fn,ms});return serial;},clearTimeout(id){timers.delete(id);},setInterval(fn,ms){return ++serial;},clearInterval(){},async fetch(path,opts){return api(new Request('http://duel.test'+path,opts),{DB});}});
-for(const file of ['base','combat'])vm.runInContext(fs.readFileSync(new URL('../web/cylast/'+file+'.js',import.meta.url),'utf8'),ctx);for(const file of ['base','combat'])vm.runInContext(fs.readFileSync(new URL('../web/mox/'+file+'.js',import.meta.url),'utf8'),ctx);vm.runInContext(fs.readFileSync(new URL('../web/game.js',import.meta.url),'utf8'),ctx);vm.runInContext(fs.readFileSync(new URL('../web/net-codec.js',import.meta.url),'utf8'),ctx);vm.runInContext(fs.readFileSync(new URL('../web/online.js',import.meta.url),'utf8').replace('window.riftNet={','window.testTransport={channel,send,fast,inspectRoute,connectionGuard,connectSocket,queues:()=>({frames:frames.length,events:pending.length}),session:()=>session};window.riftNet={'),ctx);
+for(const file of ['base','combat'])vm.runInContext(fs.readFileSync(new URL('../web/cylast/'+file+'.js',import.meta.url),'utf8'),ctx);for(const file of ['base','combat'])vm.runInContext(fs.readFileSync(new URL('../web/mox/'+file+'.js',import.meta.url),'utf8'),ctx);vm.runInContext(fs.readFileSync(new URL('../web/game.js',import.meta.url),'utf8'),ctx);vm.runInContext(fs.readFileSync(new URL('../web/net-codec.js',import.meta.url),'utf8'),ctx);vm.runInContext((netSource||fs.readFileSync(new URL('../web/online.js',import.meta.url),'utf8')).replace('window.riftNet={','window.testTransport={channel,send,sendState,sendInput,fast,inspectRoute,connectionGuard,connectSocket,queues:()=>({frames:frames.length,events:pending.length,hostFrames:hostFrames.length}),session:()=>session};window.riftNet={'),ctx);
 const result={ctx,el,hold,actions,reconnect(){const pair=[...timers].find(([id,t])=>t.ms>=500&&t.ms<701);assert.ok(pair,'production backoff timer exists');timers.delete(pair[0]);pair[1].fn();},setHit(b){document.hit=b;},run:s=>vm.runInContext(s,ctx),async poll(){let pair;for(let i=0;i<200&&!pair;i++){await new Promise(r=>setTimeout(r,1));pair=[...timers].find(([id,t])=>t.ms===120||t.ms===1600);}assert.ok(pair,'poll timer exists');timers.delete(pair[0]);await pair[1].fn();await new Promise(setImmediate);
- const list=peers.get(DB)||[],active=list.filter(c=>c.run('!!window.testTransport.session()'));if(active.length===2){for(const c of active){const other=active.find(v=>v!==c);if(!c.run('!!window.testTransport.session().channel')){const dc={readyState:'open',bufferedAmount:0,send:text=>{const dest=other.run('window.testTransport.session()?.channel');if(link)link.send(()=>dest?.onmessage?.({data:text}),text);else dest?.onmessage?.({data:text});},close(){this.readyState='closed';}};c.ctx.testDC=dc;c.run('window.testTransport.channel(testDC)');}}for(let i=0;i<2;i++)for(const c of active)c.run('window.riftNet.frame(1/120);window.testTransport.fast(window.testTransport.session())');}
+ const list=peers.get(DB)||[],active=list.filter(c=>c.run('!!window.testTransport.session()'));if(active.length===2){for(const c of active){const other=active.find(v=>v!==c);if(!c.run('!!window.testTransport.session().channel')){const sender=c.run('window.testTransport.session().role');const dc={readyState:'open',get bufferedAmount(){return link?.buffered?.(sender)||0;},send:text=>{const dest=other.run('window.testTransport.session()?.channel');if(link)link.send(()=>dest?.onmessage?.({data:text}),text,sender);else dest?.onmessage?.({data:text});},close(){this.readyState='closed';}};c.ctx.testDC=dc;c.run('window.testTransport.channel(testDC)');}}for(let i=0;i<2;i++)for(const c of active)c.run('window.riftNet.frame(1/120);window.testTransport.fast(window.testTransport.session());if(window.testTransport.session().role==="host")window.testTransport.sendState();else window.testTransport.sendInput();');}
  },fire(button,name,id){for(const fn of button.listeners[name]||[])fn({pointerId:id,preventDefault(){}});}};(peers.get(DB)||peers.set(DB,[]).get(DB)).push(result);return result;}
 const flush=()=>new Promise(setImmediate);
 test('multitouch independent fingers, release/cancel and repeated hold pointers',()=>{const DB=localDB(),c=client(DB);try{c.run("mode='pve';start();phase='fight'");c.fire(c.hold[1],'pointerdown',1);c.fire(c.actions[0],'pointerdown',2);assert.equal(c.run('keys.KeyD'),true);assert.equal(c.run('fighters[0].jumps'),1);c.fire(c.actions[0],'pointerup',2);assert.equal(c.run('keys.KeyD'),true);c.fire(c.hold[1],'lostpointercapture',1);assert.equal(c.run('keys.KeyD'),false);c.fire(c.hold[0],'pointerdown',5);c.fire(c.hold[0],'pointerdown',6);c.fire(c.hold[0],'pointercancel',5);assert.equal(c.run('keys.KeyA'),true);c.fire(c.hold[0],'pointerup',6);assert.equal(c.run('keys.KeyA'),false);}finally{DB.close();}});
@@ -44,7 +44,7 @@ test('combat audio is host-confirmed and duplicate snapshots do not replay it',a
 test('no relay connection means no combat over HTTP',async()=>{const DB=localDB(),c=client(DB);try{await c.el('createRoom').onclick();await flush();await c.poll();assert.equal(c.run('phase'),'lobby');assert.equal(c.run('window.riftNet.blocked'),true);}finally{DB.close();}});
 
 function simulatedLink(rtt,jitter=0){return {now:0,rtt,jitter,serial:0,queue:[],outage:false,dropEvery:0,bytes:0,send(deliver,text){this.bytes+=text.length;const id=++this.serial;if(this.outage||this.dropEvery&&id%this.dropEvery===0)return;this.queue.push({at:this.now+rtt/2+(jitter?Math.sin(id*7)*jitter:0),deliver});},flush(){this.queue.sort((a,b)=>a.at-b.at);let n=0;while(this.queue[0]?.at<=this.now&&n++<1000)this.queue.shift().deliver();}};}
-async function paired(link,type='soul'){const DB=localDB(),host=client(DB,link),guest=client(DB,link);for(const c of [host,guest]){c.el('select0').value=type;c.run("mode='online'");}await host.el('createRoom').onclick();await flush();guest.el('roomCode').value=host.el('lobbyCode').textContent;await guest.el('joinRoom').onclick();await flush();await host.poll();await guest.poll();function advance(ms){for(let i=0;i<Math.ceil(ms/(1000/120));i++){link.now+=1000/120;link.flush();host.run("if(!window.riftNet.blocked&&!['paused','roundover','matchover'].includes(phase))step(1/120)");guest.run('window.riftNet.frame(1/120)');if(i%2===0)for(const c of [host,guest])c.run('window.testTransport.fast(window.testTransport.session())');link.flush();}}advance(4500);assert.equal(host.run('phase'),'fight');assert.equal(guest.run('phase'),'fight');return {DB,host,guest,advance};}
+async function paired(link,type='soul',netSource=null){const DB=localDB(),host=client(DB,link,netSource),guest=client(DB,link,netSource);for(const c of [host,guest]){c.el('select0').value=type;c.run("mode='online'");}await host.el('createRoom').onclick();await flush();guest.el('roomCode').value=host.el('lobbyCode').textContent;await guest.el('joinRoom').onclick();await flush();await host.poll();await guest.poll();function advance(ms){for(let i=0;i<Math.ceil(ms/(1000/120));i++){link.now+=1000/120;link.flush();host.run("if(!window.riftNet.blocked&&!['paused','roundover','matchover'].includes(phase))step(1/120)");guest.run('window.riftNet.frame(1/120)');if(i%2===0)for(const c of [host,guest])c.run('window.testTransport.fast(window.testTransport.session())');link.flush();}}advance(4500);assert.equal(host.run('phase'),'fight');assert.equal(guest.run('phase'),'fight');return {DB,host,guest,advance};}
 for(const rtt of [50,100,150,200])test(`simulated RTT ${rtt}ms: immediate guest movement, jump, authority, bounded reconciliation`,async()=>{const link=simulatedLink(rtt),{DB,host,guest,advance}=await paired(link);try{
  const x=guest.run('predicted.x'),hp=guest.run('fighters[0].hp');guest.run('keys.KeyA=true;window.riftNet.frame(1/120)');assert.ok(guest.run('predicted.x')<x);assert.equal(guest.run('fighters[1].x'),x);assert.equal(guest.run('fighters[0].hp'),hp);
  guest.run("localAction('jump')");assert.ok(guest.run('predicted.vy')<0);advance(300);guest.run('keys.KeyA=false');advance(1800);
@@ -105,4 +105,62 @@ test('two full game clients use real WebSocket relay for combat and recover a di
  }finally{
   for(const c of [host,guest])c.run('window.riftNet.leave()');await flush();for(const ws of sockets)ws.terminate();relay.close();await new Promise(r=>server.close(r));DB.close();
  }
+});
+
+test('WS2 reduces traffic against WS1 at 200ms RTT and keeps input processing recent',async()=>{
+ const baseline=fs.readFileSync('tests/fixtures/ws1-online.js','utf8');const measured=[];
+ for(const source of [baseline,null]){
+  const link=simulatedLink(200),{DB,host,guest,advance}=await paired(link,'soul',source);
+  try{
+   for(const c of [host,guest])c.run('window.testTransport.session().reliable=true');
+   link.bytes=0;let maxHostBacklog=0;
+   for(let i=0;i<40;i++){
+    guest.run(i%2?'keys.KeyA=false;keys.KeyD=true':'keys.KeyD=false;keys.KeyA=true');
+    if(i%8===0)guest.run("localAction('jump')");advance(200);
+    maxHostBacklog=Math.max(maxHostBacklog,host.run('window.testTransport.queues().hostFrames'));
+   }
+   const bytes=link.bytes;guest.run('keys.KeyA=false;keys.KeyD=false');advance(1500);
+   assert.equal(host.run('window.riftNet.blocked'),false);assert.equal(guest.run('window.riftNet.blocked'),false);
+   assert.ok(Math.abs(guest.run('predicted.x')-host.run('fighters[1].x'))<1);
+   measured.push({version:source?'6.18':'6.19',bytes,maxHostBacklog,staleMovesSkipped:host.run('window.riftNet.metrics().staleMovesSkipped||0')});
+  }finally{DB.close();}
+ }
+ console.log(JSON.stringify({scenario:'8s alternating movement at simulated RTT 200ms; JSON payload only',measured}));
+ assert.ok(measured[1].bytes<measured[0].bytes*.7,'at least 30% less payload');
+ assert.ok(measured[1].maxHostBacklog<=3,'old movement queue stays bounded');
+});
+
+test('WS2 never requeues sent TCP input events and measures direct server RTT',async()=>{
+ const link=simulatedLink(200),{DB,host,guest,advance}=await paired(link);try{
+  for(const c of [host,guest])c.run('window.testTransport.session().reliable=true');
+  guest.run("localAction('jump')");const queued=guest.run('window.testTransport.queues().events');assert.equal(queued,1);
+  guest.run('window.testTransport.sendInput();window.testTransport.sendInput()');
+  advance(1000);assert.equal(guest.run('window.testTransport.queues().events'),0);assert.equal(host.run('window.riftNet.blocked'),false);
+  assert.ok(guest.run('window.testTransport.session().sentInputSeq')>0);
+ }finally{DB.close();}
+});
+
+test('WS2 stays playable on a bandwidth-limited ordered link and bounds TCP queues',async()=>{
+ const link=simulatedLink(200);link.next={host:0,guest:0};link.bytesPerSecond=24000;
+ link.buffered=function(role){return Math.max(0,(this.next[role]-this.now)*this.bytesPerSecond/1000);};
+ link.send=function(deliver,text,role){this.bytes+=text.length;const start=Math.max(this.now,this.next[role]||0);this.next[role]=start+text.length/this.bytesPerSecond*1000;this.queue.push({at:this.next[role]+this.rtt/2,deliver});};
+ const {DB,host,guest,advance}=await paired(link);try{
+  for(const c of [host,guest])c.run('window.testTransport.session().reliable=true');
+  let maxBuffered=0;
+  for(let i=0;i<30;i++){guest.run(i%2?'keys.KeyA=true;keys.KeyD=false':'keys.KeyD=true;keys.KeyA=false');advance(200);maxBuffered=Math.max(maxBuffered,link.buffered('host'),link.buffered('guest'));}
+  guest.run('keys.KeyA=false;keys.KeyD=false');advance(2000);
+  assert.equal(host.run('window.riftNet.blocked'),false);assert.equal(guest.run('window.riftNet.blocked'),false);
+  assert.ok(link.buffered('host')<8192);assert.ok(guest.run('window.testTransport.queues().frames')<120);
+  console.log(JSON.stringify({scenario:'WS2 ordered 24KB/s per direction, RTT 200ms, alternating movement',maxBufferedBytes:Math.round(maxBuffered),hostBlocked:host.run('window.riftNet.blocked')}));
+ }finally{DB.close();}
+});
+
+test('guest display interpolates opponent position while gameplay state remains authoritative',async()=>{
+ const {DB,host,guest}=await paired(simulatedLink(50));try{
+  const actual=guest.run('fighters[0].x');guest.ctx.targetX=actual+80;
+  guest.run('var update=window.riftGame.snapshot();update.fighters[0]={...update.fighters[0],x:targetX};window.riftGame.receive(update)');
+  assert.equal(guest.run('fighters[0].x'),actual+80);assert.ok(guest.run('fighters[0].netDrawX')<actual+80);
+  guest.run('advanceGuest(1/60)');assert.ok(guest.run('fighters[0].netDrawX')>actual);
+  assert.equal(guest.run('fighters[0].x'),actual+80);
+ }finally{DB.close();}
 });

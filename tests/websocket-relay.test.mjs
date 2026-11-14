@@ -14,7 +14,7 @@ async function fixture(){
  async function call(name,data,token){const r=await api(new Request(origin+'/api/rooms/'+name,{method:'POST',headers:{'Content-Type':'application/json',Origin:origin,...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify(data)}),{DB});return r.json();}
  async function socket(session,options={}){
   const ws=new WebSocket(origin.replace('http:','ws:')+'/ws',{origin,...options});sockets.push(ws);const messages=[];ws.on('message',data=>messages.push(JSON.parse(data)));
-  await once(ws,'open');if(session)ws.send(JSON.stringify({type:'auth',version:78,code:session.code,token:session.token}));
+  await once(ws,'open');if(session)ws.send(JSON.stringify({type:'auth',version:79,code:session.code,token:session.token}));
   return {ws,messages};
  }
  async function wait(check){const end=Date.now()+3000;while(!check()){if(Date.now()>end)throw Error('Timed out waiting for relay');await new Promise(r=>setTimeout(r,5));}}
@@ -53,5 +53,15 @@ test('relay rejects cross-origin upgrade and handles HTTPS proxy origin',async()
   const host=await f.call('create',{});
   const secure=await f.socket(host,{origin:f.origin.replace('http:','https:'),headers:{'X-Forwarded-Proto':'https'}});
   await f.wait(()=>secure.messages.some(m=>m.event==='authenticated'));
+ }finally{await f.close();}
+});
+
+test('direct server probe is echoed locally and never forwarded to opponent',async()=>{
+ const f=await fixture();try{
+  const host=await f.call('create',{}),guest=await f.call('join',{code:host.code});
+  const h=await f.socket(host),g=await f.socket(guest);await f.wait(()=>h.messages.some(m=>m.event==='ready'));
+  h.ws.send(JSON.stringify({type:'server-ping',id:123}));
+  await f.wait(()=>h.messages.some(m=>m.event==='server-pong'&&m.id===123));
+  assert.equal(g.messages.some(m=>m.type==='server-ping'||m.event==='server-pong'),false);
  }finally{await f.close();}
 });

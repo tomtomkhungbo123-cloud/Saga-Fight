@@ -1,76 +1,70 @@
-# Saga Fight 6.18 — PvP Online qua Render WebSocket
+# Saga Fight 6.19 — tối ưu PvP WebSocket
 
-Bản cập nhật dành cho game Saga Fight 6.17 đang chạy trên Render. Không cần Cloudflare, TURN, STUN hoặc WebRTC.
-Giữ nguyên bộ nhân vật, visual, sát thương, kỹ năng, AI và cơ chế dự đoán chuyển động hiện có.
+Bản vá cho gói game GitHub/Render 6.17 hoặc 6.18 đã gửi trước đó. Không cần TURN hoặc API Token Cloudflare.
 
-## Cập nhật GitHub — quan trọng
+## 1. Cập nhật
 
-1. Giải nén ZIP trên máy tính.
-2. Mở **gốc repository Saga-Fight** trên GitHub, chọn Add file → Upload files.
-3. Kéo **nội dung bên trong ZIP**, gồm các file ở gốc và các thư mục `scripts`, `worker`, `web` vào trang upload. Không upload nguyên ZIP và không tạo thêm thư mục cha.
-4. Bấm Commit changes. Việc upload cập nhật các file trùng tên, giữ nguyên những file game cũ khác. Không xóa thư mục web hiện có.
+Giải nén ZIP, upload **toàn bộ nội dung bên trong** vào **gốc repository Saga-Fight** trên GitHub và Commit changes. Giữ đúng cấu trúc thư mục, ghi đè file trùng tên, không xóa assets/game cũ và không thêm thư mục cha.
 
-Kiểm tra đủ 7 đường dẫn sau sau khi commit:
+Các file chạy game cần có:
 
-| Đường dẫn | Vai trò |
+| Đường dẫn | Thay đổi |
 |---|---|
-| `package.json` | Khai báo thư viện WebSocket |
-| `package-lock.json` | Khóa phiên bản để npm ci cài đúng |
-| `server.mjs` | HTTP và WebSocket trên cùng cổng Render |
-| `scripts/relay.mjs` | Server relay; đây là file mới, bắt buộc có |
-| `worker/index.mjs` | API tạo/vào/đóng phòng |
-| `web/online.js` | Kết nối WebSocket và khôi phục trận |
-| `web/index.html` | Nhãn BUILD 6.18 · ONLINE WS |
+| package.json | Phiên bản 6.19, thư viện ws |
+| package-lock.json | Khóa thư viện cho npm ci |
+| server.mjs | Server và health check 6.19-ws2 |
+| scripts/relay.mjs | Relay WebSocket, giới hạn snapshot chờ, đo RTT server |
+| worker/index.mjs | API phòng, không cần TURN |
+| web/online.js | Input mới, nén hướng di chuyển, điều tiết snapshot |
+| web/game.js | Làm mượt phần hiển thị đối thủ và đạn trên guest |
+| web/index.html | BUILD 6.19 · ONLINE WS và phiên bản script mới |
 
-Không đặt file mới thành `scripts/scripts/relay.mjs` hoặc `web/web/online.js`.
-Không upload node_modules; Render cài ws bằng npm ci.
+ZIP cũng kèm kiểm thử và hướng dẫn; upload tất cả để không thiếu phụ thuộc.
 
-## Cài đặt Render
+## 2. Render
 
-Giữ service Web Service hiện có, khu vực Singapore, một instance:
+- Build Command: `npm ci`
+- Start Command: `node server.mjs` hoặc `npm start`
+- Health Check Path: `/healthz`
+- Node: 24
+- Một instance duy nhất.
+- Manual Deploy → Deploy latest commit, chờ Live.
+- Không cần biến Cloudflare/TURN; các biến cũ nếu còn sẽ không được sử dụng.
 
-| Mục | Giá trị |
-|---|---|
-| Build Command | `npm ci` |
-| Start Command | `node server.mjs` hoặc `npm start` |
-| Health Check Path | `/healthz` |
-| NODE_VERSION | `24` |
-| Root Directory | Để trống nếu package.json ở gốc repository |
-
-Không cần API Token, không thêm cổng WebSocket riêng. Có thể xóa các biến CLOUDFLARE_TURN_KEY_ID, CLOUDFLARE_TURN_API_TOKEN, TURN_RELAY_ONLY; nếu giữ, bản mới cũng không đọc hay gọi chúng.
-Chọn Manual Deploy → Deploy latest commit và chờ Live. Sau khi deploy, phòng của phiên bản cũ cần được tạo lại.
-
-## Kiểm tra đúng bản
-
-Mở link Render + `/healthz`, kết quả phải có:
+Mở link Render + `/healthz`, phải có:
 
 ```json
-{"ok":true,"build":"6.18-ws1","transport":"websocket","turnRequired":false}
+{"ok":true,"build":"6.19-ws2","transport":"websocket","turnRequired":false}
 ```
 
-Hai máy mở cùng link Render, tải lại trang. Menu phải có **BUILD 6.18 · ONLINE WS**.
-Một máy tạo phòng, máy còn lại nhập mã. Trong trận badge hiển thị **SERVER WS** cùng ping đo thực tế.
-Ping là RTT từ máy qua relay tới đối thủ và quay lại; không phải ping riêng đến Render.
+Cả hai máy tải lại cùng link Render, thấy BUILD 6.19 · ONLINE WS rồi tạo phòng mới. Không dùng chung phòng với bản cũ.
 
-Không có bước tạo Cloudflare TURN hoặc kiểm tra ICE nữa. Nếu còn thấy lỗi ICE/DataChannel hoặc lỗi API Token, ít nhất một máy hoặc bản server vẫn chưa nhận đủ file mới.
+## 3. Cải tiến
 
-## Cách hoạt động và giới hạn
+- Trên WebSocket, chỉ gửi frame input và lệnh mới, không gửi lại toàn bộ lịch sử chưa ACK trên mỗi tick. Lịch sử vẫn giữ ở guest cho dự đoán/hòa giải cho tới khi host ACK.
+- Các frame liên tiếp cùng hướng được gom thành run. Đổi hướng hoặc bấm chiêu vẫn gửi ngay, không chờ chu kỳ định kỳ.
+- Snapshot tối đa khoảng 30 Hz; khoảng 20 Hz khi RTT cao, 15 Hz khi buffer bắt đầu nghẽn. Mô phỏng combat vẫn 120 Hz; không giảm tốc độ nhân vật hoặc nhịp mô phỏng.
+- Hạn chế xếp hàng snapshot, ưu tiên dữ liệu mới. Bỏ bớt bước di chuyển đã cũ khi host nhận một lô trễ, không bỏ lệnh đánh/nhảy/kỹ năng và không chạy nhanh physics để bù.
+- Kéo giãn khoảng polling HTTP phòng khi WebSocket đã vào trận, giảm tác vụ không cần thiết trên Render.
+- Host/guest vẫn có heartbeat, tạm dừng và epoch/snapshot để khôi phục. Ngưỡng phát hiện nghẽn có tính đến RTT/jitter; không giả ping thấp hoặc bỏ kiểm tra mất đồng bộ.
+- Vị trí hiển thị đối thủ được làm mượt riêng khỏi trạng thái authoritative. Đạn trên guest có ngoại suy hiển thị tối đa 75 ms giữa snapshot; không tự tính damage phía guest.
 
-- Hai máy kết nối WSS tới `/ws` trên cùng domain Render. Server chỉ chuyển tiếp giữa hai thành viên đã xác thực trong cùng phòng. Room token gửi trong frame xác thực, không đưa vào URL.
-- Host vẫn quyết định combat, sát thương, HP và kết quả. Guest giữ dự đoán di chuyển và hòa giải với snapshot host; đây chưa phải server authoritative chống gian lận từ host.
-- Giữ mô phỏng 120 Hz, truyền dữ liệu tối đa khoảng 60 Hz. Snapshot delta, ACK, heartbeat và giới hạn buffer được giữ. Server giới hạn payload 85 KB và số message; cắt kết nối chậm thay vì xếp hàng vô hạn.
-- Mất kết nối ngắn: tạm dừng, thử lại với backoff, xóa lệnh cũ và đồng bộ snapshot/epoch trước khi tiếp tục. Sau khoảng 15 giây không khôi phục được, trở về menu với hướng dẫn tạo phòng mới.
-- WebSocket dùng TCP. Khi mạng mất gói, có thể tăng trễ do truyền lại; chuyển sang WebSocket không đảm bảo mọi mạng mượt hoặc không bao giờ mất kết nối.
-- Chỉ dùng một instance. Các socket/phòng relay nằm trong bộ nhớ instance, DB SQLite mặc định nằm trên ổ tạm. Redeploy/restart có thể kết thúc phòng, cần tạo mới.
-- Mọi dữ liệu trận đấu đi qua Render, tiêu thụ tài nguyên và băng thông Render. Gói Free vẫn có giới hạn và có thể ngủ khi không hoạt động; việc bỏ TURN không đồng nghĩa host miễn phí vô hạn.
-- Chưa triển khai vào tài khoản GitHub/Render của người dùng và chưa đo trên hai thiết bị thật khác mạng. Cần thử thực tế sau khi cập nhật.
+## 4. Đọc ping để xác định vấn đề còn lại
 
-## Nếu deploy lỗi
+- **P1/P2**: RTT đo qua relay tới đối thủ và quay về. Đây là độ trễ đường đi đầy đủ.
+- **SERVER**: RTT trực tiếp từ thiết bị hiện tại tới server Render và quay về. Chỉ báo này không phải ping của đối thủ.
+- Nếu SERVER thấp nhưng P1/P2 cao: cần so sánh SERVER của máy còn lại, tải thiết bị và tình trạng đường truyền của bên đó.
+- Nếu SERVER cũng cao trên cả hai máy: kiểm tra Region của service trên Render. Với người chơi Việt Nam, Singapore là khu vực cần thử; vị trí gần không bảo đảm tuyến mạng tốt nhất.
+- Không cần gửi token khi chụp ảnh ping. Nếu vẫn không chơi được, gửi ảnh badge P1/P2/SERVER của cả hai máy và mục Region trong Render.
 
-- Cannot find package `ws`: kiểm tra đã cập nhật cả package.json và package-lock.json; Build Command phải là npm ci.
-- Cannot find module scripts/relay.mjs: upload file này vào đúng thư mục scripts ở gốc repository.
-- Healthz vẫn là 6.17/6.17-turn1: chưa deploy commit mới hoặc đang mở nhầm link service.
-- Healthz đúng nhưng menu cũ: kiểm tra web/index.html và web/online.js đã được ghi đè, tải lại cả hai máy.
-- WebSocket kết nối thất bại: kiểm tra service đang Live, cả hai máy cùng URL, Node.js server đang chạy. Gửi log/ảnh lỗi đã che token; không gửi API token Cloudflare.
+Render không đổi được region cho một service đã tạo theo tài liệu hiện tại; nếu service nằm ở khu vực khác, cần tạo service mới ở Singapore và deploy cùng repository. Không xóa service cũ trước khi kiểm tra service mới.
 
-Tài liệu Render: https://render.com/docs/websocket
+## 5. Giới hạn kiểm chứng
+
+- Các số đo băng thông trong báo cáo đi kèm là mô phỏng JSON payload, chưa tính đầy đủ TCP/TLS và băng thông thực tế trên Internet.
+- Hạ lượng dữ liệu và hàng đợi có thể giảm trễ do nghẽn; không thể làm biến mất RTT đường truyền, TCP retransmission hoặc khoảng cách tới server.
+- Chưa deploy vào GitHub/Render của người dùng, chưa thử hai thiết bị thật khác mạng. Không tuyên bố ping thực tế đã giảm trước khi người dùng cập nhật và đo.
+- Gói Free của Render có giới hạn tài nguyên/băng thông. Khi host quá tải hoặc đường mạng không phù hợp, cần kiểm tra số đo trước khi quyết định nâng gói hay đổi hạ tầng.
+- Một instance. Redeploy/restart có thể kết thúc các phòng hiện có và cần tạo lại.
+
+Tài liệu Render: https://render.com/docs/websocket và https://render.com/docs/regions
