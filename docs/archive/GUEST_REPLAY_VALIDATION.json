@@ -1,0 +1,98 @@
+{
+  "build": "6.21-replay1",
+  "scope": "Guest snapshot restore + unacknowledged input rollback/replay; shared host fighter update and independent prediction clock. Not full two-sided combat rollback.",
+  "checks": [
+    "npm ci --offline --ignore-scripts",
+    "npm test"
+  ],
+  "tests": {
+    "passed": 87,
+    "failed": 0,
+    "skipped": 0
+  },
+  "measurements": [
+    {
+      "scenario": "isolated skill prediction vs host, 45 fixed steps without snapshot correction",
+      "comparison": [
+        {
+          "type": "melanta",
+          "skill": "q",
+          "previousMaxError": 110.83878400000003,
+          "currentMaxError": 0,
+          "previousRigError": 0,
+          "currentRigError": 0
+        },
+        {
+          "type": "mox",
+          "skill": "e",
+          "previousMaxError": 0,
+          "currentMaxError": 0,
+          "previousRigError": 374.9999999999968,
+          "currentRigError": 0
+        },
+        {
+          "type": "soul",
+          "skill": "w",
+          "previousMaxError": 0,
+          "currentMaxError": 0,
+          "previousRigError": 0,
+          "currentRigError": 0
+        },
+        {
+          "type": "thunder",
+          "skill": "w",
+          "previousMaxError": 0,
+          "currentMaxError": 0,
+          "previousRigError": 0,
+          "currentRigError": 0
+        }
+      ]
+    },
+    {
+      "scenario": "DIRECT cadence, 120Hz harness/60Hz timer, RTT20ms",
+      "snapshots": 59
+    },
+    {
+      "scenario": "Node VM CPU only; 30 runs per character; replay 24 frames per snapshot",
+      "report": [
+        {
+          "type": "thunder",
+          "frames": 24,
+          "medianMs": 1.1160190000000512,
+          "p95Ms": 1.587430000000495
+        },
+        {
+          "type": "soul",
+          "frames": 24,
+          "medianMs": 0.9956069999998363,
+          "p95Ms": 1.763295000000653
+        },
+        {
+          "type": "cylast",
+          "frames": 24,
+          "medianMs": 0.5913339999997334,
+          "p95Ms": 1.069934999999532
+        },
+        {
+          "type": "mox",
+          "frames": 24,
+          "medianMs": 0.7055739999996149,
+          "p95Ms": 0.9005720000004658
+        },
+        {
+          "type": "melanta",
+          "frames": 24,
+          "medianMs": 0.5685859999994136,
+          "p95Ms": 0.8207879999999932
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "WebRTC is mocked; only WebSocket transport uses real local TCP sockets in tests",
+    "No two physical devices, Wi-Fi router, real iOS/Safari or internet test",
+    "No deployment into user GitHub/Render",
+    "CPU/position/cadence figures are controlled Node VM tests, not real FPS or ping improvements",
+    "Damage, hit confirmation, capture and results remain host-authoritative"
+  ]
+}

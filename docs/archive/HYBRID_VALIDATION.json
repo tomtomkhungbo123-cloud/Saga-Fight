@@ -1,0 +1,32 @@
+{
+  "build": "6.20-hybrid1",
+  "checks": [
+    "npm ci --offline --ignore-scripts",
+    "npm test"
+  ],
+  "runtime": "Node.js 24.22.1; ws 8.23.0",
+  "tests": {
+    "passed": 76,
+    "failed": 0,
+    "skipped": 0
+  },
+  "coverage": [
+    "Existing gameplay, AI, visual, audio and network regression suite",
+    "Real TCP WebSocket relay with full VM game clients",
+    "Mock RTCPeerConnection and ordered reliable DataChannel negotiated through real authenticated WebSocket signaling",
+    "Host candidates only; iceServers empty; no STUN/TURN service or token",
+    "Both peers confirm DataChannel probes before host selects route and guest ACKs",
+    "Mock DIRECT combat sends no state/input packets through WebSocket relay",
+    "DIRECT failure falls back to WebSocket after pause, route ACK, epoch/full-state recovery; HP preserved; old input cleared",
+    "Blocked DIRECT attempt times out to WebSocket in same room",
+    "WebSocket reconnect during direct negotiation does not strand lobby",
+    "Room isolation and host-only route selection enforcement"
+  ],
+  "limitations": [
+    "WebRTC/UDP itself is mocked in tests, not verified on two real devices",
+    "No actual user Wi-Fi, iOS/Safari or router test",
+    "No deployment into user GitHub/Render account",
+    "No promise of a particular LAN ping, Internet latency or FPS",
+    "Render WebSocket remains required for room/control/fallback; not offline LAN mode"
+  ]
+}

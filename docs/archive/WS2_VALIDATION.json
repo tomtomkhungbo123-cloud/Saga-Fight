@@ -1,0 +1,42 @@
+{
+  "build": "6.19-ws2",
+  "runtime": "Node.js 24.22.1",
+  "checks": [
+    "npm ci --offline --ignore-scripts",
+    "npm test"
+  ],
+  "tests": {
+    "passed": 72,
+    "failed": 0,
+    "skipped": 0
+  },
+  "comparison": {
+    "scenario": "8 seconds alternating Soulblade movement and periodic jumps; simulated peer RTT 200ms; application JSON payload only",
+    "before_build": "6.18",
+    "before_bytes": 1427416,
+    "after_build": "6.19",
+    "after_bytes": 363347,
+    "reduction_percent": 74.55
+  },
+  "limited_link": {
+    "bandwidth_per_direction_bytes_per_second": 24000,
+    "simulated_peer_rtt_ms": 200,
+    "max_send_buffer_bytes": 9519,
+    "host_blocked_at_end": false
+  },
+  "coverage": [
+    "Existing gameplay/visual/audio/AI checks",
+    "Real TCP WebSocket relay with two full VM clients",
+    "Guest and host disconnect/reconnect, authority, epoch recovery",
+    "Role/origin/session isolation",
+    "TCP input batching and fresh-only send",
+    "Direct server RTT probe",
+    "Guest render interpolation separate from authoritative coordinates"
+  ],
+  "limitations": [
+    "No deployment into user GitHub or Render account",
+    "No test on two physical devices on different networks",
+    "Actual Internet RTT reduction unverified",
+    "Cannot eliminate propagation latency, TCP retransmission, server overload or hardware FPS problems"
+  ]
+}

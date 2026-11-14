@@ -1,9 +1,9 @@
 import {WebSocketServer,WebSocket} from 'ws';
 import {createHash} from 'node:crypto';
 
-// One instance owns the sockets for its rooms. The game host still resolves combat.
+// One instance owns its rooms. Both players simulate combat; host coordinates checkpoints.
 export function attachRelay(server,DB,{heartbeatMs=10000,authTimeoutMs=5000}={}){
- const wss=new WebSocketServer({noServer:true,maxPayload:85000,perMessageDeflate:false});
+ const wss=new WebSocketServer({noServer:true,maxPayload:512000,perMessageDeflate:false});
  const rooms=new Map();
  const control=(ws,event,extra={})=>{if(ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify({type:'relay',event,...extra}));};
  const close=(ws,code,reason)=>{if(ws.readyState===WebSocket.OPEN||ws.readyState===WebSocket.CONNECTING){ws.close(code,reason);const timer=setTimeout(()=>ws.terminate(),1000);timer.unref();}};
@@ -26,7 +26,7 @@ export function attachRelay(server,DB,{heartbeatMs=10000,authTimeoutMs=5000}={})
    let message;try{message=JSON.parse(bytes.toString());}catch{return close(ws,4003,'Invalid JSON');}
    if(!message||typeof message!=='object'||Array.isArray(message))return close(ws,4003,'Invalid message');
    if(!member){
-    if(authenticating||message.type!=='auth'||message.version!==80||typeof message.token!=='string'||message.token.length>200||!/^[A-Z2-9]{6}$/.test(message.code||''))return close(ws,4001,'Invalid session or version');
+    if(authenticating||message.type!=='auth'||message.version!==82||typeof message.token!=='string'||message.token.length>200||!/^[A-Z2-9]{6}$/.test(message.code||''))return close(ws,4001,'Invalid session or version');
     authenticating=true;
     try{
      const row=await DB.prepare('SELECT * FROM duel_rooms WHERE code=? AND expires_at>?').bind(message.code,Date.now()).first();
@@ -55,7 +55,8 @@ export function attachRelay(server,DB,{heartbeatMs=10000,authTimeoutMs=5000}={})
     if(['select','ack'].includes(kind)&&(!Number.isSafeInteger(message.id)||message.id<1||!['direct','ws'].includes(message.mode)))return close(ws,4003,'Invalid route selection');
     const peer=member.room[role==='host'?'guest':'host'];if(peer?.readyState===WebSocket.OPEN&&peer.bufferedAmount<32768)peer.send(bytes,{binary:false});return;
    }
-   const allowed=member.role==='host'?['hello','ping','pong','state']:['hello','ping','pong','input','stateAck','resync'];
+   const allowed=member.role==='host'?['hello','ping','pong','state','rb-init','rb-start','rb-input','rb-hash']:['hello','ping','pong','input','stateAck','resync','rb-ack','rb-input','rb-hash','rb-resync'];
+   if(bytes.length>(message.type==='rb-init'?512000:85000))return close(ws,4003,'Message too large');
    if(!allowed.includes(message.type))return close(ws,4003,'Invalid player message');
    const peer=member.room[member.role==='host'?'guest':'host'];
    if(peer?.readyState!==WebSocket.OPEN)return;

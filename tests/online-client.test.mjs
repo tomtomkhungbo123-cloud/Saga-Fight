@@ -1,10 +1,10 @@
 import test from 'node:test';import assert from 'node:assert/strict';import vm from 'node:vm';import fs from 'node:fs';import {api} from '../worker/index.mjs';import {localDB} from '../scripts/local-db.mjs';
 const peers=new WeakMap();
-function client(DB,link=null,netSource=null){let serial=0;const timers=new Map(),elements=new Map();function node(id=''){const classes=new Set();return {id,value:id==='select0'?'thunder':id==='select1'?'soul':'normal',textContent:'',style:{},hidden:false,disabled:false,dataset:{},children:[],listeners:{},classList:{add:x=>classes.add(x),remove:x=>classes.delete(x),contains:x=>classes.has(x),toggle(x,b){b??=!classes.has(x);b?classes.add(x):classes.delete(x);return b;}},firstChild:{textContent:''},parentElement:{firstChild:{textContent:''}},addEventListener(k,fn){(this.listeners[k]??=[]).push(fn);},querySelector(k){return this.parts[k]??=(node('part'));},parts:{},closest(s){if(s==='[data-do]')return this.dataset.do?this:null;if(s==='[data-hold]')return this.dataset.hold?this:null;if(s==='.touch-move')return this.dataset.hold?this:null;return null;},focus(){},setPointerCapture(){},getContext(){return {};},getBoundingClientRect(){return {width:1200,height:800};},click(){return this.onclick?.();}};}
+function client(DB,link=null,netSource=null,gameSource=null){let serial=0;const timers=new Map(),elements=new Map();function node(id=''){const classes=new Set();return {id,value:id==='select0'?'thunder':id==='select1'?'soul':'normal',textContent:'',style:{},hidden:false,disabled:false,dataset:{},children:[],listeners:{},classList:{add:x=>classes.add(x),remove:x=>classes.delete(x),contains:x=>classes.has(x),toggle(x,b){b??=!classes.has(x);b?classes.add(x):classes.delete(x);return b;}},firstChild:{textContent:''},parentElement:{firstChild:{textContent:''}},addEventListener(k,fn){(this.listeners[k]??=[]).push(fn);},querySelector(k){return this.parts[k]??=(node('part'));},parts:{},closest(s){if(s==='[data-do]')return this.dataset.do?this:null;if(s==='[data-hold]')return this.dataset.hold?this:null;if(s==='.touch-move')return this.dataset.hold?this:null;return null;},focus(){},setPointerCapture(){},getContext(){return {};},getBoundingClientRect(){return {width:1200,height:800};},click(){return this.onclick?.();}};}
 const el=id=>{if(!elements.has(id))elements.set(id,node(id));return elements.get(id);};const hold=['KeyA','KeyD'].map(k=>Object.assign(node(k),{dataset:{hold:k}})),actions=['jump','drop','attack','q','w','e','r'].map(k=>Object.assign(node(k),{dataset:{do:k}})),modes=['pve','pvp','online'].map(k=>Object.assign(node(k),{dataset:{mode:k}}));
 const document={hidden:false,body:node('body'),activeElement:null,hit:null,elementFromPoint(){return this.hit;},getElementById:el,addEventListener(){},querySelectorAll(s){if(s==='.fighterhud')return [el('fighter0'),el('fighter1')];if(s==='[data-hold]')return hold;if(s==='[data-do]')return actions;if(s==='[data-mode]')return modes;if(s==='.touch-skills [data-do]')return actions.filter(b=>['q','w','e','r'].includes(b.dataset.do));return [];},querySelector(s){return s.includes('data-mode="online"')?modes[2]:el(s);}};
 const ctx=vm.createContext({console,Math,Map,Set,Date,JSON,URL,performance:link?{now:()=>link.now}:performance,AbortController,document,navigator:{},location:{href:'http://duel.test/'},window:{addEventListener(){}},Image:class{},devicePixelRatio:1,requestAnimationFrame(){},setTimeout(fn,ms){timers.set(++serial,{fn,ms});return serial;},clearTimeout(id){timers.delete(id);},setInterval(fn,ms){return ++serial;},clearInterval(){},async fetch(path,opts){return api(new Request('http://duel.test'+path,opts),{DB});}});
-for(const file of ['base','combat'])vm.runInContext(fs.readFileSync(new URL('../web/cylast/'+file+'.js',import.meta.url),'utf8'),ctx);for(const file of ['base','combat'])vm.runInContext(fs.readFileSync(new URL('../web/mox/'+file+'.js',import.meta.url),'utf8'),ctx);vm.runInContext(fs.readFileSync(new URL('../web/game.js',import.meta.url),'utf8'),ctx);vm.runInContext(fs.readFileSync(new URL('../web/net-codec.js',import.meta.url),'utf8'),ctx);vm.runInContext((netSource||fs.readFileSync(new URL('../web/online.js',import.meta.url),'utf8')).replace('window.riftNet={','window.testTransport={channel,send,sendState,sendInput,fast,inspectRoute,connectionGuard,connectSocket,queues:()=>({frames:frames.length,events:pending.length,hostFrames:hostFrames.length}),session:()=>session};window.riftNet={'),ctx);
+for(const file of ['base','combat'])vm.runInContext(fs.readFileSync(new URL('../web/cylast/'+file+'.js',import.meta.url),'utf8'),ctx);for(const file of ['base','combat'])vm.runInContext(fs.readFileSync(new URL('../web/mox/'+file+'.js',import.meta.url),'utf8'),ctx);ctx.Path2D=class{addPath(){}};ctx.document.createElement=()=>({width:1,height:1,getContext:()=>new Proxy({},{get:(target,key)=>['createRadialGradient','createLinearGradient'].includes(key)?()=>({addColorStop(){}}):()=>{}})});for(const name of ['visual','combat'])vm.runInContext(fs.readFileSync(new URL('../web/melanta/'+name+'.js',import.meta.url),'utf8'),ctx);vm.runInContext(gameSource||fs.readFileSync(new URL('../web/game.js',import.meta.url),'utf8'),ctx);vm.runInContext(fs.readFileSync(new URL('../web/net-codec.js',import.meta.url),'utf8'),ctx);vm.runInContext((netSource||fs.readFileSync(new URL('./fixtures/legacy-online-6.21.js',import.meta.url),'utf8')).replace('window.riftNet={','window.testTransport={ticks:()=>tick,channel,send,sendState,sendInput,fast,inspectRoute,connectionGuard,connectSocket,queues:()=>({frames:frames.length,events:pending.length,hostFrames:hostFrames.length}),session:()=>session};window.riftNet={'),ctx);
 const result={ctx,el,hold,actions,expireDirect(){const pair=[...timers].find(([id,t])=>t.ms===4000);assert.ok(pair,'direct timeout exists');timers.delete(pair[0]);pair[1].fn();},reconnect(){const pair=[...timers].find(([id,t])=>t.ms>=500&&t.ms<701);assert.ok(pair,'production backoff timer exists');timers.delete(pair[0]);pair[1].fn();},setHit(b){document.hit=b;},run:s=>vm.runInContext(s,ctx),async poll(){let pair;for(let i=0;i<200&&!pair;i++){await new Promise(r=>setTimeout(r,1));pair=[...timers].find(([id,t])=>t.ms===120||t.ms===1600);}assert.ok(pair,'poll timer exists');timers.delete(pair[0]);await pair[1].fn();await new Promise(setImmediate);
  const list=peers.get(DB)||[],active=list.filter(c=>c.run('!!window.testTransport.session()'));if(active.length===2){for(const c of active){const other=active.find(v=>v!==c);if(!c.run('!!window.testTransport.session().channel')){const sender=c.run('window.testTransport.session().role');const dc={readyState:'open',get bufferedAmount(){return link?.buffered?.(sender)||0;},send:text=>{const dest=other.run('window.testTransport.session()?.channel');if(link)link.send(()=>dest?.onmessage?.({data:text}),text,sender);else dest?.onmessage?.({data:text});},close(){this.readyState='closed';}};c.ctx.testDC=dc;c.run('window.testTransport.channel(testDC)');}}for(let i=0;i<2;i++)for(const c of active)c.run('window.riftNet.frame(1/120);window.testTransport.fast(window.testTransport.session());if(window.testTransport.session().role==="host")window.testTransport.sendState();else window.testTransport.sendInput();');}
  },fire(button,name,id){for(const fn of button.listeners[name]||[])fn({pointerId:id,preventDefault(){}});}};(peers.get(DB)||peers.set(DB,[]).get(DB)).push(result);return result;}
@@ -18,7 +18,7 @@ test('two independent clients: DataChannel sync, guest controls/skill, both read
  host.run('for(let i=0;i<390;i++)step(1/120);fighters[0].hp=0;step(1/120)');await host.poll();await guest.poll();assert.equal(host.run('koFilter'),true);assert.equal(guest.run('koFilter'),false);
  host.run('pause()');await host.poll();await guest.poll();assert.equal(guest.run('phase'),'paused');assert.equal(host.run('koFilter'),true);assert.equal(guest.run('koFilter'),false);
  host.run('pause();setupRound()');await host.poll();await guest.poll();assert.equal(host.run('koFilter'),false);assert.equal(guest.run('koFilter'),false);
- host.run('window.riftNet.leave()');await flush();await guest.poll();assert.equal(guest.run('phase'),'menu');assert.equal(guest.run('window.riftNet.room'),null);await flush();
+ await host.run('window.riftNet.leave()');await guest.poll();assert.equal(guest.run('phase'),'menu');assert.equal(guest.run('window.riftNet.room'),null);await flush();
  }finally{DB.close();}});
 
 test('movement slide and skill sweep keep one next input without duplicate casts',()=>{const DB=localDB(),c=client(DB);try{c.run("mode='pvp';start();phase='fight'");c.fire(c.hold[0],'pointerdown',1);c.setHit(c.hold[1]);c.fire(c.hold[0],'pointermove',1);assert.equal(c.run('keys.KeyA'),false);assert.equal(c.run('keys.KeyD'),true);const q=c.actions.find(b=>b.dataset.do==='q'),w=c.actions.find(b=>b.dataset.do==='w'),e=c.actions.find(b=>b.dataset.do==='e');c.fire(q,'pointerdown',2);c.setHit(w);c.fire(q,'pointermove',2);c.setHit(e);c.fire(q,'pointermove',2);c.setHit(w);c.fire(q,'pointermove',2);assert.equal(c.run("fighters[0].action.k"),'q');assert.equal(c.run("fighters[0].combat.buffer.k"),'e');assert.equal(c.run("fighters[0].queue.length"),0);assert.equal(c.run('keys.KeyD'),true);c.fire(q,'pointercancel',2);assert.equal(c.run('actionPointers.size'),0);c.fire(c.hold[0],'pointerup',1);assert.equal(c.run('keys.KeyD'),false);}finally{DB.close();}});
@@ -234,4 +234,87 @@ test('WebSocket reconnect during direct negotiation completes in server mode ins
   assert.equal(f.host.run('window.riftNet.metrics().transport'),'websocket');
   assert.equal(f.guest.run('window.riftNet.metrics().transport'),'websocket');
  }finally{await f.close();}
+});
+
+for(const type of ['thunder','soul','cylast','mox','melanta'])test(`guest shared-step prediction matches host ${type} movement, jump and normal without mutating authority`,()=>{
+ const DB=localDB(),c=client(DB);try{
+  c.run(`$('select0').value='${type}';$('select1').value='${type}';mode='pvp';start();phase='fight';fighters[0].x=200;fighters[1].x=1000;fighters[1].dir=1;fighters.forEach(f=>f.y=floor(f.x));var seed=window.riftGame.snapshot();window.riftGame.reconcilePrediction([],[],seed);`);
+  for(let i=0;i<120;i++){
+   if(i===5)c.run("request(fighters[1],'jump');window.riftGame.predictAction({id:1,k:'jump',seq:5})");
+   if(i===35)c.run("request(fighters[1],'attack');window.riftGame.predictAction({id:2,k:'attack',seq:35})");
+   c.ctx.stepFrame={seq:i+1,move:i<70?1:0};
+   c.run('time+=1/120;fighters[1].move=stepFrame.move;updateFighter(fighters[1],1/120);var authorityBefore=JSON.stringify({fighters,shots,effects,shake,moxShake,time,score,sfxSerial});window.riftGame.predictStep(stepFrame,1/120)');
+   assert.equal(c.run('JSON.stringify({fighters,shots,effects,shake,moxShake,time,score,sfxSerial})'),c.run('authorityBefore'));
+   assert.ok(c.run('Math.hypot(predicted.x-fighters[1].x,predicted.y-fighters[1].y)')<1e-6,`${type} frame ${i}`);
+  }
+  assert.ok(c.run('Math.abs(window.riftGame.predictionMetrics().clock-time)')<1e-7);
+ }finally{DB.close();}
+});
+
+test('input rollback advances its own clock, replays cooldowns and preserves global clock/sound/HP',()=>{
+ const DB=localDB(),c=client(DB);try{
+  c.run("$('select0').value='soul';$('select1').value='soul';mode='pvp';start();phase='fight';fighters[0].x=200;fighters[1].x=1000;fighters[1].cd.q=.2;var seed=window.riftGame.snapshot();var realBefore=JSON.stringify({fighters,shots,effects,time,score,sfxSerial});var replayFrames=Array.from({length:60},(_,i)=>({seq:i+1,move:1}));window.riftGame.reconcilePrediction(replayFrames,[],seed)");
+  assert.equal(c.run('JSON.stringify({fighters,shots,effects,time,score,sfxSerial})'),c.run('realBefore'));
+  assert.equal(c.run('predicted.cd.q'),0);assert.ok(c.run('Math.abs(predictionTime-seed.time-.5)')<1e-7);
+  assert.equal(c.run('window.riftGame.predictionMetrics().lastReplayFrames'),60);
+  c.run('window.riftGame.resetPrediction()');assert.equal(c.run('window.riftGame.predictionMetrics().historyFrames'),0);
+ }finally{DB.close();}
+});
+
+test('shared-step replay fixes Melanta hop and Mox rig mismatch against 6.20',()=>{
+ const previousGame=fs.readFileSync('tests/fixtures/guest-game-6.20.js','utf8');const comparison=[];
+ for(const [type,skill] of [['melanta','q'],['mox','e'],['soul','w'],['thunder','w']]){
+  const errors=[],rigErrors=[];
+  for(const source of [previousGame,null]){
+   const DB=localDB(),c=client(DB,null,null,source);try{
+    c.run(`$('select0').value='${type}';$('select1').value='${type}';mode='pvp';start();phase='fight';fighters[0].x=200;fighters[1].x=1000;fighters[1].dir=1;fighters.forEach(f=>f.y=floor(f.x));var seed=window.riftGame.snapshot();window.riftGame.reconcilePrediction([],[],seed);request(fighters[1],'${skill}');window.riftGame.predictAction({id:1,k:'${skill}',seq:0});`);
+    let maxError=0,maxRigError=0;for(let i=0;i<45;i++){
+     c.ctx.stepFrame={seq:i+1,move:0};c.run('time+=1/120;fighters[1].move=0;updateFighter(fighters[1],1/120);window.riftGame.predictStep(stepFrame,1/120)');
+     maxError=Math.max(maxError,c.run('Math.hypot(predicted.x-fighters[1].x,predicted.y-fighters[1].y)'));if(type==='mox')maxRigError=Math.max(maxRigError,c.run('Math.abs(predicted.mox.p.x-fighters[1].mox.p.x)'));
+    }
+    errors.push(maxError);rigErrors.push(maxRigError);
+   }finally{DB.close();}
+  }
+  comparison.push({type,skill,previousMaxError:errors[0],currentMaxError:errors[1],previousRigError:rigErrors[0],currentRigError:rigErrors[1]});assert.ok(errors[1]<1e-6,`${type} matches shared host step`);
+ }
+ console.log(JSON.stringify({scenario:'isolated skill prediction vs host, 45 fixed steps without snapshot correction',comparison}));
+ assert.ok(comparison[0].previousMaxError>10,'baseline Melanta hop visibly diverged');
+});
+
+test('guest replay predicts gravity while stunned and resumes movement at the same tick as host',()=>{
+ const DB=localDB(),c=client(DB);try{
+  c.run("mode='pvp';start();phase='fight';fighters[1].ground=false;fighters[1].y-=180;fighters[1].vy=100;fighters[1].stunUntil=time+.1;var seed=window.riftGame.snapshot();window.riftGame.reconcilePrediction([],[],seed)");
+  for(let i=0;i<40;i++){c.ctx.frameData={seq:i+1,move:1};c.run('time+=1/120;fighters[1].move=1;updateFighter(fighters[1],1/120);window.riftGame.predictStep(frameData,1/120)');assert.ok(c.run('Math.hypot(predicted.x-fighters[1].x,predicted.y-fighters[1].y)')<1e-6);}
+ }finally{DB.close();}
+});
+
+test('DIRECT fixed scheduler sends near 60 snapshots per second without timer-rounding slowdown',async()=>{
+ const link=simulatedLink(20),{DB,host,guest,advance}=await paired(link);try{
+  for(const c of [host,guest])c.run("var n=window.testTransport.session();n.directChannel=n.channel;n.activeRoute='direct';n.reliable=true");
+  const before=host.run('window.testTransport.ticks()');advance(1000);const count=host.run('window.testTransport.ticks()')-before;
+  assert.ok(count>=55&&count<=62,`actual snapshot cadence ${count}/s`);assert.equal(host.run('window.riftNet.metrics().snapshotHz'),60);
+  console.log(JSON.stringify({scenario:'DIRECT cadence, 120Hz harness/60Hz timer, RTT20ms',snapshots:count}));
+ }finally{DB.close();}
+});
+
+test('rollback input history is bounded and replay does not duplicate HP, sound, projectiles or camera',()=>{
+ const DB=localDB(),c=client(DB);try{
+  c.run("$('select0').value='thunder';$('select1').value='thunder';mode='pvp';start();phase='fight';fighters[0].x=500;fighters[1].x=550;var seed=window.riftGame.snapshot();var untouched=JSON.stringify({fighters,time,shots,effects,shake,moxShake,sfxSerial,score});var longFrames=Array.from({length:500},(_,i)=>({seq:i+1,move:0}));window.riftGame.reconcilePrediction(longFrames,[{id:1,k:'r',seq:261}],seed)");
+  assert.equal(c.run('JSON.stringify({fighters,time,shots,effects,shake,moxShake,sfxSerial,score})'),c.run('untouched'));
+  assert.equal(c.run('window.riftGame.predictionMetrics().historyFrames'),240);
+  assert.equal(c.run('window.riftGame.predictionMetrics().lastReplayFrames'),240);
+ }finally{DB.close();}
+});
+
+test('bounded guest replay cost is measured for all five character updates',()=>{
+ const report=[];
+ for(const type of ['thunder','soul','cylast','mox','melanta']){
+  const DB=localDB(),c=client(DB);try{
+   c.run(`$('select0').value='${type}';$('select1').value='${type}';mode='pvp';start();phase='fight';var seed=window.riftGame.snapshot();var framesForCost=Array.from({length:24},(_,i)=>({seq:i+1,move:1}))`);
+   const costs=[];for(let i=0;i<30;i++){c.run('window.riftGame.reconcilePrediction(framesForCost,[],seed)');costs.push(c.run('window.riftGame.predictionMetrics().lastReplayMs'));}
+   costs.sort((a,b)=>a-b);report.push({type,frames:24,medianMs:costs[15],p95Ms:costs[28]});
+   assert.ok(c.run('window.riftGame.predictionMetrics().historyFrames')<=240);
+  }finally{DB.close();}
+ }
+ console.log(JSON.stringify({scenario:'Node VM CPU only; 30 runs per character; replay 24 frames per snapshot',report}));
 });
