@@ -91,3 +91,11 @@ body.scene-changing #sceneFade{pointer-events:auto;touch-action:none}
 @media(prefers-reduced-motion:reduce){.fighter-summary,.fighter-card{transition:none}}
 
 @media(max-width:550px){.fighter-picker-grid>.fighter-card:last-child:nth-child(odd){grid-column:1/-1;justify-self:center;width:calc((100% - 10px)/2)}}
+
+/* Compact live peer RTT. Route/debug detail remains in the tooltip and metrics. */
+#netBadge{display:flex;align-items:center;gap:6px;padding:5px 8px;font-size:11px;line-height:1;letter-spacing:0;font-variant-numeric:tabular-nums;color:#e9e8ec;border-color:#ffffff24;min-height:24px}
+#netBadge::before{content:"";width:7px;height:7px;flex:0 0 7px;border-radius:50%;background:#9a97a4}
+#netBadge[data-quality="good"]::before{background:#6ee7a0}
+#netBadge[data-quality="fair"]::before{background:#f4cc67}
+#netBadge[data-quality="bad"]::before{background:#ff747f}
+#netBadge[hidden]{display:none}

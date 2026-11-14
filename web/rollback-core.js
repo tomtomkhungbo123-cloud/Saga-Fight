@@ -25,5 +25,5 @@ class Rollback {
  checkpoint(){return this.states.get(this.confirmed);}
  digest(t=this.confirmed){const s=this.states.get(t);return s?{tick:t,hash:hash(s)}:null;}
 }
-window.SagaRollback={build:'6.22.1',Rollback,pack,unpack,hash,canonicalize};
+window.SagaRollback={build:'6.22.2',Rollback,pack,unpack,hash,canonicalize};
 })();

@@ -1,8 +1,6 @@
-Saga Fight 6.22.1 recovery hotfix — 2026-11-14
-Node.js 24.22.1; npm test: 125 passed, 0 failed, 0 skipped, 0 cancelled.
-Regression reproduced before fix: 45 ms delayed control sends caused the checkpoint handshake to time out.
-Fixed: guest awaiting START no longer requests a new checkpoint; ACK/START retries are idempotent; RESYNC requests are throttled; active-checkpoint watchdogs do not restart initialization.
-Verified after fix: 45 ms / 120 ms delayed control, first START dropped, actual frame callback scheduling at 60/30 Hz, one recovery on DIRECT-to-WS switch, mixed-build rejection, prior symmetric rollback/25 fighter pairings, deliberate checksum repair, socket reconnect, combat/render/server regressions.
-Protocol 83. UI BUILD 6.22.1. Health build 6.22.1-recovery1.
-Not yet verified: user's Render deployment, physical device/internet tests, native browser WebRTC. Automated native Chromium could not launch in this environment.
-Detailed reproduction: docs/recovery-6.22.1.md. Full run: docs/validation-6.22.1.txt.
+Saga Fight 6.22.2 — compact ping and preferred DIRECT
+2026-11-14; Node 24.22.1; npm test: 128 passed, 0 failed, 0 skipped, 0 cancelled.
+Focused UI/DIRECT tests rerun: 3 passed after explicit hidden styling.
+Covers real peer RTT and color; background WS-to-DIRECT upgrade; failed background trial leaves WS unblocked; prior recovery-race fix; full rollback/25 fighter pairings; combat, render, relay and HTTP regressions.
+Protocol 84; UI BUILD 6.22.2; health 6.22.2-direct1.
+WebRTC is mocked in integration tests, WS is real local. Physical two-device Wi-Fi/internet/browser compatibility and mobile FPS are not verified.
