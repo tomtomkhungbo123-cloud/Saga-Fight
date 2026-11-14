@@ -1,6 +1,15 @@
-# Saga Fight 6.22.2 — Rollback hai chiều
+# Saga Fight 6.22.3 — Rollback hai chiều
 
-Bản 6.22.2 thu gọn thanh mạng còn chấm màu và RTT giữa hai máy, ưu tiên DIRECT và có thử lại ở nền khi đang dùng WS. Giữ bản sửa vòng lặp ACK/START của 6.22.1. Không cần TURN.
+Bản 6.22.3 thêm nội suy hình ảnh giữa các tick cho cả chủ phòng/người tham gia và giữ animation Melanta khi có sửa dự đoán nhỏ. Giữ thanh ping gọn, ưu tiên DIRECT và bản sửa vòng lặp ACK/START. Không cần TURN.
+
+## Sửa hiển thị đối phương
+
+- Hình vẽ lấy hai vị trí tick gần nhất để nội suy theo thời gian còn dư của frame; độ trễ vẽ bổ sung tối đa một tick 120 Hz (~8,3 ms), không thêm bộ đệm mạng dài cho riêng đối phương.
+- Hitbox/sát thương/cooldown vẫn dùng trạng thái mô phỏng. Chỉnh vị trí nhỏ chỉ ảnh hưởng hình vẽ. Trúng đòn, bắt giữ, hạ gục, chuyển pha và nhảy vị trí lớn cập nhật ngay.
+- Không xóa toàn bộ bộ nhớ animation Melanta sau mỗi rollback nhỏ. Chỉnh lớn chỉ reset nhân vật liên quan; checkpoint mới thì reset lớp hiển thị.
+- Giữ bộ đếm render cục bộ trong `window.riftNet.metrics().render` để phân biệt ping cao với máy vẽ chậm. Thanh hiển thị vẫn chỉ có ping và chấm màu.
+
+Chi tiết và giới hạn: `docs/smooth-view-6.22.3.md`.
 
 - Xanh: ping không quá 80 ms và jitter không quá 40 ms.
 - Vàng: ping 81–150 ms hoặc jitter 41–80 ms.
@@ -14,15 +23,15 @@ Trình duyệt không xác định chắc chắn hai máy có cùng Wi-Fi/SSID. 
 
 Chi tiết: `docs/ping-direct-6.22.2.md`.
 
-Nếu đang dùng gói `Saga_Fight_6_22_2_Ping_DIRECT.zip`, đây là bản vá cho bộ 6.22 đang có, không phải bộ cài mới. Giải nén rồi ghi đè toàn bộ file trong gói vào đúng đường dẫn ở gốc repository (kể cả `web/style.css`); giữ các asset/thư mục khác đang có. Các file chạy game cần thay cùng nhau:
+Nếu đang dùng gói `Saga_Fight_6_22_3_Smooth_Opponent.zip`, đây là bản vá cho bộ 6.22/6.22.1/6.22.2 đang có, không phải bộ cài mới. Giải nén rồi ghi đè toàn bộ file trong gói vào đúng đường dẫn ở gốc repository (kể cả `web/style.css` và `web/melanta/visual.js`); giữ các asset/thư mục khác đang có. Các file chạy game cần thay cùng nhau:
 
 - `server.mjs`, `package.json`, `package-lock.json`
 - `scripts/relay.mjs`
 - `web/index.html`, `web/game.js`, `web/online.js`, `web/rollback-core.js`
 
-Gói cũng cập nhật kiểm thử và tài liệu. Commit các thay đổi, Render → Manual Deploy → Deploy latest commit. Giữ Build Command `npm ci`, Start Command `npm start`. Chờ Live. Mở `/healthz`: phải thấy `6.22.2-direct1`, protocol 84. Hai máy tải lại và tạo phòng mới. Bản cũ dùng giao thức 82/83 không chơi chung với bản này.
+Gói cũng cập nhật kiểm thử và tài liệu. Commit các thay đổi, Render → Manual Deploy → Deploy latest commit. Giữ Build Command `npm ci`, Start Command `npm start`. Chờ Live. Mở `/healthz`: phải thấy `6.22.3-view1`, protocol 85. Hai máy tải lại và tạo phòng mới. Bản cũ dùng giao thức 82/83/84 không chơi chung với bản này.
 
-Chi tiết nguyên nhân và kiểm chứng: `docs/recovery-6.22.2.md`.
+Chi tiết nguyên nhân và kiểm chứng: `docs/recovery-6.22.3.md`.
 
 ## Cập nhật lên Render đang có
 
@@ -30,7 +39,7 @@ Chi tiết nguyên nhân và kiểm chứng: `docs/recovery-6.22.2.md`.
 2. Commit thay đổi lên nhánh `main`.
 3. Render → service `saga-fight` → Settings: Root Directory để trống nếu `package.json` ở gốc; Build Command `npm ci`; Start Command `npm start`. Runtime Node 24. Giữ loại **Web Service**.
 4. Render → Manual Deploy → Deploy latest commit. Chờ trạng thái **Live**.
-5. Hai máy đóng tab game cũ, mở lại cùng URL. Phải thấy **BUILD 6.22.2 · ROLLBACK · DIRECT + WS**. Nếu còn bản cũ, tải lại bỏ cache hoặc xóa dữ liệu website. Tạo phòng mới; phòng/phiên của bản cũ không dùng chung với bản này.
+5. Hai máy đóng tab game cũ, mở lại cùng URL. Phải thấy **BUILD 6.22.3 · ROLLBACK · DIRECT + WS**. Nếu còn bản cũ, tải lại bỏ cache hoặc xóa dữ liệu website. Tạo phòng mới; phòng/phiên của bản cũ không dùng chung với bản này.
 6. Không cần các biến `CLOUDFLARE_TURN_KEY_ID` và `CLOUDFLARE_TURN_API_TOKEN`.
 
 Nếu tạo service mới bằng Blueprint, dùng `render.yaml` có sẵn. Service dùng một instance; room/socket nằm trong bộ nhớ instance, khởi động lại service sẽ ngắt các phòng đang chơi.
@@ -58,8 +67,8 @@ Mở `http://localhost:3000` nếu không đặt `PORT` khác. Để chạy ki�
 
 ## Kiểm tra sau cập nhật
 
-- `/healthz` phải trả về `build: "6.22.2-direct1"`.
-- Cả hai máy phải thấy cùng BUILD 6.22.2 và badge `ROLLBACK`, đường truyền `DIRECT` hoặc `SERVER WS`, ping P1/P2 thực tế.
+- `/healthz` phải trả về `build: "6.22.3-view1"`.
+- Cả hai máy phải thấy cùng BUILD 6.22.3 và badge `ROLLBACK`, đường truyền `DIRECT` hoặc `SERVER WS`, ping P1/P2 thực tế.
 - Chung Wi-Fi: thử cả hai vai trò chủ phòng/tham gia; di chuyển, nhảy, đánh thường, Q/W/E/R, đổi dạng Mox, bắt giữ, đóng băng, pause/resume, sang hiệp mới.
 - Giữ màn hình và tab game hoạt động khi đấu. Tab nền có thể bị trình duyệt dừng mô phỏng.
 - Thông tin đo nằm ở `window.riftNet.metrics()`; trường `rollback` có tick hiện tại, tick xác nhận, số lần/tick đã replay và số lần chờ input.

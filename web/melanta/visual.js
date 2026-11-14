@@ -495,6 +495,6 @@ window.MelantaVisual={
  front(context,f,enemy,clock,surface){bind(context,f,enemy,clock,surface);stunMist(game.e,true);if(f.melanta?.a?.k!=='w'||!f.melanta.a.locked)return;if(!rig.wWrap?.length)return;const pts=[rig.wRope.nodes.at(-1),...rig.wWrap],end=pts.at(-1),prev=pts.at(-2);curveStroke(pts,'#bc79d51c',10);curveStroke(pts,'#bf7cda',2.5);curveStroke(pts,'#ecc0fa',.65);blade(end.x,ground+end.y,Math.atan2(end.y-prev.y,end.x-prev.x)-.3,.8);},
  frame(context,f,enemy,clock,surface,width=1600,height=1120){bind(context,f,enemy,clock,surface);ultFrame.draw(context,width,height,healStar,false);},
  finisher(context,f,enemy,clock,surface,elapsed,width=1600,height=1120){const state=bind(context,f,enemy,clock,surface);W=width;H=height;game.matchState='finishing';if(!state.finishAction||elapsed<state.finishAction.t)state.finishAction={t:0,duration:2,dir:f.dir};const action=state.finishAction;action.t=elapsed;game.finisher=action;finisherScene=state.finish??=(new FinisherScene());finisherScene.update(1/120,action);drawFinisher(action);},
- reset(){actors.clear();}
+ reset(id){if(id===undefined)actors.clear();else actors.delete(id);}
 };
 })();
