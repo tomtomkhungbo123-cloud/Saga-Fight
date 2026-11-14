@@ -1,0 +1,8 @@
+Saga Fight 6.17 - Render export
+Source commit: 76afb6b0bc90d8386b35e3553cb9a4edfb8999d6
+Runtime tested: Node.js 24.22.1
+Result: npm test - 67 passed, 0 failed, 0 skipped.
+Includes HTTP server integration: HTTPS proxy same-origin validation, page serving, health check, room create/join, offer/answer exchange, leave, request limit, cross-origin denial.
+The historical audio regression test uses a checked-in manifest and SHA-256 baseline extracted from original commit 7d33ca59bd238abde0f9f577f7be63a762a7c8ca, replacing its dependency on private Git history.
+Source web/ and worker/ are unchanged. Node HTTP adapter and Render deployment files added.
+Not verified: actual Render deployment, two-device WebRTC, iOS performance or improved latency. No TURN fallback included.
