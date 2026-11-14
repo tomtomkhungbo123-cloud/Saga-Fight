@@ -1,0 +1,106 @@
+{
+  "version": 2,
+  "patchOnly": true,
+  "character": "Soulblade",
+  "basePack": "Saga_SFX_v1",
+  "sampleRate": 48000,
+  "format": "PCM 16-bit mono",
+  "sounds": [
+    {
+      "id": "soulblade_slash_1",
+      "group": "Soulblade",
+      "label": "Chém thường 1",
+      "event": "soulblade.normal.1",
+      "file": "wav/soulblade_slash_1.wav",
+      "duration": 0.425,
+      "gain": 0.67,
+      "priority": 1,
+      "replace_existing": true,
+      "sha256": "0bbe426076968dea2847ca402ba6b97cb818e7fe3690296c6aff3f27d4a73fe7"
+    },
+    {
+      "id": "soulblade_slash_2",
+      "group": "Soulblade",
+      "label": "Chém thường 2",
+      "event": "soulblade.normal.2",
+      "file": "wav/soulblade_slash_2.wav",
+      "duration": 0.46,
+      "gain": 0.67,
+      "priority": 1,
+      "replace_existing": true,
+      "sha256": "eaae044a38e4bbeecfc3a6f3d1d85432f5437ae8a4cdf07ce614b85b634ac067"
+    },
+    {
+      "id": "soulblade_slash_3",
+      "group": "Soulblade",
+      "label": "Chém thường 3",
+      "event": "soulblade.normal.3",
+      "file": "wav/soulblade_slash_3.wav",
+      "duration": 0.495,
+      "gain": 0.67,
+      "priority": 1,
+      "replace_existing": true,
+      "sha256": "aefc16a0c12ce596a4b3f74747a6000b27578fbe2352182f5096d8c34c20f8f2"
+    },
+    {
+      "id": "soulblade_q_spin",
+      "group": "Soulblade",
+      "label": "Q · Xoáy kiếm",
+      "event": "soulblade.q.cast",
+      "file": "wav/soulblade_q_spin.wav",
+      "duration": 0.72,
+      "gain": 0.67,
+      "priority": 1,
+      "replace_existing": true,
+      "sha256": "45ecd8b4fdc296b2f55c8d2c0282305958d9464b561b8a796dbdabcffaee871a"
+    },
+    {
+      "id": "soulblade_w_throw",
+      "group": "Soulblade",
+      "label": "W · Phi kiếm",
+      "event": "soulblade.w.throw",
+      "file": "wav/soulblade_w_throw.wav",
+      "duration": 0.56,
+      "gain": 0.67,
+      "priority": 1,
+      "replace_existing": true,
+      "sha256": "28965efe19dbafa9dddf02e20a8f03873ca2b98be60d10a3e27eab7af5b00100"
+    },
+    {
+      "id": "soulblade_w_blink",
+      "group": "Soulblade",
+      "label": "W · Dịch chuyển chém",
+      "event": "soulblade.w.blink",
+      "file": "wav/soulblade_w_blink.wav",
+      "duration": 0.76,
+      "gain": 0.67,
+      "priority": 1,
+      "replace_existing": true,
+      "sha256": "324ccdd6f0a6d087ba7bfea41a283e9a90e18c9114d02f8bde33de68258d040b"
+    },
+    {
+      "id": "soulblade_r_cast",
+      "group": "Soulblade",
+      "label": "R · Khởi chiêu",
+      "event": "soulblade.r.cast",
+      "file": "wav/soulblade_r_cast.wav",
+      "duration": 1.03,
+      "gain": 0.76,
+      "priority": 2,
+      "replace_existing": true,
+      "sha256": "6aa0bc0c2e5a47aa80537b8c51aa55fc6da17619b62c3a27102fe13d044b6380"
+    },
+    {
+      "id": "soulblade_bleed_explode",
+      "group": "Soulblade",
+      "label": "Xuất huyết phát nổ",
+      "event": "soulblade.bleed.explode",
+      "file": "wav/soulblade_bleed_explode.wav",
+      "duration": 1.26,
+      "gain": 0.76,
+      "priority": 2,
+      "replace_existing": true,
+      "sha256": "4432bbb53219ebe54a72dcedd096f10fa96b100329ae6da4eab3d9664e629fb8"
+    }
+  ]
+}

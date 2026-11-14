@@ -1,0 +1,88 @@
+{
+  "version": 2,
+  "patchOnly": true,
+  "character": "Thunder Stance",
+  "basePack": "Saga_SFX_v1",
+  "sampleRate": 48000,
+  "format": "PCM 16-bit mono",
+  "sounds": [
+    {
+      "id": "thunder_normal",
+      "group": "Thunder Stance",
+      "label": "Đánh thường · Sét",
+      "event": "thunder.normal.cast",
+      "file": "wav/thunder_normal.wav",
+      "duration": 0.48,
+      "gain": 0.62,
+      "priority": 1,
+      "sha256": "240846159e1e8cfa998bb128c78128c7d11dff1e494f6018a349dde2854b7b8a",
+      "replace_existing": true,
+      "max_instances": 3
+    },
+    {
+      "id": "thunder_q_bolt",
+      "group": "Thunder Stance",
+      "label": "Q · Phóng sét",
+      "event": "thunder.q.release",
+      "file": "wav/thunder_q_bolt.wav",
+      "duration": 0.77,
+      "gain": 0.7,
+      "priority": 1,
+      "sha256": "4da9f25ed98ae3035d6e83334ded33549a00e83a52a09de970c7af3211f5a7c7",
+      "replace_existing": true,
+      "max_instances": 3
+    },
+    {
+      "id": "thunder_w_orb",
+      "group": "Thunder Stance",
+      "label": "W · Tung cầu sét",
+      "event": "thunder.w.orb",
+      "file": "wav/thunder_w_orb.wav",
+      "duration": 0.48,
+      "gain": 0.48,
+      "priority": 1,
+      "sha256": "a71baf4904edb0fe80f6de9be9a31d6f0dfeb6949b2e369a44a8b40d3cc8b862",
+      "replace_existing": true,
+      "max_instances": 3
+    },
+    {
+      "id": "thunder_w_stomp",
+      "group": "Thunder Stance",
+      "label": "W · Giậm điện",
+      "event": "thunder.w.stomp",
+      "file": "wav/thunder_w_stomp.wav",
+      "duration": 1.02,
+      "gain": 0.76,
+      "priority": 2,
+      "sha256": "55273c18d1dd9723b334728d7d28d8cda3ecf52cc44abd0fe834ebf784f34fd4",
+      "replace_existing": true,
+      "max_instances": 3
+    },
+    {
+      "id": "thunder_e_teleport",
+      "group": "Thunder Stance",
+      "label": "E · Lướt sét",
+      "event": "thunder.e.teleport",
+      "file": "wav/thunder_e_teleport.wav",
+      "duration": 0.4,
+      "gain": 0.6,
+      "priority": 1,
+      "sha256": "65a88fd1ba76e904f30a0f09ca4cc605db2c79707f7a2fb689b30158d3871c06",
+      "replace_existing": true,
+      "max_instances": 3
+    },
+    {
+      "id": "thunder_r_strike",
+      "group": "Thunder Stance",
+      "label": "R · Sét giáng (mỗi tia)",
+      "event": "thunder.r.strike",
+      "file": "wav/thunder_r_strike.wav",
+      "duration": 1.38,
+      "gain": 0.8,
+      "priority": 2,
+      "sha256": "a5928acff1fdfb1eae674005de363457c0f7ecf73453f07d8285a782f8bea783",
+      "replace_existing": true,
+      "max_instances": 2
+    }
+  ]
+}

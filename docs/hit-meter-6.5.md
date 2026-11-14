@@ -1,0 +1,13 @@
+# Authoritative HIT / DAMAGE HUD —6.5
+
+Every fighter/mode now has a source/target-scoped hitMeter in its existing serialized fighter state. One common damage() commit path measures actual HP-before minus HP-after and shield absorption. HP-loss contacts increment HIT; fully absorbed contacts show SHIELD separately without adding HP DAMAGE or HIT. Overkill excluded. Sandbox uses actual HP loss too, retaining its1HP training floor/regen and all combat rules. Its cumulative training totals were aligned with the same real loss convention.
+
+Lifecycle uses existing startCombo/endCombo, target identity and combo ID. Existing defensive-opportunity termination remains; no1.5second timeout added because the engine already has explicit combo boundaries. DOT is recorded per genuine commit, joins a still-continuous combo only while target remains locked, and does not keep that combo alive. A DOT tick after recovery is a new isolated one-hit result. Multi-hit cast totals are not mislabeled as true combo: replaced prior independent per-cast popup override with unified HUD. Existing strict5hit combo milestone popup remains. No damage/cooldown/cancel/hitstun/scaling modification.
+
+Static two-row HUD under each fighter's health/skill area. HIT, HP DAMAGE and optional SHIELD update on commit; small scale pulse. Ended results hold1second, fade0.4seconds using local presentation clock, even during slowmotion/results. Tuning in HIT_METER_CONFIG. New rounds/restart/menu reset counters and view state. No per-frame DOM creation, canvas or particle effects.
+
+Online: no new network messages. Host commits meter; fighter snapshot/delta carries it. Guest replaces confirmed values and does not locally increment on replay; prediction guards prevent counter/UI mutation. Protocol65 handshake forces matching clients. Existing hit-ID guard precedes accounting.
+
+Validation:57 Node test entries checked. New assertions:500HP +40/60/100=3HIT/200; duplicate IDs, overkillcap, shield70thenoverflow20HP/30shield in a new chain, evasion, DOT joined vs recovered, sandbox100hit vs10HP→9actualHP loss, hold/fade/reset, real SoulQ4hits/95damage, MoxN1→R2hits/455. Two independent VMhost/guest clients compare exact meter JSON and resend duplicate snapshots without changes. Existing native rendering, skills, audio and network-latency regressions retained. Browser preview PvE rendered1HIT/240DAMAGE under CPU health after Soul slam. Physical mobile/real two-device Wi-Fi notverified this turn; two-client network tests are simulated DataChannel application handlers.
+
+Checkpoint fc1a38cc / checkpoint-before-hit-meter-6.5.

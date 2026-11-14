@@ -1,0 +1,12 @@
+{
+  "character": "Cylast",
+  "build": "1.9",
+  "source_commit": "183f7919871a6811b01b951ed2ceaadf797eadf3",
+  "source_project_id": "appgprj_6af2e6d3e2308191a32ce086c5be93ea",
+  "engine_sha256": "e1fe6211e634049c6718ed0eec77a40a5175fb69818ca95be9d5cf8f3294eeda",
+  "renderer_sha256": "efd05be6cdac978c73b38ca1ec22568f0f6aa868228654986f02d2b029219b13",
+  "visual_policy": "Original character, pose spring and VFX drawing functions copied verbatim. Integration wrappers convert coordinates only.",
+  "copied_helpers_sha256": "c8ad86530b3045c58d007ba01b9ca5d83507ef088abbbf1f742e49274caa70cb",
+  "copied_renderer_sha256": "20a1f1d45eeef792f6feda07cdb6f15c1c5a08d5912a870892b2bec510d5bc7c",
+  "validation": "36 pixel-identical native Canvas character samples (idle, attack, Q/W/E/R; both directions); cached VFX rendered successfully."
+}
