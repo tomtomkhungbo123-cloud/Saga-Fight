@@ -1,9 +1,5 @@
-Saga Fight 6.23.0 — Fairi GitHub / Render
-Date: 2026-11-15
-Fairi source: main Site version 53, commit de917660f88e024308a11bd3b6ca4fc82daf8f52
-Netcode base: Render export 6.22.5; protocol 87; Node 24.22.1.
-
-npm test: 166 passed, 0 failed, 0 skipped (21.8 seconds).
-Includes native Fairi combat, AI, real canvas E/R rendering and reference body-color pixel checks; all 36 ordered fighter pair restore/replay cases; Fairi clone determinism under perturbed trig; native render nonmutation; production DIRECT Fairi mirror E/R with equal world hash; real WebSocket relay and reconnect; clock pacing, DIRECT-only policy, graphics 30/60 FPS and smooth-view regressions.
-
-Not tested on two physical devices or the user's router. Real WAN/LAN jitter, browser GPU performance and deployment credentials are not validated. DIRECT transport in integration tests is simulated; the signaling/relay uses real local WebSockets. No GitHub or Render deployment was performed.
+Saga Fight 6.23.1 / protocol 88 — DIRECT ICE fix
+2026-11-15, Node 24.22.1
+npm test: 167 passed; 0 failed; 0 skipped; 22.2 seconds.
+Includes lost-first-DIRECT-probe retry, no TURN configuration, strict DIRECT failure/loss, Fairi clone/R mirror, 36 fighter restore/replay pairings, graphics, clock pacing and reconnect regressions.
+Real local WebSocket relay, VM browser and simulated WebRTC tests. No physical iPad/LAN/real ICE/STUN end-to-end verification. No deployment performed.

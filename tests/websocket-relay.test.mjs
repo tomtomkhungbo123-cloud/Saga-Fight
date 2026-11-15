@@ -14,7 +14,7 @@ async function fixture(){
  async function call(name,data,token){const r=await api(new Request(origin+'/api/rooms/'+name,{method:'POST',headers:{'Content-Type':'application/json',Origin:origin,...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify(data)}),{DB});return r.json();}
  async function socket(session,options={}){
   const ws=new WebSocket(origin.replace('http:','ws:')+'/ws',{origin,...options});sockets.push(ws);const messages=[];ws.on('message',data=>messages.push(JSON.parse(data)));
-  await once(ws,'open');if(session)ws.send(JSON.stringify({type:'auth',version:87,code:session.code,token:session.token}));
+  await once(ws,'open');if(session)ws.send(JSON.stringify({type:'auth',version:88,code:session.code,token:session.token}));
   return {ws,messages};
  }
  async function wait(check){const end=Date.now()+3000;while(!check()){if(Date.now()>end)throw Error('Timed out waiting for relay');await new Promise(r=>setTimeout(r,5));}}

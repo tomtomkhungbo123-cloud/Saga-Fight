@@ -10,7 +10,7 @@ async function hybridPair(connects=true,p1='thunder',p2='soul'){
   close(){if(this.readyState==='closed')return;this.readyState='closed';const other=this.other;if(other)other.readyState='closed';queueMicrotask(()=>{this.onclose?.();other?.onclose?.();});}
  }
  class Peer{
-  constructor(config){assert.equal(config.iceServers.length,0);this.id=++serial;pcs.set(this.id,this);this.iceConnectionState='new';this.remoteDescription=null;this.candidates=[];}
+  constructor(config){assert.ok(config.iceServers.some(s=>s.urls==='stun:stun.cloudflare.com:3478'));assert.ok(config.iceServers.every(s=>!String(s.urls).includes('turn:')));this.id=++serial;pcs.set(this.id,this);this.iceConnectionState='new';this.remoteDescription=null;this.candidates=[];}
   createDataChannel(name,config){assert.equal(config.ordered,true);return this.dc=new DirectChannel();}
   async createOffer(){return {type:'offer',sdp:'offer:'+this.id};}
   async createAnswer(){return {type:'answer',sdp:'answer:'+this.id};}

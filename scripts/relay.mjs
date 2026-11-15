@@ -26,7 +26,7 @@ export function attachRelay(server,DB,{heartbeatMs=10000,authTimeoutMs=5000}={})
    let message;try{message=JSON.parse(bytes.toString());}catch{return close(ws,4003,'Invalid JSON');}
    if(!message||typeof message!=='object'||Array.isArray(message))return close(ws,4003,'Invalid message');
    if(!member){
-    if(authenticating||message.type!=='auth'||message.version!==87||typeof message.token!=='string'||message.token.length>200||!/^[A-Z2-9]{6}$/.test(message.code||''))return close(ws,4001,'Invalid session or version');
+    if(authenticating||message.type!=='auth'||message.version!==88||typeof message.token!=='string'||message.token.length>200||!/^[A-Z2-9]{6}$/.test(message.code||''))return close(ws,4001,'Invalid session or version');
     authenticating=true;
     try{
      const row=await DB.prepare('SELECT * FROM duel_rooms WHERE code=? AND expires_at>?').bind(message.code,Date.now()).first();
