@@ -1,6 +1,6 @@
  'use strict';
 (()=>{
- const G=window.riftGame,el=id=>document.getElementById(id),HZ=60,STEP=1/120,BUILD='6.22.5';
+ const G=window.riftGame,el=id=>document.getElementById(id),HZ=60,STEP=1/120,BUILD='6.23.0';
  if(window.SagaGameBuild!==BUILD||window.SagaRollback?.build!==BUILD){el('netError').textContent='Các file game khác phiên bản hoặc thiếu rollback-core.js. Hãy cập nhật đầy đủ bản '+BUILD+' và tải lại cả hai máy.';el('createRoom').disabled=el('joinRoom').disabled=true;return;}
  let session=null;
  const connectionChoice=el('connectionMode');let connectionMode='auto';try{if(localStorage.getItem('saga.connection.v1')==='direct')connectionMode='direct';}catch{}connectionChoice.value=connectionMode;connectionChoice.addEventListener('change',()=>{connectionMode=connectionChoice.value==='direct'?'direct':'auto';try{localStorage.setItem('saga.connection.v1',connectionMode);}catch{}});
@@ -128,7 +128,7 @@
   if(m.type==='rb-init'&&n.role==='guest'){
    if(!Number.isSafeInteger(m.epoch)||m.epoch<n.epoch)return;
    if(n.rb&&m.epoch===n.epoch){ackCheckpoint(n);return;}
-   if(!m.config||!['thunder','soul','mox','cylast','melanta'].includes(m.config.p1)||!['thunder','soul','mox','cylast','melanta'].includes(m.config.p2))return;
+   if(!m.config||!['thunder','soul','mox','cylast','melanta','fairi'].includes(m.config.p1)||!['thunder','soul','mox','cylast','melanta','fairi'].includes(m.config.p2))return;
    n.epoch=m.epoch;G.configure(m.config);if(!n.started){G.begin();G.rollback.seed(0x53414741);}n.started=true;n.synced=false;n.suspended=true;n.lostAt=performance.now();makeRollback(n,m.state);n.waitingStart=true;ackCheckpoint(n);return;
   }
   if(m.epoch!==n.epoch)return;
@@ -142,9 +142,9 @@
   if(m.type==='rb-input'){if(!n.rb.receive(m)){requestCheckpoint(n,'invalid-input');return;}n.lastState=n.lastStateAck=performance.now();n.peerHashQueue??=new Map();for(const [t,h]of n.peerHashQueue)if(t<=n.rb.confirmed){n.peerHashQueue.delete(t);const ours=n.rb.digest(t);if(ours&&ours.hash!==h){requestCheckpoint(n,'checksum',{hashTick:t,localHash:ours.hash,remoteHash:h});return;}}return;}
   if(m.type==='rb-hash'&&Number.isSafeInteger(m.tick)&&m.tick>=0&&m.tick<=n.rb.tick+240&&typeof m.hash==='string'&&m.hash.length<=16){if(m.tick<=n.rb.confirmed){const ours=n.rb.digest(m.tick);if(ours&&ours.hash!==m.hash)requestCheckpoint(n,'checksum',{hashTick:m.tick,localHash:ours.hash,remoteHash:m.hash});}else{n.peerHashQueue??=new Map();if(n.peerHashQueue.size<16)n.peerHashQueue.set(m.tick,m.hash);}}
  }
- function channel(dc){const n=session;if(!n)return;if(n.channel&&n.channel!==dc){n.channel.onopen=n.channel.onmessage=n.channel.onclose=n.channel.onerror=null;n.channel.close();}n.channel=dc;dc.onopen=()=>{if(session!==n)return;n.lastPeer=performance.now();send({type:'hello',version:86});};dc.onmessage=event=>{if(session!==n||typeof event.data!=='string'||event.data.length>512000)return;let m;try{m=JSON.parse(event.data);}catch{return;}if(!m||typeof m!=='object'||Array.isArray(m))return;n.metrics.bytesReceived+=event.data.length;
+ function channel(dc){const n=session;if(!n)return;if(n.channel&&n.channel!==dc){n.channel.onopen=n.channel.onmessage=n.channel.onclose=n.channel.onerror=null;n.channel.close();}n.channel=dc;dc.onopen=()=>{if(session!==n)return;n.lastPeer=performance.now();send({type:'hello',version:87});};dc.onmessage=event=>{if(session!==n||typeof event.data!=='string'||event.data.length>512000)return;let m;try{m=JSON.parse(event.data);}catch{return;}if(!m||typeof m!=='object'||Array.isArray(m))return;n.metrics.bytesReceived+=event.data.length;
  if(!['hello','ping','pong','rb-input','rb-init','rb-ack','rb-start','rb-hash','rb-resync'].includes(m.type))return;n.lastPeer=performance.now();if(m.type.startsWith('rb-')){try{rollbackMessage(n,m);}catch(e){n.metrics.rollbackError=String(e.message);requestCheckpoint(n,'exception',{message:String(e.message)});}return;}
- if(m.type==='hello'){if(m.version!==86){status('Hai máy cần tải lại cùng phiên bản game.');return;}n.peerHello=true;if(!m.reply)send({type:'hello',version:86,reply:true});maybeStart(n);return;}
+ if(m.type==='hello'){if(m.version!==87){status('Hai máy cần tải lại cùng phiên bản game.');return;}n.peerHello=true;if(!m.reply)send({type:'hello',version:87,reply:true});maybeStart(n);return;}
  if(m.type==='ping'){send({type:'pong',id:m.id,stamp:m.stamp,epoch:n.epoch,peerTick:n.synced?n.rb?.tick:null});n.peerRtt=Number.isFinite(m.rtt)?m.rtt:null;return;}
  if(m.type==='pong'){const sent=n.probes.get(m.id);if(sent!==undefined){n.probes.delete(m.id);const probe=n.probeTicks?.get(m.id);n.probeTicks?.delete(m.id);if(probe&&probe.epoch===n.epoch&&m.epoch===n.epoch&&n.rb&&n.synced&&!n.suspended&&Number.isSafeInteger(m.peerTick)&&m.peerTick>=0){const skew=(probe.tick+n.rb.tick)/2-m.peerTick;if(Math.abs(skew)<=120)n.clockSkew=n.clockSkew==null?skew:n.clockSkew*.5+skew*.5;n.metrics.clockSkewTicks=n.clockSkew;}const value=performance.now()-sent;n.jitter=n.peerPing==null?0:.8*n.jitter+.2*Math.abs(value-n.peerPing);n.peerPing=value;n.lastPong=performance.now();if(n.suspended)recover(n);badge(n);}return;}
  };dc.onerror=()=>suspend(n);dc.onclose=()=>{if(session===n)suspend(n);};}
@@ -159,7 +159,7 @@
   const socket=new WebSocket(url.href);n.socket=socket;let authenticated=false;
   const dc={get readyState(){return authenticated&&socket.readyState===1?'open':'connecting';},get bufferedAmount(){return socket.bufferedAmount||0;},send:text=>socket.send(text),close:()=>socket.close()};
   channel(dc);
-  socket.onopen=()=>{if(session===n&&n.socket===socket)socket.send(JSON.stringify({type:'auth',version:86,code:n.room,token:n.token}));};
+  socket.onopen=()=>{if(session===n&&n.socket===socket)socket.send(JSON.stringify({type:'auth',version:87,code:n.room,token:n.token}));};
   socket.onmessage=event=>{
    if(session!==n||n.socket!==socket||typeof event.data!=='string')return;
    let message;try{message=JSON.parse(event.data);}catch{return;}if(!message||typeof message!=='object'||Array.isArray(message))return;
@@ -170,7 +170,7 @@
     authenticated=true;n.reliable=true;n.reconnectAt=0;n.retryDelay=500;n.route=directRequired(n)?'CHỜ DIRECT':'SERVER WS';n.metrics.transport=directRequired(n)?'direct-pending':'websocket';if(!n.started){n.suspended=false;n.transportReady=false;}error('');dc.onopen?.();
    }else if(message.event==='ready'){
     n.joined=true;n.joinedAt=performance.now();n.config=message.config;connectionChoice.value=directRequired(n)?'direct':'auto';n.metrics.connectionMode=directRequired(n)?'direct':'auto';n.peerHello=false;n.lastPeer=performance.now();
-    if(n.started||n.directDisabled){n.directDisabled=true;if(directRequired(n))directUnavailable(n);else if(n.role==='host')selectRoute(n,'ws');}else startDirect(n);send({type:'hello',version:86});
+    if(n.started||n.directDisabled){n.directDisabled=true;if(directRequired(n))directUnavailable(n);else if(n.role==='host')selectRoute(n,'ws');}else startDirect(n);send({type:'hello',version:87});
    }else if(message.event==='peer-disconnected'){
     n.directDisabled=true;n.activeRoute='ws';closeDirect(n);if(directRequired(n))directUnavailable(n,false);else{if(n.started)suspend(n);status('ONLINE · ĐỐI THỦ MẤT KẾT NỐI · ĐANG CHỜ');}
    }else if(message.event==='room-closed'){
@@ -195,7 +195,7 @@
  if(session===n)n.pollTimer=setTimeout(()=>poll(n),n.reliable&&connected(n)&&n.started?10000:1600);}
  function fast(n){if(session!==n)return;const now=performance.now();routeTick(n,now);if(connected(n)){
  if(n.role==='host'&&n.activeRoute==='ws'&&n.synced&&!n.suspended&&!n.pc&&window.RTCPeerConnection&&(n.directAttempts||0)<4&&n.directRetryAt!=null&&now>=n.directRetryAt)startDirect(n,true);
- if(!n.peerHello)send({type:'hello',version:86});
+ if(!n.peerHello)send({type:'hello',version:87});
  if(now-n.lastProbe>=500){n.lastProbe=now;for(const [id,t]of n.probes)if(now-t>3000){n.probes.delete(id);n.probeTicks?.delete(id);}const id=++n.probeId;n.probes.set(id,now);n.probeTicks??=new Map();if(n.rb&&n.synced)n.probeTicks.set(id,{tick:n.rb.tick,epoch:n.epoch});send({type:'ping',id,rtt:n.peerPing});}
  if(now-(n.lastServerProbe||0)>=1000){n.lastServerProbe=now;n.serverProbes??=new Map();for(const [id,t]of n.serverProbes)if(now-t>5000)n.serverProbes.delete(id);const id=++n.probeId;n.serverProbes.set(id,now);send({type:'server-ping',id});}
  if(now-n.lastStats>2000){n.lastStats=now;inspectRoute(n);}
