@@ -1,5 +1,11 @@
-Saga Fight 6.23.1 / protocol 88 — DIRECT ICE fix
-2026-11-15, Node 24.22.1
-npm test: 167 passed; 0 failed; 0 skipped; 22.2 seconds.
-Includes lost-first-DIRECT-probe retry, no TURN configuration, strict DIRECT failure/loss, Fairi clone/R mirror, 36 fighter restore/replay pairings, graphics, clock pacing and reconnect regressions.
-Real local WebSocket relay, VM browser and simulated WebRTC tests. No physical iPad/LAN/real ICE/STUN end-to-end verification. No deployment performed.
+Saga Fight 6.24.4 / protocol 89 — Maps GitHub / Render
+2026-11-15; Node 24.22.1
+Source map: main Site version 57, commit 08378178dc5d3c945ee4e4eb754f4658be012cd5.
+Export base: Render 6.23.1; keeps STUN-only DIRECT fix, symmetric rollback, clock pacing, graphics and Fairi.
+
+npm test: 212 passed; 0 failed; 0 skipped; 38.5 seconds.
+Includes 72 ordered fighter/map restore-replay cases, checkpoint map geometry restoration, owner-selected forest over production DIRECT and WS, Fairi wide-map rendering, cavern native-canvas edge pixels/zoom geometry, graphics, clock pacing, strict DIRECT, reconnect and all combat regressions.
+After targeted Fairi renderer cache reset preservation: native rendering/Fairi/smooth-view checks rerun (see test suite locally).
+
+Real local WebSocket relay; browser VM and simulated WebRTC. Camera tests use native canvas. No real browser/GPU/iPad/LAN/STUN end-to-end verification performed for this export. No GitHub/Render deployment performed.
+Source docs describe historical Site changes and their verification; the limits above apply to this Render export.

@@ -1,43 +1,24 @@
-# Bản vá DIRECT 6.23.1
+# Saga Fight 6.24.4 — Map cho GitHub / Render
 
-Gói cập nhật dưới 100 file, dùng trên repository game đang có đủ ảnh/âm thanh. Giải nén rồi kéo NỘI DUNG vào gốc repository GitHub và commit. Không upload nguyên ZIP; không xóa asset cũ. Render giữ npm ci / npm start. Cả hai máy tải lại BUILD 6.23.1, rời phòng cũ, tạo phòng mới.
+Gói cập nhật dưới 100 file, dùng cho repository Saga Fight hiện có ảnh/âm thanh. Bao gồm Fairi, netcode rollback cân nhịp hai phía và bản sửa DIRECT/STUN 6.23.1.
 
-Sửa kết nối: thêm STUN công khai stun.cloudflare.com:3478, không có TURN và không yêu cầu token. Không chuyển gameplay qua STUN. Trình duyệt vẫn tự chọn cặp ICE khả dụng; không khẳng định cặp đó là đường LAN chỉ vì cùng Wi-Fi. Tăng thời gian chờ ban đầu 8→12 giây, thử lại direct-probe khi gói đầu thất lạc, chờ 2.5 giây ở sự kiện ICE disconnected trước khi coi là hỏng (watchdog trận vẫn có thể tạm dừng sớm hơn).
+## Upload GitHub
 
-Nếu thất bại, thông báo có trạng thái ICE và số ứng viên máy này; chi tiết không chứa địa chỉ IP tại window.riftNet.metrics().directIce. Bản sửa không vượt qua được router cách ly thiết bị hoặc mọi chính sách quyền riêng tư của trình duyệt. Có thể chọn Tự động để chơi qua server khi DIRECT không khả dụng; chế độ Chỉ DIRECT vẫn không dùng server cho gameplay.
+1. Giải nén Saga_Fight_6_24_4_Maps_GitHub_Update.zip.
+2. Tải lại trang Upload files đang lỗi (nếu có). Ở GỐC repository Saga-Fight, kéo toàn bộ NỘI DUNG bên trong thư mục giải nén vào ô upload: web, worker, scripts, tests, docs và các file ở gốc. Giữ đúng thư mục, không upload nguyên ZIP, không đặt thêm thư mục bao ngoài.
+3. Commit changes. Giữ nguyên ảnh/âm thanh cũ trên GitHub; gói này không thay thế một repository trắng.
+4. Render: npm ci / npm start. Chờ Auto-Deploy hoặc Manual Deploy → Deploy latest commit, trạng thái Live.
+5. Cả hai máy tải lại BUILD 6.24.4; /healthz có clientBuild 6.24.4, protocol 89. Rời phòng cũ, tạo phòng mới.
 
-Kiểm thử tự động: 167 đạt, 0 lỗi. WebRTC được mô phỏng trong kiểm thử; chưa kiểm thử WebRTC thật trên iPad hoặc router của bạn. Giữ Fairi, rollback, đồ họa và cân nhịp host/guest của bản trước.
+## Map mới
 
-Nguồn cấu hình STUN: https://developers.cloudflare.com/realtime/sfu/get-started/connection-patterns/
+- Rừng tiên linh: ảnh nền mới, đấu trường rộng 3200 × 1600, địa hình và camera theo nhân vật; khi hai người chung máy, camera giữ cả hai trong khung hình.
+- Hang đá lãng quên: góc nhìn mới và cảnh đệm hai bên/phía trên để hạn chế lộ mép ảnh khi nhảy cao. Zoom thế giới còn 75% so với bản map 6.24.2, nhân vật/hiệu ứng nhỏ hơn; không đổi sát thương hoặc tầm chiêu vì zoom.
+- Fairi, Mox và Melanta dùng giới hạn đấu trường theo map, tránh bị chặn ở biên map cũ.
+- Chọn ĐẤU TRƯỜNG trước khi tạo phòng. Chủ phòng quyết định map; người vào phòng tự nhận cùng map, không tự đổi trong phòng. Snapshot rollback lưu map/địa hình; camera giữ riêng từng thiết bị.
 
----
+## Kết nối và kiểm chứng
 
-# Saga Fight 6.23.1 — Fairi cho GitHub / Render
+Giữ chế độ Chung Wi-Fi · Chỉ DIRECT và Tự động · DIRECT ưu tiên, server dự phòng. STUN tìm địa chỉ, không có TURN/token. Cùng Wi-Fi không bảo đảm DIRECT nếu router/trình duyệt hạn chế.
 
-Gói mã nguồn đầy đủ: Fairi mới nhất (kể cả sửa màu trong trận), ghép với netcode rollback và chế độ Chỉ DIRECT của bản Render 6.22.5. Giữ cài đặt đồ họa Tự động / Cao / Cân bằng / Thấp và giới hạn hiển thị 60 / 30 FPS; mô phỏng chiến đấu vẫn 120 Hz.
-
-## Cập nhật GitHub
-
-1. Giải nén `Saga_Fight_6_23_1_DIRECT_ICE_Fix_Under100.zip`.
-2. Tải toàn bộ nội dung bên trong lên GỐC repository đang dùng, ghi đè file cùng tên. Giữ đúng thư mục `web/fairi/`, `web/`, `worker/`, `scripts/`, không đặt thêm một thư mục bao ngoài. Không chỉ tải `game.js` hoặc `index.html`.
-3. Commit. Render: Build Command `npm ci`, Start Command `npm start`, Root Directory để trống nếu repository chứa `package.json` ở gốc. Nếu Auto-Deploy bật, chờ deploy; nếu chưa chạy thì Manual Deploy → Deploy latest commit.
-4. Chờ Live. Mở `/healthz`: `clientBuild` phải là `6.23.1`, `protocol` là `87`.
-5. Cả hai máy tải lại trang, kiểm tra `BUILD 6.23.1`, rời phòng cũ và tạo phòng mới. Nếu còn bản cũ, tải lại bỏ cache hoặc xóa dữ liệu trang. Không trộn các file từ hai bản.
-
-## Fairi
-
-900 HP; Q ba tích lũy; W tàng hình / đâm bất ngờ; E bốn bản sao; R hội tụ cùng bản sao. Dùng logic chiến đấu của bản game chính mới nhất, không thay bằng thông số nhân vật cũ trong hội thoại. Màu thân theo bản vẽ; màu nhấn HUD riêng; đổi màu khi đấu trùng nhân vật và màu xám khi hạ gục được giữ.
-
-Bản sao và kỹ năng được lưu/khôi phục trong snapshot rollback ở cả hai phía. Ngẫu nhiên điều khiển bản sao dùng hash số nguyên ổn định thay cho hash lượng giác để giảm nguy cơ lệch giữa trình duyệt. Bộ đệm hình ảnh tách khỏi trạng thái chiến đấu; chỉnh nhẹ rollback giữ animation, chỉnh cứng reset đúng nhân vật.
-
-## Kết nối
-
-Chung Wi-Fi: trước khi tạo phòng chọn `Chung Wi-Fi · Chỉ DIRECT`. Người tham gia nhận chính sách của chủ phòng. Gameplay không chuyển sang WS khi DIRECT mất; game dừng và báo lỗi kết nối. Server vẫn phục vụ trang, phòng, signaling và khôi phục checkpoint. Không tự nhận diện chắc chắn hai máy cùng Wi-Fi; router cách ly thiết bị có thể chặn DIRECT.
-
-Khác mạng: chọn `Tự động · DIRECT ưu tiên, server dự phòng`. Không cần cấu hình TURN để dùng WS dự phòng. Độ mượt còn phụ thuộc RTT, jitter, thiết bị và khu vực server; gói này không bảo đảm mọi mạng đều không trễ.
-
-Giữ các sửa cân nhịp host/guest, gộp rollback, nội suy hiển thị và ping thật từ bản Render trước. Các ghi chú phiên bản cũ trong docs chỉ là lịch sử.
-
-## Kiểm chứng
-
-Xem `VALIDATION.txt`. Chạy lại: Node 24 → `npm ci` → `npm test`. Không có token Cloudflare, khóa triển khai hay node_modules trong gói.
+212 kiểm thử đạt trên Node 24, gồm 72 cặp nhân vật/map restore/replay, đồng bộ map qua DIRECT/WebSocket, Fairi Q/E/R trên map rộng, pixel mép ảnh/camera Hang đá và các hồi quy mạng/đồ họa. Xem VALIDATION.txt. Chưa thử trên hai thiết bị Wi-Fi vật lý của bạn; không bảo đảm xóa mọi giật do mạng hoặc thiết bị. Chưa deploy GitHub/Render thay bạn.

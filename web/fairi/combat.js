@@ -8,11 +8,11 @@ function finishE(f){let g=f.fairi;if(g.eActive&&!g.clones.length){g.eActive=fals
 function reveal(f,env){let g=f.fairi;if(g.wActive){g.wActive=false;g.stealth=0;f.cd.w=C.wCooldown;event(f,env,'reveal')}}
 function cancel(f,env){let a=f.action;if(a?.k==='r'&&env.enemy.grabbedBy===f.id){env.enemy.grabbedBy=null;env.enemy.vy=0}f.action=null;f.normal=null}
 function ready(f,k){let g=f.fairi;return k==='q'?f.charges>0&&f.cd.q<=1e-7:k==='w'?!g.wActive&&f.cd.w<=1e-7:k==='e'?!g.eActive&&f.cd.e<=1e-7:f.cd[k]<=1e-7}
-function use(f,k,env){let g=f.fairi,e=env.enemy;if(!ready(f,k))return false;if(k==='r'&&(Math.hypot(e.x-f.x,e.y-f.y)>C.rRange||!env.control(e)))return false;let a={k,age:0,duration:k==='q'?C.qDuration:k==='w'?C.wFade:k==='e'?.3:C.rDuration,dir:f.dir,sx:f.x,sy:f.y,use:env.use()};
+function use(f,k,env){let g=f.fairi,e=env.enemy;if(!ready(f,k))return false;if(k==='r'&&(Math.hypot(e.x-f.x,e.y-f.y)>C.rRange||!env.control(e)))return false;let a={k,age:0,duration:k==='q'?C.qDuration:k==='w'?C.wFade:k==='e'?.3:C.rDuration,dir:f.dir,sx:f.x,sy:f.y,bounds:env.bounds?{...env.bounds}:undefined,use:env.use()};
 if(k!=='w')reveal(f,env);
-if(k==='q'){f.charges--;f.qRecharge.push(C.qRecharge);f.cd.q=C.qGap;a.end=Math.max(45,Math.min(1555,f.x+f.dir*C.qRange));env.cue('soulblade_slash_1')}
+if(k==='q'){f.charges--;f.qRecharge.push(C.qRecharge);f.cd.q=C.qGap;a.end=Math.max(45,Math.min(env.bounds?.max??1555,f.x+f.dir*C.qRange));env.cue('soulblade_slash_1')}
 if(k==='w'){g.wActive=true;g.stealth=0;event(f,env,'cast');env.cue('soulblade_w_blink')}
-if(k==='e'){g.eActive=true;let seed=(++g.serial*2654435761+f.id*97)>>>0;g.group=FairiClones.plan(seed);let base=env.surface(f.x,f.y);g.clones=Array.from({length:4},(_,i)=>FairiClones.spawn(i,{x:f.x,y:Math.max(0,base-f.y),vy:-f.vy},g.group));event(f,env,'cast');env.cue('soulblade_w_blink')}
+if(k==='e'){g.eActive=true;let seed=(++g.serial*2654435761+f.id*97)>>>0;g.group=FairiClones.plan(seed,env.bounds);let base=env.surface(f.x,f.y);g.clones=Array.from({length:4},(_,i)=>FairiClones.spawn(i,{x:f.x,y:Math.max(0,base-f.y),vy:-f.vy},g.group));event(f,env,'cast');env.cue('soulblade_w_blink')}
 if(k==='r'){a.dir=Math.sign(e.x-f.x)||f.dir;f.dir=a.dir;f.cd.r=C.rCooldown;a.tx=e.x;a.ty=e.y;a.base=env.surface(e.x,e.y);a.actors=[{x:f.x,y:a.base-f.y},...g.clones.map(c=>({x:c.x,y:a.base-(env.surface(c.x,f.y)-c.y),dir:c.dir}))];a.count=a.actors.length;env.interrupt(e);e.grabbedBy=f.id;e.vx=e.vy=0;env.cue('soulblade_r_cast')}
 f.action=a;return true}
 function ambush(f,env){let g=f.fairi,e=env.enemy;if(!g.stealth)return false;reveal(f,env);if(Math.hypot(e.x-f.x,e.y-f.y)>C.wRange)return false;f.normal=null;f.action={k:'ambush',age:0,duration:.78,dir:Math.sign(e.x-f.x)||f.dir,sx:f.x,sy:f.y,tx:e.x,ty:e.y,carryVx:f.vx,use:env.use()};return true}

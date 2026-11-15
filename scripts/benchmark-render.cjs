@@ -1,5 +1,5 @@
 const fs=require('fs'),vm=require('vm'),{performance}=require('perf_hooks');
-const {createCanvas,Path2D,Image}=require(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES+'/@napi-rs/canvas');
+const {createCanvas,Path2D,Image}=require('@napi-rs/canvas');
 const root=require('node:path').join(__dirname,'../web/'),prefix=process.argv[2]||root,pending=[],els={},images=[];
 function el(id){if(els[id])return els[id];const e={value:id==='select0'?'thunder':id==='select1'?'soul':'normal',style:{},hidden:false,children:[],classList:{toggle(){}},querySelector(){return el('temp')},addEventListener(){},focus(){},getBoundingClientRect(){return {width:1200,height:838}},firstChild:{textContent:''}};if((id==='game'||id==='arenaBackground')){const c=createCanvas(1200,838);e.getContext=()=>c.getContext('2d');Object.defineProperties(e,{width:{get:()=>c.width,set:v=>c.width=v},height:{get:()=>c.height,set:v=>c.height=v}});}return els[id]=e;}
 class Asset extends Image{set src(v){super.src=fs.readFileSync(root+v.split('?')[0]);images.push(this);}get src(){return super.src;}}

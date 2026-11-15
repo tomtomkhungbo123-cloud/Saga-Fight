@@ -4,7 +4,8 @@ const FairiDash=(()=>{
  const sat=x=>Math.max(0,Math.min(1,x)),smooth=x=>{x=sat(x);return x*x*(3-2*x)};
  const CFG={ghostsHigh:4,ghostsLow:2,historyStep:.029,fadeIn:.14,fadeOut:.30,tailMax:430,trailLife:.55,heightHigh:116,heightLow:94};
  const envelope=u=>smooth(u/CFG.fadeIn)*smooth((1-u)/CFG.fadeOut);
- function echoes(a,u,quality,range){let out=[],count=quality==='low'?CFG.ghostsLow:CFG.ghostsHigh,now=a.duration*u;for(let i=count;i>0;i--){let past=now-i*CFG.historyStep;if(past<0)continue;out.push({x:Math.max(60,Math.min(1540,a.sx+a.dir*range*smooth(past/a.duration))),y:a.sy,alpha:(.06+.035*(count-i))*envelope(u)})}return out}
+ function endX(a,range){return Number.isFinite(a.end)?a.end:Math.max(a.bounds?.min??60,Math.min(a.bounds?.max??1540,a.sx+a.dir*range))}
+ function echoes(a,u,quality,range){let out=[],count=quality==='low'?CFG.ghostsLow:CFG.ghostsHigh,now=a.duration*u;for(let i=count;i>0;i--){let past=now-i*CFG.historyStep;if(past<0)continue;out.push({x:a.sx+(endX(a,range)-a.sx)*smooth(past/a.duration),y:a.sy,alpha:(.06+.035*(count-i))*envelope(u)})}return out}
  let ribbons=null;
  function texture(){if(ribbons)return ribbons;ribbons=document.createElement('canvas');ribbons.width=1024;ribbons.height=256;let c=ribbons.getContext('2d');c.scale(2,2);c.translate(440,64);
  // Three feathered nested contours. Blur is baked once, never on the arena canvas.
@@ -25,7 +26,7 @@ const FairiDash=(()=>{
  function createTrail(){return {items:[],active:null,clear(){this.items.length=0;this.active=null},update(sample,a,u,p,t,range){
   if(a?.k==='q'){if(this.active!==a){this.active=a;this.items.push({action:a,start:t-a.t,end:t-a.t+a.duration,u:0,geometry:null});if(this.items.length>3)this.items.shift()}let item=this.items.at(-1);item.geometry=geometry(sample,a,p);item.u=u}
   else this.active=null;
-  for(let item of this.items)if(t>=item.end&&item.geometry){let g=item.geometry;g.x=Math.max(60,Math.min(1540,item.action.sx+item.action.dir*range))+g.handOffset;g.length=Math.min(CFG.tailMax,Math.abs(g.x-g.handOffset-item.action.sx)+82)}
+  for(let item of this.items)if(t>=item.end&&item.geometry){let g=item.geometry;g.x=endX(item.action,range)+g.handOffset;g.length=Math.min(CFG.tailMax,Math.abs(g.x-g.handOffset-item.action.sx)+82)}
   this.items=this.items.filter(item=>t-item.end<CFG.trailLife);
  },draw(ctx,t,quality){for(let item of this.items){if(!item.geometry)continue;let alpha=t<item.end?smooth(item.u/CFG.fadeIn):1-smooth((t-item.end)/CFG.trailLife);paint(ctx,item.geometry,alpha,quality)}}}}
 
