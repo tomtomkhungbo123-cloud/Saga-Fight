@@ -1,31 +1,29 @@
-# Saga Fight 6.22.5 — cân nhịp hai máy và phòng Chỉ DIRECT
+# Saga Fight 6.23.0 — Fairi cho GitHub / Render
 
-Bản vá dành cho GitHub/Render đang dùng 6.22.4. Giữ cài đặt đồ họa, rollback, thanh ping gọn và nội suy hiển thị.
+Gói mã nguồn đầy đủ: Fairi mới nhất (kể cả sửa màu trong trận), ghép với netcode rollback và chế độ Chỉ DIRECT của bản Render 6.22.5. Giữ cài đặt đồ họa Tự động / Cao / Cân bằng / Thấp và giới hạn hiển thị 60 / 30 FPS; mô phỏng chiến đấu vẫn 120 Hz.
 
-## Cập nhật
+## Cập nhật GitHub
 
-1. Giải nén Saga_Fight_6_22_5_Host_Sync_DIRECT_Only.zip.
-2. Ghi đè toàn bộ file trong gói vào đúng đường dẫn ở gốc repository GitHub. Đặc biệt phải cập nhật worker/index.mjs, scripts/relay.mjs và các file web cùng nhau. Giữ các asset/file khác đang có.
-3. Commit → Render → Manual Deploy → Deploy latest commit. Build Command npm ci; Start Command npm start; Node 24. Chờ Live.
-4. Hai máy tải lại, xác nhận BUILD 6.22.5. /healthz phải trả về 6.22.5-clock1, protocol 86.
-5. Rời phòng cũ và tạo phòng mới. Hai máy phải dùng cùng bản.
+1. Giải nén `Saga_Fight_6_23_0_Fairi_GitHub_Render.zip`.
+2. Tải toàn bộ nội dung bên trong lên GỐC repository đang dùng, ghi đè file cùng tên. Giữ đúng thư mục `web/fairi/`, `web/`, `worker/`, `scripts/`, không đặt thêm một thư mục bao ngoài. Không chỉ tải `game.js` hoặc `index.html`.
+3. Commit. Render: Build Command `npm ci`, Start Command `npm start`, Root Directory để trống nếu repository chứa `package.json` ở gốc. Nếu Auto-Deploy bật, chờ deploy; nếu chưa chạy thì Manual Deploy → Deploy latest commit.
+4. Chờ Live. Mở `/healthz`: `clientBuild` phải là `6.23.0`, `protocol` là `87`.
+5. Cả hai máy tải lại trang, kiểm tra `BUILD 6.23.0`, rời phòng cũ và tạo phòng mới. Nếu còn bản cũ, tải lại bỏ cache hoặc xóa dữ liệu trang. Không trộn các file từ hai bản.
 
-## Chơi chung Wi-Fi chỉ qua DIRECT
+## Fairi
 
-Trước khi bấm Tạo phòng, chủ phòng chọn Kết nối phòng → Chung Wi-Fi · Chỉ DIRECT. Người tham gia tự nhận chế độ của phòng. Input trận đấu và checksum chỉ đi DataChannel DIRECT; relay server từ chối chuyển tiếp các gói này trong phòng Chỉ DIRECT. Nếu DIRECT không thiết lập được hoặc mất giữa trận, game báo rõ/dừng, không chuyển gameplay sang WS. Rời phòng để kiểm tra mạng rồi tạo lại.
+900 HP; Q ba tích lũy; W tàng hình / đâm bất ngờ; E bốn bản sao; R hội tụ cùng bản sao. Dùng logic chiến đấu của bản game chính mới nhất, không thay bằng thông số nhân vật cũ trong hội thoại. Màu thân theo bản vẽ; màu nhấn HUD riêng; đổi màu khi đấu trùng nhân vật và màu xám khi hạ gục được giữ.
 
-Server vẫn phục vụ trang, tạo/vào phòng, trao đổi ICE và thông điệp khởi tạo/khôi phục checkpoint; đây không phải chế độ LAN offline. Game không biết chắc SSID/cùng Wi-Fi của hai máy. Router cách ly thiết bị, Wi-Fi khách, VPN hoặc chính sách trình duyệt có thể chặn DIRECT. Khi chơi khác mạng, có thể chọn Tự động · DIRECT ưu tiên, server dự phòng.
+Bản sao và kỹ năng được lưu/khôi phục trong snapshot rollback ở cả hai phía. Ngẫu nhiên điều khiển bản sao dùng hash số nguyên ổn định thay cho hash lượng giác để giảm nguy cơ lệch giữa trình duyệt. Bộ đệm hình ảnh tách khỏi trạng thái chiến đấu; chỉnh nhẹ rollback giữ animation, chỉnh cứng reset đúng nhân vật.
 
-## Sửa lệch trải nghiệm chủ phòng/người tham gia
+## Kết nối
 
-Bản trước đặt thời điểm khởi động host/guest theo các độ trễ khác nhau: lệnh START đi qua WS nhưng phía guest bù bằng RTT của đường DIRECT. Khi đường server chậm và DIRECT nhanh, chủ phòng có thể chạy trước nhiều tick. Người tham gia có sẵn input của chủ phòng, còn chủ phòng phải dự đoán input người tham gia nhiều hơn.
+Chung Wi-Fi: trước khi tạo phòng chọn `Chung Wi-Fi · Chỉ DIRECT`. Người tham gia nhận chính sách của chủ phòng. Gameplay không chuyển sang WS khi DIRECT mất; game dừng và báo lỗi kết nối. Server vẫn phục vụ trang, phòng, signaling và khôi phục checkpoint. Không tự nhận diện chắc chắn hai máy cùng Wi-Fi; router cách ly thiết bị có thể chặn DIRECT.
 
-Bản này đo RTT của bước khởi tạo/ACK qua đúng đường điều khiển để bù START. Heartbeat mang tick/epoch, cho phép ước lượng lệch nhịp; phía đi trước giữ lại tối đa một tick mỗi frame khi lệch quá hai tick. Áp dụng giống nhau cho cả hai vai, không đổi trạng thái hay bỏ input để bắt kịp. Việc cân nhịp có thể làm chậm bước mô phỏng tạm thời trong lúc chỉnh lệch, không phải bỏ độ trễ mạng.
+Khác mạng: chọn `Tự động · DIRECT ưu tiên, server dự phòng`. Không cần cấu hình TURN để dùng WS dự phòng. Độ mượt còn phụ thuộc RTT, jitter, thiết bị và khu vực server; gói này không bảo đảm mọi mạng đều không trễ.
 
-Chẩn đoán: window.riftNet.metrics() có startControlRttMs, clockSkewTicks, clockHolds và connectionMode. Giữ số liệu ping/FPS thật; không tạo số ping cố định.
+Giữ các sửa cân nhịp host/guest, gộp rollback, nội suy hiển thị và ping thật từ bản Render trước. Các ghi chú phiên bản cũ trong docs chỉ là lịch sử.
 
 ## Kiểm chứng
 
-152 kiểm thử đạt trên Node 24.22.1. Đã tái hiện ca tín hiệu WS trễ 120 ms với DIRECT nhanh: bản trước host chạy trước khoảng 19 tick; bản sửa về 0 tick ở lần đo đại diện. Cố tình cho từng phía chạy trước cũng được cân nhịp mà không reset epoch, giữ checksum giống nhau. Đã kiểm tra phòng DIRECT thành công, thất bại, mất DIRECT giữa trận, chính sách host truyền cho guest, relay chặn input WS và cập nhật thiếu backend được báo rõ.
-
-Chưa thử trên hai thiết bị vật lý/Wi-Fi của bạn. Không bảo đảm xóa mọi giật do GPU/CPU, Wi-Fi hoặc jitter bất đối xứng. Chi tiết: docs/host-clock-direct-6.22.5.md.
+Xem `VALIDATION.txt`. Chạy lại: Node 24 → `npm ci` → `npm test`. Không có token Cloudflare, khóa triển khai hay node_modules trong gói.

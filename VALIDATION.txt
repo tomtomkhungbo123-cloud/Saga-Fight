@@ -1,6 +1,9 @@
-Saga Fight 6.22.5 — clock alignment and DIRECT-only rooms
-2026-11-14; Node 24.22.1; npm test: 152 passed, 0 failed, 0 skipped, 0 cancelled.
-Before fix, delayed WS control / fast DIRECT test reproduced a 19–20 tick host lead. Representative after-fix run: 0 tick gap. Leading host/guest drift tests converge within three ticks without epoch reset and retain shared checksums.
-DIRECT-only tests: inherited host policy, unavailable ICE, direct loss, no WS gameplay, relay rejects injected game input, missing backend policy is reported and stale room closed.
-Preserves graphics settings, rollback, interpolation, compact ping and auto-mode fallback/recovery.
-BUILD 6.22.5; health 6.22.5-clock1; protocol 86. Native WebRTC/physical devices are not verified.
+Saga Fight 6.23.0 — Fairi GitHub / Render
+Date: 2026-11-15
+Fairi source: main Site version 53, commit de917660f88e024308a11bd3b6ca4fc82daf8f52
+Netcode base: Render export 6.22.5; protocol 87; Node 24.22.1.
+
+npm test: 166 passed, 0 failed, 0 skipped (21.8 seconds).
+Includes native Fairi combat, AI, real canvas E/R rendering and reference body-color pixel checks; all 36 ordered fighter pair restore/replay cases; Fairi clone determinism under perturbed trig; native render nonmutation; production DIRECT Fairi mirror E/R with equal world hash; real WebSocket relay and reconnect; clock pacing, DIRECT-only policy, graphics 30/60 FPS and smooth-view regressions.
+
+Not tested on two physical devices or the user's router. Real WAN/LAN jitter, browser GPU performance and deployment credentials are not validated. DIRECT transport in integration tests is simulated; the signaling/relay uses real local WebSockets. No GitHub or Render deployment was performed.

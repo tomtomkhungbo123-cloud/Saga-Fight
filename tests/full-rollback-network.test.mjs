@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {client} from './rollback-harness.mjs';import {localDB} from '../scripts/local-db.mjs';
 const flush=()=>new Promise(setImmediate);
-async function hybridPair(connects=true){
+async function hybridPair(connects=true,p1='thunder',p2='soul'){
  const {default:http}=await import('node:http');const {WebSocket}=await import('ws');const {attachRelay}=await import('../scripts/relay.mjs');
  const DB=localDB(),server=http.createServer(),relay=attachRelay(server,DB);server.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));
  const origin='http://127.0.0.1:'+server.address().port,sockets=[],pcs=new Map(),wireCounts={wsCombat:0,directCombat:0};let serial=0;
@@ -31,7 +31,7 @@ async function hybridPair(connects=true){
  const host=client(DB),guest=client(DB);
  for(const c of [host,guest]){c.ctx.window.WebSocket=c.ctx.WebSocket=BrowserSocket;c.ctx.window.RTCPeerConnection=c.ctx.RTCPeerConnection=Peer;c.run("mode='online'");}
  const wait=async(check)=>{const end=Date.now()+4000;while(!check()){if(Date.now()>end)throw Error('Hybrid condition timed out');for(const c of [host,guest])c.run('if(window.testTransport.session())window.testTransport.fast(window.testTransport.session())');await new Promise(r=>setTimeout(r,5));}};
- await host.el('createRoom').onclick();guest.el('roomCode').value=host.el('lobbyCode').textContent;guest.el('select0').value='soul';await guest.el('joinRoom').onclick();
+ host.el('select0').value=p1;await host.el('createRoom').onclick();guest.el('roomCode').value=host.el('lobbyCode').textContent;guest.el('select0').value=p2;await guest.el('joinRoom').onclick();
  return {DB,host,guest,wait,pcs,wireCounts,async close(){for(const c of [host,guest])c.run('window.riftNet.leave()');await flush();for(const ws of sockets)ws.terminate();relay.close();await new Promise(r=>server.close(r));DB.close();}};
 }
 
@@ -43,3 +43,5 @@ test('production symmetric rollback over DIRECT, checkpoint fallback to real WS 
  const before=f.host.run('window.testTransport.session().epoch');f.guest.run('fighters[0].hp-=17');await pump(f,100);await synced(f);await pump(f,100);assert.ok(f.host.run('window.testTransport.session().epoch')>before);assert.equal(f.host.run('window.testTransport.session().rb.digest().hash'),f.guest.run('window.testTransport.session().rb.digest().hash'));
  }catch(e){console.error('NETWORKFAIL',e);throw e;}finally{await f.close();}});
 test('blocked DIRECT starts both clients over WS; socket reconnect resumes a confirmed checkpoint',async()=>{const f=await hybridPair(false);try{await f.wait(()=>f.host.run('!!window.testTransport.session().pc?.remoteDescription'));f.host.expireDirect();await synced(f);await pump(f,400);assert.equal(f.host.run('phase'),'fight');const epoch=f.host.run('window.testTransport.session().epoch');f.host.run('window.testTransport.session().socket.terminate()');await f.wait(()=>f.host.run('window.testTransport.session().reconnectAt>0'));f.host.reconnect();await synced(f);await pump(f,90);assert.ok(f.host.run('window.testTransport.session().epoch')>epoch);assert.equal(f.host.run('window.testTransport.session().rb.digest().hash'),f.guest.run('window.testTransport.session().rb.digest().hash'));}catch(e){console.error('NETWORKFAIL',e);throw e;}finally{await f.close();}});
+
+test('Fairi mirror match synchronizes clones and R over production DIRECT',async()=>{const f=await hybridPair(true,'fairi','fairi');try{await synced(f);await pump(f,400);for(const c of [f.host,f.guest])assert.equal(c.run('fighters.every(f=>!!f.fairi&&f.hp===900)'),true);f.host.run("window.riftNet.action('e')");f.guest.run("window.riftNet.action('e')");await pump(f,70);for(const c of [f.host,f.guest])assert.equal(c.run('fighters.every(f=>f.fairi.clones.length===4)'),true);f.host.run("window.riftNet.action('r')");f.guest.run("window.riftNet.action('q')");await pump(f,180);assert.equal(f.host.run('window.testTransport.session().rb.digest().hash'),f.guest.run('window.testTransport.session().rb.digest().hash'));assert.equal(f.wireCounts.wsCombat,0);assert.ok(f.wireCounts.directCombat>0);}finally{await f.close();}});
