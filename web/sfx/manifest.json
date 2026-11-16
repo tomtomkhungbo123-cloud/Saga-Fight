@@ -556,14 +556,14 @@
       "label": "W · Long lanh duy trì",
       "event": "cylast.w.active",
       "file": "wav/cylast_w_rain_loop.wav",
-      "duration": 4.0,
+      "duration": 4,
       "gain": 0.44,
       "priority": 1,
       "loop": true,
       "replace_existing": false,
       "sha256": "aa27ddf6fe76710fc8738fafaf8f5b529c66f195891bd1d049bebad4508fbe7d",
       "loopStart": 0,
-      "loopEnd": 4.0,
+      "loopEnd": 4,
       "stopOn": "owning skill instance ends, is cancelled, is removed, or scene exits",
       "fadeInMs": 80,
       "fadeOutMs": 120
@@ -574,14 +574,14 @@
       "label": "R · Bão tuyết duy trì",
       "event": "cylast.r.active",
       "file": "wav/cylast_r_storm_loop.wav",
-      "duration": 4.0,
+      "duration": 4,
       "gain": 0.57,
       "priority": 2,
       "loop": true,
       "replace_existing": false,
       "sha256": "b544a0314253b519978dc1b54d38ac660b653a75751722e270f9f52f4876cf60",
       "loopStart": 0,
-      "loopEnd": 4.0,
+      "loopEnd": 4,
       "stopOn": "owning skill instance ends, is cancelled, is removed, or scene exits",
       "fadeInMs": 80,
       "fadeOutMs": 120
@@ -601,6 +601,56 @@
       "sha256": "eb8d4e0a597cf1dc2f35690c93a983de619dda066b765440502aa9acbb4ea2e4",
       "min_interval_ms": 80,
       "requires_new_hook": true
+    },
+    {
+      "id": "aether_cast",
+      "group": "Aether",
+      "label": "cast",
+      "event": "aether.cast",
+      "file": "aether/cast.wav",
+      "duration": 0.62,
+      "gain": 0.65,
+      "priority": 2
+    },
+    {
+      "id": "aether_launch",
+      "group": "Aether",
+      "label": "launch",
+      "event": "aether.launch",
+      "file": "aether/launch.wav",
+      "duration": 0.4,
+      "gain": 0.65,
+      "priority": 2
+    },
+    {
+      "id": "aether_zip",
+      "group": "Aether",
+      "label": "zip",
+      "event": "aether.zip",
+      "file": "aether/zip.wav",
+      "duration": 0.105,
+      "gain": 0.65,
+      "priority": 2
+    },
+    {
+      "id": "aether_whoosh",
+      "group": "Aether",
+      "label": "whoosh",
+      "event": "aether.whoosh",
+      "file": "aether/whoosh.wav",
+      "duration": 0.82,
+      "gain": 0.75,
+      "priority": 2
+    },
+    {
+      "id": "aether_break",
+      "group": "Aether",
+      "label": "break",
+      "event": "aether.break",
+      "file": "aether/break.wav",
+      "duration": 1.08,
+      "gain": 0.65,
+      "priority": 3
     }
   ],
   "revision": "56"

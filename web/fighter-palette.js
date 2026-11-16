@@ -1,6 +1,6 @@
 // Alternate palette for mirror matches. Recolor sprites once; no per-frame filters.
 (()=>{
- const angles={thunder:155,soul:205,cylast:100,mox:165,melanta:130,fairi:145},contexts=new WeakMap(),images=new WeakMap(),caches={};
+ const angles={thunder:155,soul:205,cylast:100,mox:165,melanta:130,fairi:145,aether:145},contexts=new WeakMap(),images=new WeakMap(),caches={};
  const matrices={};
  function matrix(type){if(matrices[type])return matrices[type];if(type==='defeated')return matrices[type]=[.213,.715,.072,.213,.715,.072,.213,.715,.072];const a=angles[type]*Math.PI/180,c=Math.cos(a),s=Math.sin(a);return matrices[type]=[.213+.787*c-.213*s,.715-.715*c-.715*s,.072-.072*c+.928*s,.213-.213*c+.143*s,.715+.285*c+.140*s,.072-.072*c-.283*s,.213-.213*c-.787*s,.715-.715*c+.715*s,.072+.928*c+.072*s];}
  const byte=v=>Math.max(0,Math.min(255,Math.round(v)));

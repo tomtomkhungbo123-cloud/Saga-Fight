@@ -2,7 +2,7 @@ const json=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:
 const fail=(message,status=400)=>{throw Object.assign(new Error(message),{status});};
 const token=()=>crypto.randomUUID()+crypto.randomUUID();
 const hash=async str=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str)))).map(b=>b.toString(16).padStart(2,'0')).join('');
-const fighter=v=>['thunder','soul','cylast','mox','melanta','fairi'].includes(v)?v:'thunder';
+const fighter=v=>['thunder','soul','cylast','mox','melanta','fairi','aether'].includes(v)?v:'thunder';
 export async function api(request,env){
  const url=new URL(request.url),now=Date.now();
  if(request.method!=='POST')return json({error:'Chỉ hỗ trợ POST.'},405);

@@ -1,11 +1,14 @@
-Saga Fight 6.24.4 / protocol 89 — Maps GitHub / Render
-2026-11-15; Node 24.22.1
-Source map: main Site version 57, commit 08378178dc5d3c945ee4e4eb754f4658be012cd5.
-Export base: Render 6.23.1; keeps STUN-only DIRECT fix, symmetric rollback, clock pacing, graphics and Fairi.
+Saga Fight 6.25.6 / protocol 90 — Aether GitHub / Render
+Date: 2026-11-16; Node 24.22.1.
+Source: main Site version 63, commit 09b7736804ec8ae2eb0c97d18516a6022160c3a0 (6.25.5).
+Render base: 6.24.4, including both maps and STUN-only DIRECT fix.
 
-npm test: 212 passed; 0 failed; 0 skipped; 38.5 seconds.
-Includes 72 ordered fighter/map restore-replay cases, checkpoint map geometry restoration, owner-selected forest over production DIRECT and WS, Fairi wide-map rendering, cavern native-canvas edge pixels/zoom geometry, graphics, clock pacing, strict DIRECT, reconnect and all combat regressions.
-After targeted Fairi renderer cache reset preservation: native rendering/Fairi/smooth-view checks rerun (see test suite locally).
+Final coverage: 245 distinct cases validated across full-regression and focused runs.
+- Full first regression: 242 cases; 241 passed; Git-history-dependent audio test was converted back to the portable baseline fixture, then passed.
+- Added two production DIRECT role tests for Aether Q/liquid on forest; both passed.
+- Added deterministic Aether KO/finisher/checkpoint/next-round test; passed.
+- Final focused network run: 7/7 passed. Checksum assertions compare the SAME confirmed tick (rather than different latest ticks during bounded clock pacing), with <=3 tick tolerance. No gameplay fallback restriction was relaxed.
+- All 98 ordered fighter/map restore/replay pairs passed, plus native render nonmutation, Aether geometry/mirror palette, fullscreen-frame cinematic pixels and Melanta aspect tests. Aether finisher owner/time/sound and 1500HP reset are included.
+- Static checks: HTML/script/stylesheet references, matching build/package lock, all 56 audio paths and supplied checksums.
 
-Real local WebSocket relay; browser VM and simulated WebRTC. Camera tests use native canvas. No real browser/GPU/iPad/LAN/STUN end-to-end verification performed for this export. No GitHub/Render deployment performed.
-Source docs describe historical Site changes and their verification; the limits above apply to this Render export.
+Verification limits: VM browser and simulated WebRTC with real local WebSockets; native canvas for pixel checks. No physical mobile/GPU/LAN/real ICE-STUN/WAN end-to-end validation for this export. No GitHub or Render deployment performed. Site-source notes about host-authority or old protocols do not describe the Render symmetric rollback transport.

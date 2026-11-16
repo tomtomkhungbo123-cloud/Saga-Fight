@@ -1,0 +1,4 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),{createCanvas,Path2D}=require('@napi-rs/canvas');
+const env=vm.createContext({window:{},Math,Path2D,document:{createElement:()=>createCanvas(1,1)}});for(const file of ['base','visual'])vm.runInContext(fs.readFileSync('web/aether/'+file+'.js','utf8'),env);
+for(const [w,h] of [[1200,838],[1280,720],[960,400],[480,800]]){const out=createCanvas(w,h),c=out.getContext('2d');env.brush=c;env.width=w;env.height=h;vm.runInContext("window.AetherVisual.finisher(brush,width,height,2,'high')",env);for(const [x,y] of [[1,1],[w-2,1],[1,h-2],[w-2,h-2],[w/2,5],[w/2,h-5]]){const p=c.getImageData(Math.floor(x),Math.floor(y),1,1).data;assert.equal(p[3],255);assert.notDeepEqual([...p].slice(0,3),[16,23,21],'former matte bars must be replaced by the scene background');}}
+console.log('PASS Aether cinematic fills frame edges/corners at four aspect ratios; no black bars or missing lower frame');
