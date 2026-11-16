@@ -1,14 +1,7 @@
-Saga Fight 6.25.6 / protocol 90 — Aether GitHub / Render
-Date: 2026-11-16; Node 24.22.1.
-Source: main Site version 63, commit 09b7736804ec8ae2eb0c97d18516a6022160c3a0 (6.25.5).
-Render base: 6.24.4, including both maps and STUN-only DIRECT fix.
-
-Final coverage: 245 distinct cases validated across full-regression and focused runs.
-- Full first regression: 242 cases; 241 passed; Git-history-dependent audio test was converted back to the portable baseline fixture, then passed.
-- Added two production DIRECT role tests for Aether Q/liquid on forest; both passed.
-- Added deterministic Aether KO/finisher/checkpoint/next-round test; passed.
-- Final focused network run: 7/7 passed. Checksum assertions compare the SAME confirmed tick (rather than different latest ticks during bounded clock pacing), with <=3 tick tolerance. No gameplay fallback restriction was relaxed.
-- All 98 ordered fighter/map restore/replay pairs passed, plus native render nonmutation, Aether geometry/mirror palette, fullscreen-frame cinematic pixels and Melanta aspect tests. Aether finisher owner/time/sound and 1500HP reset are included.
-- Static checks: HTML/script/stylesheet references, matching build/package lock, all 56 audio paths and supplied checksums.
-
-Verification limits: VM browser and simulated WebRTC with real local WebSockets; native canvas for pixel checks. No physical mobile/GPU/LAN/real ICE-STUN/WAN end-to-end validation for this export. No GitHub or Render deployment performed. Site-source notes about host-authority or old protocols do not describe the Render symmetric rollback transport.
+Saga Fight 6.25.7 / protocol91 — DIRECT checking diagnosis
+2026-11-16, Node24.22.1.
+Changed network/UI only from 6.25.6; preserves Aether/map/combat implementation.
+Network/server regression: 30/30 passed across clock-start, ping-direct, full-rollback-network, reconnect-regression, render-server and websocket-relay.
+Additional clock-start run: 9/9 passed, including one new rejected-candidate + sanitized diagnostic UI case. Total unique verified cases for this change:31.
+Checking grace test: first 12-second timeout does not fail while checking; final 18-second grace fails cleanly without WS gameplay in DIRECT-only room. Candidate rejection test: next usable candidate still accepted. Diagnostic report survives PC closure and omits IP/SDP/token/raw error text.
+Native WebRTC/router/iPad ICE end-to-end is not tested. Physical-network root cause of the user screenshot is not established. No GitHub/Render deployment performed.

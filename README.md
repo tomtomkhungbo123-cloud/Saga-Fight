@@ -1,27 +1,23 @@
-# Saga Fight 6.25.6 — Aether cho GitHub / Render
+# Saga Fight 6.25.7 — DIRECT checking và chẩn đoán
 
-Gói cập nhật dưới 100 file cho repository Saga Fight hiện có. Nguồn game chính: Site phiên bản 63, commit 09b7736804ec8ae2eb0c97d18516a6022160c3a0 (Build 6.25.5). Bản xuất Render là 6.25.6 để phân biệt với bản Site, giữ netcode rollback / DIRECT / STUN và hai map từ bản Render 6.24.4.
+Gói cập nhật cho repository đang có game. Giữ Aether, Fairi, hai map, rollback và STUN của bản 6.25.6. Không cần TURN/token.
 
 ## Cập nhật
 
-1. Giải nén `Saga_Fight_6_25_6_Aether_GitHub_Update.zip`.
-2. Ở GỐC repository `Saga-Fight`, chọn Add file → Upload files. Kéo toàn bộ NỘI DUNG bên trong thư mục giải nén vào ô upload, bao gồm các thư mục web, worker, scripts, tests, docs và các file ở gốc. Không upload nguyên ZIP hoặc thêm thư mục bao ngoài.
-3. Giữ nguyên ảnh/âm thanh cũ. Đây là gói cập nhật cho repository đang có game, không phải gói cài lên repository trắng. Các thư mục mới `web/aether/` và `web/sfx/aether/` phải được tải lên đầy đủ.
-4. Commit changes. Render giữ Build Command `npm ci`, Start Command `npm start`; Root Directory để trống nếu package.json ở gốc. Chờ Auto-Deploy, hoặc Manual Deploy → Deploy latest commit → Live.
-5. Cả hai máy tải lại, xác nhận BUILD 6.25.6. `/healthz` có clientBuild 6.25.6 và protocol 90. Rời phòng cũ, tạo phòng mới; không trộn hai phiên bản. Nếu còn bản cũ, tải lại bỏ cache/xóa dữ liệu trang.
+Giải nén Saga_Fight_6_25_7_DIRECT_Checking_Fix.zip; kéo toàn bộ NỘI DUNG vào GỐC repository GitHub, ghi đè file cùng tên và commit. Giữ ảnh/âm thanh cũ. Render npm ci / npm start; chờ Live. Cả hai máy tải lại BUILD 6.25.7, health clientBuild 6.25.7/protocol91. Rời phòng cũ và tạo phòng mới. Đây không phải gói cài repository trắng.
 
-## Nội dung
+## Thay đổi
 
-- Aether là chiến binh thứ bảy, dùng được ở PvE, PvP, Sandbox và Online. Thông số/kỹ năng theo bản game chính hiện tại: 1500 HP, Q sáu tinh thể, W giam cầm, E du hành dạng lỏng, R mưa tinh thể và bay lơ lửng. Không dùng thông số lab hay các mô tả nhân vật cũ trong hội thoại.
-- Giữ bản sửa màu mirror của Aether, vùng va chạm tinh thể R khi mục tiêu trên không và năm cue âm thanh mới trong bộ trộn chung.
-- Cảnh kết liễu Aether phủ kín khung đấu trường, giữ HUD. Melanta dùng đúng tỉ lệ ở nhiều kích thước màn hình. Các chỉnh sửa này lấy từ bản Site mới nhất.
-- Snapshot rollback ở hai phía bao gồm trạng thái Aether, tinh thể/vùng chiêu, seed, người kết liễu, thời gian và âm thanh đã xác nhận; camera/VFX cache giữ ngoài trạng thái chiến đấu. Round mới xóa người kết liễu Aether và tạo lại HP/kỹ năng.
-- Giữ Rừng tiên linh, camera Hang đá lãng quên, Fairi, lựa chọn đồ họa, ping thật và cân nhịp chủ phòng/người tham gia.
+- Khi hết 12 giây nhưng ICE vẫn checking/connected/completed mà DIRECT chưa sẵn sàng, cho thêm tối đa 18 giây, tổng 30 giây. Không chờ vô hạn, không âm thầm dùng gameplay WS trong phòng Chỉ DIRECT.
+- Một ứng viên ICE bị trình duyệt từ chối không hủy toàn bộ thương lượng; ghi nhận lỗi theo loại và tiếp tục các ứng viên còn lại.
+- Thêm Sao chép chẩn đoán ở thẻ phòng. Thông tin gồm build, vai trò, trạng thái ICE, số/loại ứng viên hai phía, lỗi STUN/ứng viên, mô tả đã trao đổi và probe. Không chứa SDP, địa chỉ IP, mã phòng hoặc token. Nếu clipboard bị chặn, hiện ô văn bản để sao chép thủ công.
 
-## Kết nối
+## Nếu vẫn lỗi
 
-Chủ phòng chọn map và chế độ kết nối. `Chung Wi-Fi · Chỉ DIRECT` không chuyển gameplay sang server nếu DIRECT mất. `Tự động · DIRECT ưu tiên, server dự phòng` cho phép WebSocket dự phòng. Có STUN công khai để tìm đường kết nối; không dùng TURN/token. Server vẫn cần cho trang/phòng/signaling/khôi phục. Router hoặc trình duyệt có thể hạn chế DIRECT dù cùng Wi-Fi.
+1. Chỉ MỘT máy bấm Tạo phòng. Máy còn lại nhập đúng mã trong THẺ PHÒNG của máy tạo rồi bấm Vào phòng; không tạo hai phòng riêng. Nếu đã có phòng đang hoạt động, bấm Rời phòng trước khi vào mã khác. Mã đang gõ ở ô nhập không thay đổi phòng hiện tại.
+2. Giữ cả hai trang mở. Nếu DIRECT thất bại sau thời gian chờ, bấm Sao chép chẩn đoán ở CẢ HAI máy và gửi nội dung để xác định bước bị chặn.
+3. Có thể chọn Tự động để dùng WS dự phòng nếu muốn chơi ngay; Chỉ DIRECT sẽ dừng nếu không thể kết nối trực tiếp.
 
-## Kiểm tra
+Cùng Wi-Fi không bảo đảm DIRECT. ICE checking với hai ứng viên không đủ để kết luận lỗi là router, trình duyệt hay trao đổi kết nối. Bản sửa xử lý điểm thất bại sớm trong mã, không bảo đảm vượt qua cách ly thiết bị/chặn UDP/quyền trình duyệt. Không tự bật microphone/camera hoặc yêu cầu quyền media.
 
-Node 24 → npm ci → npm test. Xem VALIDATION.txt cho phạm vi xác minh. Chưa kiểm tra trên hai thiết bị Wi-Fi vật lý của bạn; chưa deploy GitHub/Render thay bạn. Không bảo đảm loại bỏ mọi trễ mạng hoặc tụt FPS phần cứng.
+Kiểm chứng: 31 trường hợp mạng/server khác nhau đã đạt qua bộ hồi quy và kiểm tra bổ sung; WebRTC được mô phỏng, signaling/relay dùng WebSocket local thật. Chưa xác minh trên hai thiết bị/router của bạn. Chưa deploy GitHub/Render thay bạn.

@@ -11,7 +11,7 @@
 
 ## Cài đặt
 
-Gói cập nhật dành cho repository đang chạy bản 6.25.6 có đủ ảnh/âm thanh. Giải nén và chép đè đúng đường dẫn vào gốc repository, giữ các file không nằm trong gói. Upload cả worker/index.mjs và các file web, không chỉ game.js. Render tiếp tục dùng npm ci / npm start. Hai máy tải lại BUILD 6.24.0, rời phòng cũ và tạo phòng mới. Nếu dùng Cloudflare Worker riêng, deploy lại Worker để lưu lựa chọn map.
+Gói cập nhật dành cho repository đang chạy bản 6.25.7 có đủ ảnh/âm thanh. Giải nén và chép đè đúng đường dẫn vào gốc repository, giữ các file không nằm trong gói. Upload cả worker/index.mjs và các file web, không chỉ game.js. Render tiếp tục dùng npm ci / npm start. Hai máy tải lại BUILD 6.24.0, rời phòng cũ và tạo phòng mới. Nếu dùng Cloudflare Worker riêng, deploy lại Worker để lưu lựa chọn map.
 
 ## Kiểm tra thực tế còn cần
 

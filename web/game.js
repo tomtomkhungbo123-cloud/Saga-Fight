@@ -1,5 +1,5 @@
 'use strict';
-window.SagaGameBuild='6.25.6';
+window.SagaGameBuild='6.25.7';
 const $=id=>document.getElementById(id),canvas=$('game'),ctx=canvas.getContext('2d'),clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 let W=1600,H=1117;
 // Keep layout reads and static scenery out of the animation hot path.
