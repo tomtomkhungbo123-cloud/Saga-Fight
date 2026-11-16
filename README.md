@@ -1,23 +1,26 @@
-# Saga Fight 6.25.7 — DIRECT checking và chẩn đoán
+# Saga Fight 6.25.8 — Kiểm tra và sửa tương tác kết nối giữa trình duyệt
 
-Gói cập nhật cho repository đang có game. Giữ Aether, Fairi, hai map, rollback và STUN của bản 6.25.6. Không cần TURN/token.
+Bản cập nhật trực tiếp cho game GitHub/Render đang dùng 6.25.7. Giữ Aether, bảy chiến binh, hai map, rollback và STUN. Thay đổi nằm ở thương lượng kết nối DIRECT; chưa có bằng chứng xác nhận nguyên nhân duy nhất của lỗi trên thiết bị của người dùng.
 
 ## Cập nhật
 
-Giải nén Saga_Fight_6_25_7_DIRECT_Checking_Fix.zip; kéo toàn bộ NỘI DUNG vào GỐC repository GitHub, ghi đè file cùng tên và commit. Giữ ảnh/âm thanh cũ. Render npm ci / npm start; chờ Live. Cả hai máy tải lại BUILD 6.25.7, health clientBuild 6.25.7/protocol91. Rời phòng cũ và tạo phòng mới. Đây không phải gói cài repository trắng.
+Giải nén Saga_Fight_6_25_8_Connection_Interop_Update.zip. Ở GỐC repository GitHub, kéo toàn bộ NỘI DUNG vào Upload files và commit, giữ đúng thư mục và giữ ảnh/âm thanh cũ. Không upload nguyên ZIP. Gói dưới100file, không dùng cho repository trắng.
 
-## Thay đổi
+Render giữ npm ci / npm start. Chờ Live. Cả hai máy tải lại BUILD 6.25.8, /healthz có clientBuild 6.25.8 và protocol92. Rời phòng cũ, tạo phòng mới. Thử máy tính tạo phòng → iPad vào, sau đó đổi vai nếu cần.
 
-- Khi hết 12 giây nhưng ICE vẫn checking/connected/completed mà DIRECT chưa sẵn sàng, cho thêm tối đa 18 giây, tổng 30 giây. Không chờ vô hạn, không âm thầm dùng gameplay WS trong phòng Chỉ DIRECT.
-- Một ứng viên ICE bị trình duyệt từ chối không hủy toàn bộ thương lượng; ghi nhận lỗi theo loại và tiếp tục các ứng viên còn lại.
-- Thêm Sao chép chẩn đoán ở thẻ phòng. Thông tin gồm build, vai trò, trạng thái ICE, số/loại ứng viên hai phía, lỗi STUN/ứng viên, mô tả đã trao đổi và probe. Không chứa SDP, địa chỉ IP, mã phòng hoặc token. Nếu clipboard bị chặn, hiện ô văn bản để sao chép thủ công.
+## Các điểm tìm thấy và đã sửa
 
-## Nếu vẫn lỗi
+1. Hoàn tất ICE: mã cũ chuyển tiếp RTCIceCandidate có chuỗi rỗng nhưng bỏ qua sự kiện candidate=null. Bản này chuyển sự kiện hoàn tất toàn cục thành end-of-candidates hợp lệ, xử lý cả hai dạng và tránh gửi lặp. Không giả định mọi trình duyệt phát sự kiện hoàn tất giống nhau.
+2. SDP/ICE bất đồng bộ: thông điệp signaling cũ gọi xử lý trực tiếp, nhiều promise có thể chồng nhau. Bản này xếp hàng theo phiên, áp dụng offer/answer xong rồi mới xử lý tiếp candidate/route, có giới hạn hàng đợi. Gói của PC/phiên đã đóng không được làm hỏng lượt kết nối mới.
+3. Trạng thái disconnected lúc khởi tạo: không dùng thời gian đóng2.5giây của trận đang chạy cho kết nối chưa mở. Khởi tạo vẫn có deadline hữu hạn12giây và phần chờ thêm18giây khi phù hợp; trạng thái failed vẫn được xử lý. Không chờ vô hạn.
+4. Ứng viên được chống lặp và gắn với PC hiện tại; một ứng viên lỗi không hủy các ứng viên còn lại. Báo cáo trong game có trạng thái gửi/nhận end-of-candidates.
 
-1. Chỉ MỘT máy bấm Tạo phòng. Máy còn lại nhập đúng mã trong THẺ PHÒNG của máy tạo rồi bấm Vào phòng; không tạo hai phòng riêng. Nếu đã có phòng đang hoạt động, bấm Rời phòng trước khi vào mã khác. Mã đang gõ ở ô nhập không thay đổi phòng hiện tại.
-2. Giữ cả hai trang mở. Nếu DIRECT thất bại sau thời gian chờ, bấm Sao chép chẩn đoán ở CẢ HAI máy và gửi nội dung để xác định bước bị chặn.
-3. Có thể chọn Tự động để dùng WS dự phòng nếu muốn chơi ngay; Chỉ DIRECT sẽ dừng nếu không thể kết nối trực tiếp.
+Chỉ DIRECT vẫn không chuyển gameplay sang WebSocket. Tự động vẫn có WebSocket dự phòng. Không thêm TURN hoặc quyền camera/microphone.
 
-Cùng Wi-Fi không bảo đảm DIRECT. ICE checking với hai ứng viên không đủ để kết luận lỗi là router, trình duyệt hay trao đổi kết nối. Bản sửa xử lý điểm thất bại sớm trong mã, không bảo đảm vượt qua cách ly thiết bị/chặn UDP/quyền trình duyệt. Không tự bật microphone/camera hoặc yêu cầu quyền media.
+## Kết quả kiểm tra và giới hạn
 
-Kiểm chứng: 31 trường hợp mạng/server khác nhau đã đạt qua bộ hồi quy và kiểm tra bổ sung; WebRTC được mô phỏng, signaling/relay dùng WebSocket local thật. Chưa xác minh trên hai thiết bị/router của bạn. Chưa deploy GitHub/Render thay bạn.
+36 ca mạng/server/đồ họa đã đạt qua bộ hồi quy. Ba ca mô phỏng nghiêm ngặt tái hiện thất bại trên mã6.25.7 và đạt ở6.25.8: candidate đến khi setRemoteDescription chưa hoàn tất; một phía chỉ báo hoàn tất bằng null; disconnected tạm thời khi chưa vào trận. Thử hai vai host/guest với độ trễ khác nhau và kiểm tra end marker đúng một lần, không có candidate bị từ chối và không dùng WS gameplay trong phòng Chỉ DIRECT.
+
+Đây là kiểm thử hành vi bằng VM/RTCPeerConnection giả lập và WebSocket local thật, không phải chạy Safari/Edge thật. Chưa thử trên máy tính/iPhone/iPad vật lý. Không thể kết luận các điểm trên là nguyên nhân duy nhất của log đã gửi hoặc bảo đảm mọi Wi-Fi đều DIRECT được.
+
+Tài liệu đối chiếu: https://www.w3.org/TR/webrtc/ và https://www.rfc-editor.org/info/rfc8838/

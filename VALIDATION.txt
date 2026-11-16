@@ -1,7 +1,11 @@
-Saga Fight 6.25.7 / protocol91 — DIRECT checking diagnosis
-2026-11-16, Node24.22.1.
-Changed network/UI only from 6.25.6; preserves Aether/map/combat implementation.
-Network/server regression: 30/30 passed across clock-start, ping-direct, full-rollback-network, reconnect-regression, render-server and websocket-relay.
-Additional clock-start run: 9/9 passed, including one new rejected-candidate + sanitized diagnostic UI case. Total unique verified cases for this change:31.
-Checking grace test: first 12-second timeout does not fail while checking; final 18-second grace fails cleanly without WS gameplay in DIRECT-only room. Candidate rejection test: next usable candidate still accepted. Diagnostic report survives PC closure and omits IP/SDP/token/raw error text.
-Native WebRTC/router/iPad ICE end-to-end is not tested. Physical-network root cause of the user screenshot is not established. No GitHub/Render deployment performed.
+Saga Fight6.25.8/protocol92 — DIRECT interoperability hardening
+2026-11-16, Node24.22.1. Base: Render6.25.7.
+
+Network/server/graphics regression:36/36 passed, 0failed, 0skipped (25.3seconds).
+Groups: clock-start, ping-direct, full-rollback-network, reconnect-regression, render-server, websocket-relay, graphics-online.
+Strengthened regression rerun:3/3 passed (5.4seconds). Candidate events arrive while remote SDP promise is pending; one profile emits only null for gather completion. Both host/guest orderings tested. In-match disconnected timer must not run during initial connection.
+Baseline6.25.7 with matching build/protocol in the same strengthened fixture:0/3 passed; both negotiation tests timed out, startup timer assertion failed. These reproduce concrete code weaknesses, not the user's physical environment.
+Additional diagnostic/UI/strict targeted run4/4 passed before fixture strengthening.
+Combat/character/map files are unchanged apart from release build stamps; seven-character simulation coverage is inherited from6.25.6, not rerun in full for this transport change.
+
+No real Safari/Edge/Firefox or physical PC/iPhone/iPad/LAN ICE end-to-end test performed. No TURN added, no media permissions requested, no claim of a proven device-specific root cause. No GitHub/Render deployment performed.
