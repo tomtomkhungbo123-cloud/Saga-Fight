@@ -1,11 +1,10 @@
-Saga Fight6.25.8/protocol92 — DIRECT interoperability hardening
-2026-11-16, Node24.22.1. Base: Render6.25.7.
+Saga Fight6.25.9 / protocol93 — Gathered SDP with late trickle
+Date2026-11-17; Node24.22.1; base Render6.25.8.
 
-Network/server/graphics regression:36/36 passed, 0failed, 0skipped (25.3seconds).
-Groups: clock-start, ping-direct, full-rollback-network, reconnect-regression, render-server, websocket-relay, graphics-online.
-Strengthened regression rerun:3/3 passed (5.4seconds). Candidate events arrive while remote SDP promise is pending; one profile emits only null for gather completion. Both host/guest orderings tested. In-match disconnected timer must not run during initial connection.
-Baseline6.25.7 with matching build/protocol in the same strengthened fixture:0/3 passed; both negotiation tests timed out, startup timer assertion failed. These reproduce concrete code weaknesses, not the user's physical environment.
-Additional diagnostic/UI/strict targeted run4/4 passed before fixture strengthening.
-Combat/character/map files are unchanged apart from release build stamps; seven-character simulation coverage is inherited from6.25.6, not rerun in full for this transport change.
+Final network/server/graphics/publication run:40 passed,0 failed,0 skipped (12seconds).
+Files: clock-start, ping-direct, full-rollback-network, reconnect-regression, render-server, websocket-relay, graphics-online, sdp-publication.
+New publication tests4/4: no candidates before SDP; actual candidate-bearing localDescription published; candidates embedded in SDP not trickled twice; end marker embedded not duplicated; gather timeout still permits late trickle; close cancels wait and stale send; ICE pair request/response report omits addresses, SDP and tokens.
+Existing36 transport tests retained, including opposite host/guest strict timing and isolated candidate rejection.
 
-No real Safari/Edge/Firefox or physical PC/iPhone/iPad/LAN ICE end-to-end test performed. No TURN added, no media permissions requested, no claim of a proven device-specific root cause. No GitHub/Render deployment performed.
+Character/combat/map code unchanged except release stamps. Existing7-character/2-map regression coverage is inherited, not fully rerun for this transport change.
+No real-browser or physical laptop/iOS ICE validation. No proven physical-network root cause. No GitHub/Render deployment performed. Package is an update for an existing repository; retains all new character/map/audio files from previous exports.

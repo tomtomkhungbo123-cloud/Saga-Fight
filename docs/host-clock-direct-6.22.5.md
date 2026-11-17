@@ -1,6 +1,6 @@
-# 6.25.8 implementation and evidence
+# 6.25.9 implementation and evidence
 
-Starting source: Render export 6.22.4; live health during investigation confirmed 6.22.4-graphics1 / protocol 85. New export 6.25.8-clock1 / protocol 86. No SQL migration or new dependency; connection policy is in the existing room config JSON.
+Starting source: Render export 6.22.4; live health during investigation confirmed 6.22.4-graphics1 / protocol 85. New export 6.25.9-clock1 / protocol 86. No SQL migration or new dependency; connection policy is in the existing room config JSON.
 
 Reproduction before patch: two independent production VM clients, real local WS relay, mocked fast reliable DIRECT, outgoing WS control delayed 120 ms, actual performance-clock frame scheduling. After 2.2 seconds the host was ahead by 19–20 ticks; the test failed its <=3-tick tolerance. Startup previously waited 100 ms on host and 100 minus peer RTT/2 after START arrival on guest, even though START itself travels through WS. This can produce the reported role asymmetry; it is not proof no other device-specific cause exists.
 
@@ -12,4 +12,4 @@ DIRECT-only policy: host selects auto/direct before room creation, stored in roo
 
 Evidence after patch: representative delayed-control test ended with tick gap 0. Tests intentionally advanced host and guest separately by 9 ticks; each leading side applied clock holds, returned within <=3 ticks and kept shared confirmed-state hashes without epoch reset. DIRECT-only unavailable/success/loss cases have zero WS gameplay packets; relay rejects injected WS input; a join cannot downgrade the policy. A DIRECT-only coordinator disconnect also pauses without spawning a WS repair epoch. Existing graphics, 25 fighter pairings, native renderer, interpolation, rollback, repair, prior ACK/START and fallback tests pass.
 
-Full npm test: Node 24.22.1; 152 passed, 0 failed/skipped/cancelled. Log: validation-6.25.8.txt. Native WebRTC is mocked; real physical browser/device Wi-Fi behavior and subjective smoothness remain unverified. No claim of zero lag, universal DIRECT reachability, or removal of all host/guest disparities on arbitrary hardware.
+Full npm test: Node 24.22.1; 152 passed, 0 failed/skipped/cancelled. Log: validation-6.25.9.txt. Native WebRTC is mocked; real physical browser/device Wi-Fi behavior and subjective smoothness remain unverified. No claim of zero lag, universal DIRECT reachability, or removal of all host/guest disparities on arbitrary hardware.
