@@ -1,13 +1,9 @@
 {
-  "build": "6.36.0",
-  "base": "known Render package 6.25.10",
-  "source_site_version": 73,
-  "source_commit": "dd4e00f2face8079ed9bec13332d85cb76bc6426",
-  "online": "Render hybrid DIRECT + WebSocket fallback + rollback",
+  "build": "6.36.0-auth1",
+  "frontend": "6.36.0",
+  "base": "Render hybrid DIRECT + WebSocket fallback + rollback",
+  "source_site_version": 78,
+  "source_commit": "68f93d9265c4c5da04ca8a582f2bb30a31e12035",
   "protocol": 94,
-  "live_observed": {
-    "health": "6.25.10",
-    "frontend": "6.25.9"
-  },
-  "github_updated": false
+  "repair": "Restore release files under served web/ directory; Supabase Auth integration; reject mismatched release on build/start"
 }

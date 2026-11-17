@@ -8,7 +8,7 @@ function unbind(f,env){const e=env.enemy,b=e.melantaBind;if(b?.owner===f.id){if(
 function cancel(f,env){if(!f.melanta)return;unbind(f,env);f.melanta.a=null;f.melanta.scriptedTick=false;f.melanta.rHealVisual=null;f.action=null;f.normal=null;f.combat.buffer=null;f.turn=0;}
 function mirror(f){const a=f.melanta.a;f.action=a?{k:a.k,age:a.t,duration:a.phase==='plunge'?4+(a.plungeTime||0):a.duration,cancel:a.duration,use:a.use,dir:a.dir}:null;}
 function use(f,k,env){const g=pull(f,env),L=window.MelantaLab;if(g.a?.k==='attack'&&!f.normal)g.a=null;if(!L.SKILLS[k]||g.a)return false;const spec=L.SKILLS[k],a={k,t:0,duration:spec.duration,sx:f.x,sy:g.p.y,dir:f.dir,hit:false,ticks:0,locked:false,tx:env.enemy.x,use:env.use?.()||f.combat.launching};g.a=a;f.cd[k]=spec.cd;
- if(k==='q'&&env.enemy.hp>0&&Math.hypot(env.enemy.x-f.x,env.enemy.y-f.y)<=L.Q_REACH+L.Q_RADIUS){a.targetId=env.enemy.id;a.impactX=env.enemy.x;a.dir=f.dir=Math.sign(env.enemy.x-f.x)||f.dir;}
+ if(k==='q'&&env.targetable?.(env.enemy)!==false&&env.enemy.hp>0&&Math.hypot(env.enemy.x-f.x,env.enemy.y-f.y)<=L.Q_REACH+L.Q_RADIUS){a.targetId=env.enemy.id;a.impactX=env.enemy.x;a.dir=f.dir=Math.sign(env.enemy.x-f.x)||f.dir;}
  if(k==='e'){a.airborne=!f.ground;a.startVy=f.vy;a.airTime=(-f.vy+Math.sqrt(f.vy*f.vy+3800*Math.max(0,g.p.y)))/1900;g.speedUntil=env.time+2;}
  if(k==='r'){a.phase=!f.ground?'plunge':'dance';a.plungeTime=0;f.vx=0;if(a.phase==='plunge')f.vy=Math.max(f.vy,600);}
  mirror(f);return true;}

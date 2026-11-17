@@ -1,9 +1,12 @@
 import http from 'node:http';
+import {releaseInfo} from './scripts/release-check.mjs';
+const release=releaseInfo();
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {pipeline} from 'node:stream/promises';
 import {api} from './worker/index.mjs';
+import {authenticatedApi} from './worker/account-auth.mjs';
 import {localDB} from './scripts/local-db.mjs';
 import {attachRelay} from './scripts/relay.mjs';
 
@@ -24,7 +27,7 @@ const server=http.createServer(async(req,res)=>{
   res.setHeader('Referrer-Policy','same-origin');
   if(url.pathname==='/healthz'){
    res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});
-   res.end(JSON.stringify({ok:true,build:'6.36.0-aether1',clientBuild:'6.36.0',sourceVersion:73,baseBuild:'6.25.10',protocol:94,transport:'hybrid',turnRequired:false}));return;
+   res.end(JSON.stringify({ok:true,...release,build:'6.36.0-auth1',clientBuild:'6.36.0',sourceVersion:78,baseBuild:'6.25.10',protocol:94,transport:'hybrid',turnRequired:false}));return;
   }
   if(url.pathname.startsWith('/api/')){
    if(!['GET','POST'].includes(req.method)){res.writeHead(405);res.end();return;}
@@ -33,7 +36,7 @@ const server=http.createServer(async(req,res)=>{
    const headers=new Headers(req.headers);for(const name of [...headers.keys()])if(name.startsWith('oai-'))headers.delete(name);
    const request=new Request(url,{method:req.method,headers,...(req.method==='POST'?{body:Buffer.concat(chunks)}:{})});
    const leaveBody=url.pathname==='/api/rooms/leave'?await request.clone().json().catch(()=>null):null;
-   const response=await api(request,{DB});
+   const response=await authenticatedApi(request,{DB,SUPABASE_URL:process.env.SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY:process.env.SUPABASE_PUBLISHABLE_KEY},api);
    if(leaveBody&&response.ok)relay.roomClosed(leaveBody.code);
    res.writeHead(response.status,Object.fromEntries(response.headers));
    res.end(Buffer.from(await response.arrayBuffer()));return;
@@ -56,7 +59,8 @@ const server=http.createServer(async(req,res)=>{
 const relay=attachRelay(server,DB);
 server.requestTimeout=15000;
 server.headersTimeout=10000;
-server.listen(Number(process.env.PORT||3000),'0.0.0.0',()=>console.log('Saga Fight 6.36.0 Rollback listening on port '+server.address().port));
+const cliPort=process.argv.indexOf('--port');
+server.listen(Number(process.env.PORT||(cliPort>=0?process.argv[cliPort+1]:3000)),'0.0.0.0',()=>console.log('Saga Fight 6.36.0 Rollback listening on port '+server.address().port));
 for(const signal of ['SIGTERM','SIGINT'])process.on(signal,()=>{
  relay.close();server.close(()=>{DB.close();process.exit(0);});
  setTimeout(()=>process.exit(0),8000).unref();

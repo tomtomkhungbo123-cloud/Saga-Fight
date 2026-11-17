@@ -7,7 +7,7 @@ class ArenaMox extends MoxGame{
  effect(k,...args){super.effect(k,...args);const env=contexts.get(this);if(k==='grab'||k==='slam')env?.cue?.(k==='grab'?'mox_r_grab':'mox_r_slam');}
 
  use(k){const accepted=super.use(k);if(accepted&&k==='q'){const env=contexts.get(this);if(env)env.fighter.immuneUntil=env.time+1;}return accepted;}
- release(a){const first=this.balls.length;super.release(a);if(a.k==='w')for(const [i,b] of this.balls.slice(first).entries()){b.dir=this.p.dir;b.use=a.use;b.hitId=a.use.id+':w:'+i;}}
+ release(a){const first=this.balls.length,env=contexts.get(this);if(a.k==='w'&&env?.targetable?.(env.enemy)===false){const hp=this.e.hp;this.e.hp=0;super.release(a);this.e.hp=hp;}else super.release(a);if(a.k==='w')for(const [i,b] of this.balls.slice(first).entries()){b.dir=this.p.dir;b.use=a.use;b.hitId=a.use.id+':w:'+i;}}
 
  hit(n,knock=0,burn=false,direction=this.p.dir,meta={}){const env=contexts.get(this),e=env.enemy;if(e.hp<=0||!env.hittable(e))return false;const use=meta.use||this.action?.use||env.use();const actual=env.damage(env.fighter,e,n,0,false,false,{...meta,use});this.e.hp=e.hp;this.damage+=actual;this.combo++;this.effect('impact',e.x,-e.y+80,.28);if(knock&&!this.action?.grab&&!env.damageArmored?.(e)&&env.control(e))e.knockVx=direction*knock;if(burn){this.e.burn=3;this.e.burnClock=0;this.burnUse=use;}if(!e.hp)this.e.burn=0;return true;}
  update(dt,input={}){dt=Math.min(dt,.0334);this.t+=dt;const p=this.p,e=this.e;

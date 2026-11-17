@@ -92,6 +92,66 @@ body.scene-changing #sceneFade{pointer-events:auto;touch-action:none}
 
 @media(max-width:550px){.fighter-picker-grid>.fighter-card:last-child:nth-child(odd){grid-column:1/-1;justify-self:center;width:calc((100% - 10px)/2)}}
 
+.graphics-settings{border-bottom:1px solid #ffffff20;padding:0 0 18px;margin-bottom:18px}.graphics-settings h3{margin-top:0}.graphics-settings label{display:block;font-size:12px;margin:16px 0 8px}.graphics-settings select{display:block;width:100%;min-height:44px;background:#211a2b;color:#eee5f4;border:1px solid #ffffff30;padding:10px 12px;border-radius:6px;font:inherit}.graphics-settings select:focus-visible{outline:2px solid #edcf88;outline-offset:2px}.graphics-settings p{font-size:11px;line-height:1.6;color:#b7a9bb}.graphics-settings .graphics-hint{color:#988b9d}
+
+.map-choice{display:block;margin:16px 0;color:#c6d4b8;font-size:11px;letter-spacing:.08em}.map-choice select{display:block;width:100%;margin:8px 0;padding:12px;background:#1b2626;color:#e1ebd8;border:1px solid #687c66;border-radius:6px;font-size:13px}.map-choice small{display:block;font-size:10px;letter-spacing:0;line-height:1.6;color:#aaa}.map-choice select:disabled{opacity:.65}
+
+/* Supplied Saga Fight identity; explicit dimensions avoid header layout shift. */
+.brand-icon{display:inline-block;width:38px;height:38px;vertical-align:middle;object-fit:contain;margin-right:10px;border-radius:6px}.brand{white-space:nowrap}
+@media(max-width:430px){.brand-icon{width:30px;height:30px;margin-right:6px}}
+
+/* Header uses the supplied symbol alone; mode label is intentionally hidden. */
+header .brand{display:inline-flex;align-items:center;flex-shrink:0}header .brand-icon{width:48px;height:48px;margin:0;border-radius:0}#modeTag{display:none!important}
+@media(max-width:430px){header .brand-icon{width:40px;height:40px}}
+
+/* Visual arena choice, sharing the native selection used by Online rooms. */
+.map-choice{border:0;padding:0;min-width:0;margin:12px 0}.map-choice legend{padding:0;margin-bottom:8px}.map-previews{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.map-preview{position:relative;display:block;text-align:left;padding:0;overflow:hidden;border:1px solid #ffffff24;border-radius:7px;background:#1d2020;letter-spacing:0;transition:border-color .15s}.map-preview img{display:block;object-fit:cover;object-position:center 62%;width:100%;height:82px;filter:brightness(.8)}.map-preview-info{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 11px}.map-preview strong{font-size:12px;font-weight:600;color:#f2ece0}.map-size{font-size:9px;letter-spacing:.06em;color:#c2baa4;white-space:nowrap}.map-picked{display:none;position:absolute;top:8px;right:8px;width:21px;height:21px;line-height:21px;text-align:center;border-radius:50%;background:#edcf88;color:#252219}.map-preview.selected{border-color:#edcf88;box-shadow:0 0 0 1px #edcf8844}.map-preview.selected img{filter:none}.map-preview.selected .map-picked{display:block}.map-preview:disabled{cursor:default;opacity:.7}.map-preview:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+@media(max-width:560px){.map-previews{gap:8px}.map-preview img{height:68px}.map-preview-info{align-items:flex-start;flex-direction:column;gap:5px;padding:8px}.map-preview strong{font-size:11px}.map-size{font-size:8px}}
+
+/* Persistent room lobby stays scrollable; creation controls disappear once inside. */
+#menu{overflow-y:auto;overscroll-behavior:contain;align-items:flex-start}.room-session .online-actions,.room-session .online-hint{display:none}.room-session #lobbyPlayers{font-size:11px;line-height:1.7;margin:0;color:#e7dfca;overflow-wrap:anywhere}#lobbyReady{min-height:44px;width:100%;font-size:13px;background:#edcf88;color:#211b25;border-color:#edcf88}#lobbyReady:disabled{opacity:.55}#lobbyState{line-height:1.6}
+#menu:has(.room-session) .modepick{display:none}
+
+/* Account entry belongs only to the home menu, with a native focus-trapped modal. */
+.menu-topline{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:8px}.account-entry{display:flex;align-items:center;gap:6px;flex-shrink:0}.account-entry button{font-size:9px;letter-spacing:.07em;padding:7px 9px;background:transparent;border-color:transparent;color:#e5d6b3}.account-entry span{font-size:10px;color:#756c65}.account-entry button:hover{border-color:#edcf8870;color:var(--gold)}#accountProfile{max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#menu:has(.room-session) .account-entry{display:none}
+#accountDialog{box-sizing:border-box;width:min(440px,calc(100vw - 28px));max-height:85svh;overflow:auto;padding:24px;border:1px solid #a88d5670;border-radius:12px;background:linear-gradient(145deg,#29242b,#151418);box-shadow:0 25px 100px #0008;color:#ece6df}#accountDialog::backdrop{background:#08070bd6;backdrop-filter:blur(5px)}#accountDialog button{float:none}#accountDialog h2{font:700 28px Inter,Arial,sans-serif;line-height:1.25;margin:22px 0 14px;color:#f3e5c4}#accountDialog p{font-size:13px;line-height:1.7;color:#bdb4b8}.account-dialog-top{display:flex;justify-content:space-between;align-items:center;gap:12px}.account-dialog-top .section-label{font-size:9px;letter-spacing:.14em}.account-dialog-top button{padding:6px 9px;font-size:9px}.account-tabs{display:flex;gap:6px;margin-top:22px;border-bottom:1px solid #ffffff17;padding-bottom:10px}.account-tabs button{flex:1;background:transparent;border-color:transparent;padding:10px}.account-tabs button[aria-selected="true"]{color:#edcf88;border-color:#edcf8866;background:#edcf8810}.account-primary,.account-secondary{display:flex;align-items:center;justify-content:space-between;text-decoration:none;padding:13px 15px;border-radius:5px;min-height:44px;font-size:13px;font-weight:600}.account-primary{background:#edcf88;color:#241e27;margin-top:24px}.account-secondary{border:1px solid #edcf8850;color:#edcf88;margin-top:22px}#accountDialog .account-note{font-size:11px;margin:18px 0 0;color:#948b91}#accountName{font-size:17px;overflow-wrap:anywhere}#accountEmail{overflow-wrap:anywhere}
+@media(max-width:560px){.menu-topline{align-items:flex-start;gap:8px}.menu-topline .eyebrow{font-size:8px;padding-top:6px}.account-entry{gap:2px}.account-entry button{font-size:8px;padding:6px 4px}#accountProfile{max-width:150px}#accountDialog{padding:20px}}
+
+/* Account career: compact, scrollable on narrow iOS screens. */
+#accountDialog{max-height:calc(100dvh - 32px);overflow-y:auto}.account-rank{display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-block:1px solid #ffffff24;margin-top:20px}.account-rank small{font-size:10px;opacity:.55;margin-left:6px}.account-rank strong{font-size:20px;color:#efd388}.account-favorite{display:flex;align-items:center;gap:12px;min-height:100px;margin:12px 0;background:#ffffff05;padding:10px}.account-favorite canvas{width:105px;height:80px;flex-shrink:0}.account-favorite strong,.account-favorite small{display:block;margin-top:8px}.account-favorite strong{font-size:18px}.account-favorite small{opacity:.6}.account-stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}.account-stats>div{padding:16px;background:#ffffff07;border:1px solid #ffffff18}.account-stats dt{font-size:12px;opacity:.7}.account-stats dd{margin:8px 0 0;font-size:28px;font-weight:800;color:#efd388}#accountStatsStatus:empty{display:none}@media(max-width:420px){.account-stats>div{padding:12px}.account-favorite{gap:4px}.account-favorite .section-label{font-size:9px}}
+
+/* 6.25.11: menus participate in document flow instead of being clipped by the arena. */
+#arena:has(#menu:not([hidden])){aspect-ratio:auto;max-height:none;min-height:0}
+#arena:has(#menu:not([hidden]))>#game{position:absolute;inset:0}
+#menu{position:relative;inset:auto;display:block;min-height:0;overflow-wrap:anywhere}
+#menu .intro{min-width:0;margin:0 auto}
+#menu:not([hidden])~.arena-caption,#arena:has(#menu:not([hidden])) #netBadge{display:none}
+#onlinePanel{min-width:0;margin-top:16px}
+#lobbyCard{position:relative;min-width:0;margin:0 0 16px;padding:18px;border-radius:8px;background:#211b29;scroll-margin-block:16px;box-shadow:inset 3px 0 var(--gold)}
+#lobbyCard:focus{outline:none}
+#lobbyCard:focus-visible{outline:2px solid var(--gold);outline-offset:-2px}
+#lobbyCard small{font-size:10px;line-height:1.5}
+#lobbyCode{font-size:clamp(32px,5vw,44px);line-height:1.2;letter-spacing:.14em;user-select:all;-webkit-user-select:all;overflow-wrap:normal;white-space:nowrap}
+#lobbyState{font-size:12px;line-height:1.6;overflow-wrap:anywhere}
+#lobbyCard>div{display:flex;flex-wrap:wrap;gap:8px;min-width:0}
+#lobbyCard button{min-height:44px;white-space:normal;line-height:1.4}
+#netDiagnosticsText{flex:1 0 100%;max-width:100%;min-width:0;font-size:16px}
+#onlinePanel.has-room .online-actions,#onlinePanel.has-room .online-hint{display:none}
+#onlinePanel .connection-choice select,#onlinePanel input,#onlinePanel button{min-height:44px}
+#menu .menuhint{line-height:1.7}
+/* Native fullscreen and iOS standalone use a bounded, touch-scrollable menu. */
+#arena:fullscreen #menu,body.immersive #menu{height:100%;max-height:100%;overflow-y:auto;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(24px,env(safe-area-inset-bottom));touch-action:pan-y}
+@media(max-width:550px){
+  #menu .modepick{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  #menu .modepick button{width:100%;min-height:52px}
+  .online-actions{flex-direction:column;align-items:stretch}
+  .join-room{width:100%}
+  #lobbyCard{padding:14px}
+  #lobbyCard button{flex:1 1 130px}
+  #onlinePanel .connection-choice select{font-size:16px}
+}
+@media(max-height:550px){#menu{padding-top:18px;padding-bottom:24px}#menu .modepick{margin:12px 0}}
+
 /* Compact live peer RTT. Route/debug detail remains in the tooltip and metrics. */
 #netBadge{display:flex;align-items:center;gap:6px;padding:5px 8px;font-size:11px;line-height:1;letter-spacing:0;font-variant-numeric:tabular-nums;color:#e9e8ec;border-color:#ffffff24;min-height:24px}
 #netBadge::before{content:"";width:7px;height:7px;flex:0 0 7px;border-radius:50%;background:#9a97a4}
@@ -100,8 +160,6 @@ body.scene-changing #sceneFade{pointer-events:auto;touch-action:none}
 #netBadge[data-quality="bad"]::before{background:#ff747f}
 #netBadge[hidden]{display:none}
 
-.graphics-settings{border-bottom:1px solid #ffffff20;padding:0 0 18px;margin-bottom:18px}.graphics-settings h3{margin-top:0}.graphics-settings label{display:block;font-size:12px;margin:16px 0 8px}.graphics-settings select{display:block;width:100%;min-height:44px;background:#211a2b;color:#eee5f4;border:1px solid #ffffff30;padding:10px 12px;border-radius:6px;font:inherit}.graphics-settings select:focus-visible{outline:2px solid #edcf88;outline-offset:2px}.graphics-settings p{font-size:11px;line-height:1.6;color:#b7a9bb}.graphics-settings .graphics-hint{color:#988b9d}
 
-.connection-choice{display:block;margin:12px 0;font-size:11px;color:#c8bdcc}.connection-choice select{display:block;width:100%;min-height:40px;margin:7px 0;padding:8px;background:#211a2b;color:#eee5f4;border:1px solid #ffffff30;border-radius:4px;font:inherit}.connection-choice small{display:block;font-size:10px;line-height:1.5;color:#a89bab}
-
-.map-choice{display:block;margin:16px 0;color:#c6d4b8;font-size:11px;letter-spacing:.08em}.map-choice select{display:block;width:100%;margin:8px 0;padding:12px;background:#1b2626;color:#e1ebd8;border:1px solid #687c66;border-radius:6px;font-size:13px}.map-choice small{display:block;font-size:10px;letter-spacing:0;line-height:1.6;color:#aaa}.map-choice select:disabled{opacity:.65}
+/* Supabase account forms: 16px inputs prevent iOS focus zoom. */
+.account-form{display:grid;gap:9px;margin-top:20px}.account-form label{font-size:12px;color:#d9cbb9;margin-top:5px}.account-form input{box-sizing:border-box;width:100%;min-height:46px;padding:11px 12px;border:1px solid #9e8e7955;border-radius:5px;background:#111017;color:#f5eee5;font:16px Inter,Arial,sans-serif}.account-form input:focus-visible{outline:2px solid #edcf88;outline-offset:2px}.account-form .account-primary{width:100%;justify-content:center;margin-top:12px;cursor:pointer}#accountDialog button:disabled{opacity:.5;cursor:wait}#accountLogout{width:100%;justify-content:center;cursor:pointer}#accountStatus{min-height:20px}#accountStatus[data-error="true"]{color:#ffb4a9}

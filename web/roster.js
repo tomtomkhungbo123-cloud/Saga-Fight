@@ -23,8 +23,9 @@ function sync(){for(const p of previews){const selected=$('select'+p.player).val
 }
 function restoreFocus(){activePlayer=null;document.body.classList.remove('fighter-picker-open');sync();summaries[returnPlayer].card.focus();}
 function close(){if(!picker.open)return;picker.close();restoreFocus();}
-function open(player){if(phase!=='menu'||window.riftNet?.room)return;activePlayer=returnPlayer=player;$('fighterPickerPlayer').textContent=$('rosterLabel'+player).textContent;sync();picker.showModal();summaries[player].card.setAttribute('aria-expanded','true');document.body.classList.add('fighter-picker-open');previews.find(p=>p.player===player&&p.type===$('select'+player).value)?.card.focus();}
-for(const p of previews)p.card.addEventListener('click',()=>{if(phase!=='menu'||window.riftNet?.room||activePlayer!==p.player)return;$('select'+p.player).value=p.type;sync();$('select'+p.player).dispatchEvent(new Event('change',{bubbles:true}));close();});
+function editable(player){return window.riftNet?.room?window.riftNet.canEdit(player):phase==='menu';}
+function open(player){if(!editable(player))return;activePlayer=returnPlayer=player;$('fighterPickerPlayer').textContent=$('rosterLabel'+player).textContent;sync();picker.showModal();summaries[player].card.setAttribute('aria-expanded','true');document.body.classList.add('fighter-picker-open');previews.find(p=>p.player===player&&p.type===$('select'+player).value)?.card.focus();}
+for(const p of previews)p.card.addEventListener('click',()=>{if(!editable(p.player)||activePlayer!==p.player)return;$('select'+p.player).value=p.type;sync();$('select'+p.player).dispatchEvent(new Event('change',{bubbles:true}));close();});
 for(const id of ['select0','select1'])$(id).addEventListener('change',()=>{sync();close();});
 $('closeFighterPicker').addEventListener('click',close);
 picker.addEventListener('cancel',e=>{e.preventDefault();close();});
@@ -39,10 +40,10 @@ else if(p.type==='cylast')window.CylastVisual.character(g,f,clock);
 else{const image=art.idle;if(!image.complete||!image.naturalWidth){g.restore();return;}if(image.complete&&image.naturalWidth){const height=220,width=height*image.naturalWidth/image.naturalHeight,bob=Math.sin(clock*2.8)*3,top=246+bob-height,seam=.42;g.save();g.translate(181,0);g.drawImage(image,0,0,image.naturalWidth,image.naturalHeight*seam+1,-width/2,top,width,height*seam+.5);g.translate(0,top+height*seam);g.transform(1,0,Math.sin(clock*2.5)*1.2/(height*(1-seam)),1,0,0);g.drawImage(image,0,image.naturalHeight*seam,image.naturalWidth,image.naturalHeight*(1-seam),-width/2,0,width,height*(1-seam)+.5);g.restore();const x=238,y=61+bob,halo=g.createRadialGradient(x,y,1,x,y,25);halo.addColorStop(0,'#fffbc7dd');halo.addColorStop(.35,'#fff36c77');halo.addColorStop(1,'#fff36c00');g.fillStyle=halo;g.fillRect(x-25,y-25,50,50);}}
 g.restore();p.painted=true;}
 const renderPreviews=[...summaries,...previews];
-let last=0;function frame(now){requestAnimationFrame(frame);const locked=!!window.riftNet?.room;if(picker.open&&(phase!=='menu'||$('menu').hidden||locked))close();if(document.hidden||$('menu').hidden||now-last<1000/30)return;last=now;
- for(const p of summaries)if(p.card.disabled!==locked)p.card.disabled=locked;
+let last=0;function frame(now){requestAnimationFrame(frame);if(picker.open&&($('menu').hidden||!editable(activePlayer)))close();if(document.hidden||$('menu').hidden||now-last<1000/30)return;last=now;
+ for(const p of summaries)p.card.disabled=!editable(p.player);
  for(const p of renderPreviews){if(p.summary?picker.open||(p.player===1&&$('opponentLabel').hidden):!picker.open||p.player!==activePlayer)continue;
  const active=!reducedMotion?.matches&&(p.summary||$('select'+p.player).value===p.type||p.card===document.activeElement||p.card.matches(':hover'));if(active||!p.painted)draw(p,active?now/1000:0);}
 }
-sync();requestAnimationFrame(frame);
+window.SagaRoster={refresh:sync,portrait(canvas,type){if(!names[type])return;const p={canvas,type,player:0,fighter:makeFighter(type,0)};draw(p,0);if(!p.painted)art.idle.addEventListener('load',()=>draw(p,0),{once:true});}};sync();requestAnimationFrame(frame);
 })();

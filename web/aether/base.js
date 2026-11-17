@@ -1,5 +1,5 @@
 (()=>{
-const CONFIG={hp:1500,enemyHp:5000,speed:330,jump:680,gravity:1800,arena:1600,attack:{damage:[60,65,80],range:650,speed:820,initialSpeed:280,accelerationTime:.12,airInitialSpeed:360,airAccelerationTime:.08,waveHeight:64,waveLength:180,boltHeight:11,boltLength:45,windup:.17,recovery:.46,chainReset:1.05,root:.2},q:{count:6,damage:100,range:900,form:.65,interval:.5,speed:2600,initialSpeed:1600,accelerationTime:.025,preload:.16,cd:4},w:{range:600,windup:.5,root:2,cd:6},e:{duration:4,transition:.35,speed:1.6,cd:6},r:{liftVelocity:540,liftGravity:900,hoverDuration:7,windup:1,duration:6,count:12,damage:300,stun:.3,cd:18,radius:75,fall:.9,warning:.38,height:700,initialSpeed:120,drift:90,sectors:6,targetSpread:100}};
+const CONFIG={hp:1500,enemyHp:5000,speed:330,jump:680,gravity:1800,arena:1600,attack:{damage:[60,65,80],range:650,speed:820,initialSpeed:280,accelerationTime:.12,airInitialSpeed:360,airAccelerationTime:.08,waveHeight:64,waveLength:180,boltHeight:11,boltLength:45,windup:.17,recovery:.46,chainReset:1.05,root:.2},q:{count:6,damage:100,range:900,form:.65,interval:.5,speed:2600,initialSpeed:1600,accelerationTime:.025,preload:.16,idleTimeout:5,cd:4},w:{range:600,windup:.5,root:2,cd:6},e:{duration:4,transition:.35,speed:1.6,cd:6},r:{liftVelocity:540,liftGravity:900,hoverDuration:7,windup:1,duration:6,count:24,damage:300,stun:.3,cd:18,radius:75,fall:.9,warning:.38,height:700,initialSpeed:120,drift:90,sectors:6,targetSpread:100}};
 'use strict';
 // Animation-only, canonical facing right. Bone lengths never depend on a pose.
 const AETHER_ARM={shoulder:{x:21,y:-143},upper:27,fore:23};
@@ -78,7 +78,7 @@ if(typeof module!=='undefined')module.exports=QCRYSTALS;
 'use strict';
 const METEOR_RAIN=(()=>{
  function place(rain,enemy,c,arena,rand){
-  const targeted=rain.index%2===0,margin=65,width=arena-2*margin,sector=width/c.sectors;let x,zone=null;
+  const targeted=enemy.targetable!==false&&rain.index%2===0,margin=65,width=arena-2*margin,sector=width/c.sectors;let x,zone=null;
   if(targeted)x=Math.max(margin,Math.min(arena-margin,enemy.x+(rand()-.5)*c.targetSpread));
   else{
    if(!rain.zones.length)rain.zones=Array.from({length:c.sectors},(_,i)=>i);

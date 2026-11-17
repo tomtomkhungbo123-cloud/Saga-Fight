@@ -13,5 +13,5 @@ if(a?.k==='q'){if(s.sourceAction!==a){s.sourceAction=a;s.qAction={...a,sy:base-a
 if(v){FairiR.mainTrail(ctx,v,t,{x:f.x,y},p,q);FairiR.ring(ctx,v,a.age,q,true)}
 if(a?.k==='ambush'&&a.age>.34){let w=p.wrists[1];FairiDash.drawLance(ctx,{x:f.x+dir*w[0],y:550-y+w[1],dir:1,angle:Math.PI/2,length:Math.min(340,(a.age-.34)*950)},Math.min(1,(a.age-.34)/.1)*(1-Math.min(1,Math.max(0,(a.age-.63)/.15))),q)}
 ctx.restore()}
-window.FairiVisual={character,bodyColor,prepare,reset(id){if(id==null)states.clear();else states.delete(id)}};
+window.FairiVisual={character,bodyColor,prepare,reset(){states.clear()}};
 })();

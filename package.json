@@ -9,9 +9,12 @@
   "scripts": {
     "start": "node server.mjs",
     "dev": "node server.mjs",
-    "test": "node --test tests-merge/*.test.*"
+    "test": "node --test tests-merge/*.test.*",
+    "build": "node scripts/release-check.mjs",
+    "test:auth": "node --test tests/account-auth.test.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "2.84.0",
     "ws": "8.23.0"
   },
   "devDependencies": {
