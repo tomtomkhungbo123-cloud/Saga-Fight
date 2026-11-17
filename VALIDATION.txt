@@ -1,10 +1,8 @@
-Saga Fight6.25.9 / protocol93 — Gathered SDP with late trickle
-Date2026-11-17; Node24.22.1; base Render6.25.8.
+Saga Fight6.25.10/protocol94 — DIRECT recovery to6.25.7
+2026-11-17; Node24.22.1; patch base Render6.25.9.
 
-Final network/server/graphics/publication run:40 passed,0 failed,0 skipped (12seconds).
-Files: clock-start, ping-direct, full-rollback-network, reconnect-regression, render-server, websocket-relay, graphics-online, sdp-publication.
-New publication tests4/4: no candidates before SDP; actual candidate-bearing localDescription published; candidates embedded in SDP not trickled twice; end marker embedded not duplicated; gather timeout still permits late trickle; close cancels wait and stale send; ICE pair request/response report omits addresses, SDP and tokens.
-Existing36 transport tests retained, including opposite host/guest strict timing and isolated candidate rejection.
+34 passed,0 failed,0 skipped (10.6seconds).
+Groups: clock-start,ping-direct,full-rollback-network,reconnect-regression,render-server,websocket-relay,graphics-online,sdp-publication (replaced withdrawn batching test with recovery assertion).
+Comparison: startDirect,directSignal,peerConnection,directChannel,fallback match6.25.7 after normalizing version/protocol. Entire original6.25.7 transport restored; origin/pair stats reporting is the only retained read-only diagnostic enhancement. Stamps changed to6.25.10/protocol94.
 
-Character/combat/map code unchanged except release stamps. Existing7-character/2-map regression coverage is inherited, not fully rerun for this transport change.
-No real-browser or physical laptop/iOS ICE validation. No proven physical-network root cause. No GitHub/Render deployment performed. Package is an update for an existing repository; retains all new character/map/audio files from previous exports.
+No claim of physical iOS recovery before user testing. Restoring a user-reported working revision is a regression containment step; laptop↔iOS failure remains unresolved. No real Safari/Edge/physical-device WebRTC test or GitHub/Render deployment performed.

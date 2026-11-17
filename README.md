@@ -1,26 +1,22 @@
-# Saga Fight 6.25.9 — Laptop / iOS DIRECT
+# Saga Fight 6.25.10 — Khôi phục DIRECT iOS
 
-Bản sửa trực tiếp phần kết nối của game, dựa trên bản Render6.25.8. Giữ Aether, bảy chiến binh, hai map, rollback, lựa chọn đồ họa và Chỉ DIRECT. Chưa xác nhận nguyên nhân duy nhất của lỗi trên thiết bị vật lý.
+Gói KHÔI PHỤC cho repository đang dùng bản Render6.25.9. Phần bắt tay/kết nối DIRECT trở về cơ chế6.25.7 mà người dùng đã báo iOS↔iOS hoạt động. Giữ gameplay hiện tại, Aether, Fairi, hai map, rollback và cài đặt đồ họa.
 
-## Cập nhật một lần trên GitHub
+## Cập nhật
 
-Giải nén `Saga_Fight_6_25_9_Laptop_iOS_DIRECT_Update.zip`. Ở GỐC repository Saga-Fight, kéo toàn bộ NỘI DUNG lên Add file → Upload files rồi Commit changes. Giữ đúng thư mục và giữ các ảnh/âm thanh cũ. Không upload nguyên ZIP hoặc thêm thư mục bao ngoài. Đây là gói cập nhật cho repository đã có game, không phải repository trắng.
+Giải nén Saga_Fight_6_25_10_DIRECT_Recovery.zip. Kéo toàn bộ NỘI DUNG vào gốc repository GitHub, ghi đè đúng đường dẫn rồi commit. Không xóa asset/file khác, không upload nguyên ZIP. Gói chỉ có các file khác so với6.25.9, không dùng để tạo repository trắng.
 
-Render giữ Build Command npm ci, Start Command npm start. Chờ deploy Live. Cả laptop và iPhone/iPad mở CÙNG ĐỊA CHỈ RENDER, xác nhận BUILD6.25.9. /healthz có clientBuild6.25.9/protocol93. Rời phòng cũ, tạo phòng mới bằng Chỉ DIRECT. Không trộn trang chatgpt.site với trang onrender.com: chúng là hai máy chủ phòng riêng, file tải lên GitHub/Render không tự cập nhật trang Site.
+Render giữ npm ci / npm start; chờ deploy Live. Hai thiết bị phải cùng mở địa chỉ Render, tải lại và kiểm tra BUILD6.25.10. /healthz có clientBuild6.25.10 và protocol94. Rời mọi phòng cũ rồi tạo phòng mới bằng Chỉ DIRECT. Nên xác nhận lại iPhone↔iPad trước.
 
-## Thay đổi kết nối
+## Phạm vi khôi phục
 
-- Offer/answer chờ gom ICE tối đa1.8giây rồi gửi chính localDescription hiện tại, bao gồm ứng viên đã thu thập được. Không sửa địa chỉ IP hoặc sửa tay SDP.
-- Các ứng viên trước đó được đệm, không gửi trước offer/answer. Không gửi lặp ứng viên đã có trong SDP. Ứng viên đến muộn vẫn được chuyển tiếp; không đợi gom vô hạn.
-- Khi rời phòng/đóng PC, hủy chờ gom và không gửi SDP từ phiên cũ.
-- Giữ hàng đợi SDP/ICE tuần tự, end-of-candidates và xử lý disconnected khởi tạo từ6.25.8.
-- STUN công khai Cloudflare + Google. Không có TURN, token, quyền camera/microphone hay gameplay relay trong phòng Chỉ DIRECT.
-- Sao chép chẩn đoán trong game có địa chỉ gốc trang đang chạy, chế độ trao đổi gathered-sdp+late-trickle và các cặp ICE: loại/dạng địa chỉ, số yêu cầu và phản hồi. Không chép địa chỉ IP ứng viên, SDP, mã phòng hay token.
+- Bỏ gom SDP/đệm ứng viên của6.25.9; gửi offer/answer và trickle ICE như6.25.7.
+- Bỏ hàng đợi SDP/ICE, end-marker tổng hợp và thay đổi thời điểm đóng kết nối của6.25.8; các hàm startDirect/directSignal/peerConnection/directChannel/fallback đã được so sánh với6.25.7.
+- Giữ báo cáo đọc-only về origin và các cặp ICE. Không thêm trang kiểm tra riêng, TURN hay quyền media.
+- Cập nhật đồng bộ build/protocol/cache để tránh hai thiết bị dùng lẫn phiên bản.
 
-Thời gian gom chỉ ở bước vào phòng; không thêm input delay trong trận. Nếu DIRECT không mở được, Chỉ DIRECT vẫn dừng, Tự động vẫn có WS dự phòng.
+Đây là rollback một thay đổi có thể gây hồi quy, không phải kết luận nguyên nhân đã được chứng minh. iOS↔iOS vẫn cần xác nhận lại trên thiết bị. Lỗi laptop↔iOS chưa được xác nhận khắc phục. Nếu máy đang chạy các file lẫn phiên bản, việc cập nhật đầy đủ và tải lại cả hai máy là cần thiết.
 
-## Kiểm chứng và giới hạn
+## Kiểm chứng
 
-40 kiểm thử đạt trên Node24.22.1: SDP có ứng viên trước khi gửi, chống lặp, trickle muộn, giới hạn thời gian gom, hủy phiên, báo cáo ICE không lộ IP/token, hai vai, rollback DIRECT/WS, clock pacing, reconnect, graphics và server.
-
-Các kiểm thử dùng VM/RTCPeerConnection mô phỏng và WebSocket local thật. Chưa chạy trên laptop/iPhone/iPad/router thật. Bản sửa thay đổi đường trao đổi kết nối để giảm phụ thuộc thứ tự sự kiện giữa trình duyệt, không khẳng định sẽ vượt qua mọi chính sách hệ điều hành/mạng hoặc đã chứng minh nguyên nhân lỗi của người dùng. Nếu vẫn lỗi, chẩn đoán trong game có thêm dữ liệu cặp ICE để tiếp tục kiểm tra.
+34 kiểm thử mạng/server/đồ họa/khôi phục đạt. Các kiểm thử mô phỏng PeerConnection, dùng WebSocket local thật; không thay thế kiểm tra Safari/iPhone/iPad vật lý. Gameplay không thay đổi ngoài dấu phiên bản, không chạy lại toàn bộ test nhân vật/map cho gói transport này.
