@@ -21,6 +21,19 @@ function setGraphics(quality=graphicsQuality,fps=graphicsFps,save=true){
 $('graphicsQuality').addEventListener('change',()=>setGraphics($('graphicsQuality').value));
 $('graphicsFps').addEventListener('change',()=>setGraphics(graphicsQuality,$('graphicsFps').value));
 setGraphics(graphicsQuality,graphicsFps,false);
+// Camera preferences belong to this device, never to the combat snapshot.
+const CAMERA_NOTES={classic:'Camera tiêu chuẩn: tự động di chuyển và thu phóng cân bằng để mọi người chơi luôn nằm trong khung hình.',hybrid:'Góc nhìn rộng hơn Classic; tự động di chuyển và thu phóng để mọi người chơi luôn nằm trong khung hình.',fix:'Camera cố định: bao quát toàn bộ bản đồ, không di chuyển, phóng to/thu nhỏ hoặc rung theo nhân vật. Tự lưu trên thiết bị.'};
+let cameraMode='classic';
+try{const saved=localStorage.getItem('saga.camera.v1');if(Object.hasOwn(CAMERA_NOTES,saved))cameraMode=saved;}catch{}
+function setCameraMode(value,save=true){
+ cameraMode=Object.hasOwn(CAMERA_NOTES,value)?value:'classic';
+ if($('cameraMode'))$('cameraMode').value=cameraMode;
+ if($('cameraNote'))$('cameraNote').textContent=CAMERA_NOTES[cameraMode];
+ if(save)try{localStorage.setItem('saga.camera.v1',cameraMode);}catch{}
+ // Retain the current transform so switching modes eases into the new view.
+}
+$('cameraMode')?.addEventListener('change',()=>setCameraMode($('cameraMode').value));
+setCameraMode(cameraMode,false);
 function invalidateViewport(){viewportDirty=true;}
 window.addEventListener('resize',invalidateViewport);window.addEventListener('orientationchange',invalidateViewport);
 if(typeof ResizeObserver!=='undefined')new ResizeObserver(invalidateViewport).observe(canvas);
@@ -58,22 +71,39 @@ function selectArena(id){
 }
 function updateWorldCamera(scene,now,aspect=1600/1117){
  aspect=Number.isFinite(aspect)&&aspect>0?aspect:1600/1117;
- const baseWidth=Math.min(W,Math.max(2200,1535.875*aspect));
- const shared=mode==='pvp',local=scene.find(f=>f.id===localId())||scene[0];
- const targets=shared?scene:local?[local]:[];
- let width=baseWidth,tx=W/2,ty=H/2;
- if(targets.length){const xs=targets.map(f=>f.x),ys=targets.map(f=>f.y-110);
-  if(shared)width=clamp(Math.max(...xs)-Math.min(...xs)+600,baseWidth,W);
-  tx=(Math.min(...xs)+Math.max(...xs))/2;ty=(Math.min(...ys)+Math.max(...ys))/2;
+ const forest=activeMap==='forest';
+ // Include the cavern ceiling used by high jumps, without changing collision geometry.
+ const left=forest?0:-128,right=forest?W:W+128,top=forest?0:-736,bottom=forest?H:H+64;
+ const fullWidth=Math.max(right-left,(bottom-top)*aspect);
+ // Follow the complete rendered scene in PvE, local PvP, Online and Sandbox.
+ // Camera choice and local player role never affect the simulation or target list.
+ const targets=scene.filter(f=>Number.isFinite(f.x)&&Number.isFinite(f.y));
+ let width=fullWidth,tx=(left+right)/2,ty=(top+bottom)/2,box=null,fit=0;
+ if(cameraMode!=='fix'&&targets.length){
+  const xs=targets.map(f=>f.x),ys=targets.map(f=>f.y);
+  box={left:Math.min(...xs)-120,right:Math.max(...xs)+120,top:Math.min(...ys)-300,bottom:Math.max(...ys)+80};
+  const base=forest?Math.max(2200,1535.875*aspect):Math.min(W,H*aspect)/.75;
+  // Reserve screen space above heads for the HUD and around bodies for shake/VFX.
+  fit=Math.max((box.right-box.left)/.88,(box.bottom-box.top)/.74*aspect);
+  width=Math.max(fit,Math.min(fullWidth,Math.max(base,fit)*(cameraMode==='hybrid'?1.25:1)));
+  tx=(box.left+box.right)/2;ty=(box.top+box.bottom)/2-width/aspect*.05;
  }
+ const height=width/aspect;
+ const bound=(center,span,lo,hi)=>span>=hi-lo?(lo+hi-span)/2:clamp(center-span/2,lo,hi-span);
+ const x=bound(tx,width,left,right),y=bound(ty,height,top,bottom);
  const dt=clamp(now-worldCamera.last,0,.05),a=worldCamera.ready?1-Math.exp(-dt*8):1;
- worldCamera.last=now;worldCamera.width+=(width-worldCamera.width)*a;worldCamera.height=worldCamera.width/aspect;
- const vw=worldCamera.width,vh=worldCamera.height;
- const bx=clamp(tx-vw/2,0,Math.max(0,W-vw)),by=vh>H?(H-vh)/2:clamp(ty-vh*.55,0,H-vh);
- worldCamera.x+=(bx-worldCamera.x)*a;worldCamera.y+=(by-worldCamera.y)*a;
- worldCamera.x=clamp(worldCamera.x,0,Math.max(0,W-vw));
- worldCamera.y=vh>H?(H-vh)/2:clamp(worldCamera.y,0,H-vh);worldCamera.ready=true;
- return worldCamera;
+ worldCamera.last=now;
+ // Fix is exact from the first frame and independent of fighter positions and time.
+ if(cameraMode==='fix'||!worldCamera.ready){Object.assign(worldCamera,{x,y,width,height});}
+ else{worldCamera.width=Math.max(fit,worldCamera.width+(width-worldCamera.width)*a);worldCamera.height=worldCamera.width/aspect;worldCamera.x+=(x-worldCamera.x)*a;worldCamera.y+=(y-worldCamera.y)*a;}
+ // Easing may lag behind a dash, teleport, high jump or rollback correction.
+ // Constrain the final drawn view, not just its goal, so neither player escapes it.
+ if(box){const vw=worldCamera.width,vh=worldCamera.height;
+  const contain=(v,lo,hi)=>lo>hi?(lo+hi)/2:clamp(v,lo,hi);
+  worldCamera.x=contain(worldCamera.x,box.right-vw*.94,box.left-vw*.06);
+  worldCamera.y=contain(worldCamera.y,box.bottom-vh*.92,box.top-vh*.18);
+ }
+ worldCamera.ready=true;return worldCamera;
 }
 function drawForestScenery(g){
  g.fillStyle='#101c1e';g.fillRect(0,0,W,H);
@@ -711,9 +741,9 @@ function drawCavernScenery(g){
  }
  g.fillStyle='#1c122b21';g.fillRect(0,0,width,height);
 }
-function render(){syncKOVisual();const sceneFighters=phase==='menu'||phase==='lobby'?[]:window.riftNet?.fullRollback?rollbackSceneFighters():onlineGuest()?fighters.map((f,i)=>i===1&&predicted?{...predicted,x:predicted.x+predictionOffset.x,y:predicted.y+predictionOffset.y}:i===0&&Number.isFinite(f.netDrawX)?{...f,x:f.netDrawX,y:f.netDrawY}:f):fighters;const size=renderViewport(),cw=size.width,ch=size.height;if(canvas.width!==cw||canvas.height!==ch){canvas.width=cw;canvas.height=ch;}ctx.setTransform(1,0,0,1,0,0);if(phase==='finishing'&&fairiKiller!=null){const ft=FINISH_CONFIG.duration-finishLeft;if(ft>=window.FairiFinish.C.fadeIn&&ft<=window.FairiFinish.C.duration-window.FairiFinish.C.fadeOut){window.FairiFinish.draw(ctx,cw,ch,ft,graphicsQuality==='low'?'low':'high',window.FairiVisual.bodyColor(fighters[fairiKiller],alternateFighter(fighters[fairiKiller])));return;}}const {scale,offsetX,offsetY}=cavernViewport(cw,ch);
+function render(){syncKOVisual();const sceneFighters=phase==='menu'||phase==='lobby'?[]:window.riftNet?.fullRollback?rollbackSceneFighters():onlineGuest()?fighters.map((f,i)=>i===1&&predicted?{...predicted,x:predicted.x+predictionOffset.x,y:predicted.y+predictionOffset.y}:i===0&&Number.isFinite(f.netDrawX)?{...f,x:f.netDrawX,y:f.netDrawY}:f):fighters;const size=renderViewport(),cw=size.width,ch=size.height;if(canvas.width!==cw||canvas.height!==ch){canvas.width=cw;canvas.height=ch;}ctx.setTransform(1,0,0,1,0,0);if(phase==='finishing'&&fairiKiller!=null){const ft=FINISH_CONFIG.duration-finishLeft;if(ft>=window.FairiFinish.C.fadeIn&&ft<=window.FairiFinish.C.duration-window.FairiFinish.C.fadeOut){window.FairiFinish.draw(ctx,cw,ch,ft,graphicsQuality==='low'?'low':'high',window.FairiVisual.bodyColor(fighters[fairiKiller],alternateFighter(fighters[fairiKiller])));return;}}const cameraView=updateWorldCamera(sceneFighters,performance.now()/1000,cw/ch),scale=cw/cameraView.width,offsetX=-cameraView.x*scale,offsetY=-cameraView.y*scale;
 if(activeMap==='forest'){
- const view=updateWorldCamera(sceneFighters,performance.now()/1000,cw/ch),viewScale=cw/view.width,ox=0,oy=0,recoil=cameraShake();
+ const view=cameraView,viewScale=cw/view.width,ox=0,oy=0,recoil=cameraMode==='fix'?{x:0,y:0}:cameraShake();
  ctx.fillStyle='#0d191b';ctx.fillRect(0,0,cw,ch);
  if(separateBackground){arenaBackground.style.visibility='hidden';arenaBackground.style.transform='';}
  // Static art and collision ledges are rasterized once, then sampled by the camera.
@@ -722,8 +752,8 @@ if(activeMap==='forest'){
  ctx.save();ctx.drawImage(backdrop,0,0);
 }else{
  const key='cavern-world:'+W+'x'+H+':'+!!map.naturalWidth,atlasWidth=W+CAVERN_FRAME.side*2,atlasHeight=H+CAVERN_FRAME.top+CAVERN_FRAME.bottom;
- const panTarget=cavernPanTarget(sceneFighters,{scale,offsetY}),panDt=clamp(time-cameraClock,0,.05);cameraClock=time;cameraPan+=(panTarget-cameraPan)*(1-Math.exp(-panDt*10));
- const recoil=cameraShake();
+ cameraPan=0;
+ const recoil=cameraMode==='fix'?{x:0,y:0}:cameraShake();
  if(separateBackground){
   ctx.clearRect(0,0,cw,ch);
   if(backdropKey!==key){arenaBackground.width=atlasWidth;arenaBackground.height=atlasHeight;drawCavernScenery(backgroundContext);backdropKey=key;}
