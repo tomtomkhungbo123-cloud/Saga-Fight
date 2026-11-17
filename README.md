@@ -1,22 +1,58 @@
-# Saga Fight 6.25.10 — Khôi phục DIRECT iOS
+# Saga Fight 6.36.0 — Render base + ChatGPT Version 73 changes
 
-Gói KHÔI PHỤC cho repository đang dùng bản Render6.25.9. Phần bắt tay/kết nối DIRECT trở về cơ chế6.25.7 mà người dùng đã báo iOS↔iOS hoạt động. Giữ gameplay hiện tại, Aether, Fairi, hai map, rollback và cài đặt đồ họa.
+Gói này thay thế gói Saga_Fight_V73_Build_6_35_GitHub_Update.zip trước đó.
+Dùng repository Render hiện có làm nền; không chuyển sang Online chỉ WebRTC của ChatGPT Site.
 
-## Cập nhật
+## Upload GitHub / Render
 
-Giải nén Saga_Fight_6_25_10_DIRECT_Recovery.zip. Kéo toàn bộ NỘI DUNG vào gốc repository GitHub, ghi đè đúng đường dẫn rồi commit. Không xóa asset/file khác, không upload nguyên ZIP. Gói chỉ có các file khác so với6.25.9, không dùng để tạo repository trắng.
+1. Giải nén và upload TOÀN BỘ nội dung bên trong ZIP vào GỐC repository GitHub hiện tại.
+   Giữ đúng cấu trúc web/, worker/, scripts/, drizzle/, tests-merge/. Ghi đè file trùng tên.
+   Không xóa các file tài nguyên sẵn có; đây là bản cập nhật bổ sung, không phải bộ cài trống.
+2. Commit, ví dụ: Merge V73 game updates while preserving Render hybrid online.
+3. Chờ Render Live. Build command: npm ci. Start command: npm start. Node.js 24.
+4. Cả hai thiết bị tải lại cùng địa chỉ Render, xác nhận BUILD 6.36.0.
+5. Tạo phòng MỚI. Có thể đổi chiến binh/map trước khi Sẵn sàng.
+   Host chọn đấu trường; mỗi người chọn chiến binh của mình.
+   Khi kết thúc trận, bấm VỀ SẢNH để đổi lựa chọn và tái đấu trong cùng phòng.
 
-Render giữ npm ci / npm start; chờ deploy Live. Hai thiết bị phải cùng mở địa chỉ Render, tải lại và kiểm tra BUILD6.25.10. /healthz có clientBuild6.25.10 và protocol94. Rời mọi phòng cũ rồi tạo phòng mới bằng Chỉ DIRECT. Nên xác nhận lại iPhone↔iPad trước.
+Không cần xóa database hoặc dữ liệu người chơi khi cài gói này.
+Database SQLite sẽ tự áp dụng migration mới một lần.
 
-## Phạm vi khôi phục
+## Giữ từ nền Render
 
-- Bỏ gom SDP/đệm ứng viên của6.25.9; gửi offer/answer và trickle ICE như6.25.7.
-- Bỏ hàng đợi SDP/ICE, end-marker tổng hợp và thay đổi thời điểm đóng kết nối của6.25.8; các hàm startDirect/directSignal/peerConnection/directChannel/fallback đã được so sánh với6.25.7.
-- Giữ báo cáo đọc-only về origin và các cặp ICE. Không thêm trang kiểm tra riêng, TURN hay quyền media.
-- Cập nhật đồng bộ build/protocol/cache để tránh hai thiết bị dùng lẫn phiên bản.
+- WebSocket /ws và relay; DIRECT ưu tiên + WebSocket dự phòng.
+- Tùy chọn Chỉ DIRECT vẫn không chuyển combat qua server.
+- Rollback đối xứng, checkpoint, pacing, ping, jitter và cơ chế khôi phục.
+- Bộ tạo số ngẫu nhiên xác định cho bản sao Fairi, tránh sai lệch giữa trình duyệt.
+- Sửa menu/mã phòng: menu giãn theo nội dung, thẻ mã được đưa vào vùng nhìn thấy.
 
-Đây là rollback một thay đổi có thể gây hồi quy, không phải kết luận nguyên nhân đã được chứng minh. iOS↔iOS vẫn cần xác nhận lại trên thiết bị. Lỗi laptop↔iOS chưa được xác nhận khắc phục. Nếu máy đang chạy các file lẫn phiên bản, việc cập nhật đầy đủ và tải lại cả hai máy là cần thiết.
+Relay giữ nguyên byte so với gói nền Render 6.25.10.
+18 hàm transport/checkpoint giữ nguyên. Phần sảnh chọn/sẵn sàng/tái đấu được ghép thêm
+vào vòng đời phòng hiện tại, không thay bằng host-snapshot networking của Site.
+Rollback capture bổ sung trạng thái kết liễu Fairi; cache vải Thunder chỉ dùng để render.
 
-## Kiểm chứng
+## Ghép thêm từ Version 73
 
-34 kiểm thử mạng/server/đồ họa/khôi phục đạt. Các kiểm thử mô phỏng PeerConnection, dùng WebSocket local thật; không thay thế kiểm tra Safari/iPhone/iPad vật lý. Gameplay không thay đổi ngoài dấu phiên bản, không chạy lại toàn bộ test nhân vật/map cho gói transport này.
+- Giao diện menu, logo, icon, màn hình chọn đấu trường/chiến binh.
+- Sảnh chờ: sửa lựa chọn trước Sẵn sàng, trở về sảnh và rematch cùng mã phòng.
+- Chỉnh sửa chiến binh và cảnh kết liễu Fairi; các sửa hình ảnh/animation mới.
+- Giao diện hồ sơ và các trường thống kê tài khoản.
+
+TÀI KHOẢN: Supabase chưa được cấu hình. Render vẫn hỗ trợ chơi khách.
+Các nút đăng nhập/đăng ký hiển thị CHƯA CẤU HÌNH; không giả lập đăng nhập hoặc mật khẩu.
+Thống kê theo người dùng trên Render chưa hoạt động cho đến khi tích hợp xác thực thật.
+Header danh tính ChatGPT do client gửi bị loại bỏ trên Node server.
+
+## Kiểm tra và dữ liệu
+
+npm test chạy tests-merge/ để không lẫn các kiểm thử giao thức cũ còn trong repository.
+Chi tiết trong VALIDATION.txt. Danh sách và hash file trong CHECKSUMS.sha256.
+
+SQLite mặc định ở .data/rooms.sqlite, hoặc thư mục DATA_DIR nếu đã cấu hình.
+Render với filesystem tạm không đảm bảo giữ file qua redeploy; gói này không thay đổi
+hạ tầng lưu trữ và không tạo database Supabase.
+
+Gói được tạo từ bộ mã Render 6.25.10 có trong phiên làm việc và nguồn Site Version 73.
+Kiểm tra URL công khai trả health 6.25.10 nhưng frontend 6.25.9; gói này đồng bộ các nhãn
+client/server lên 6.36.0. Chưa đối chiếu được các chỉnh sửa riêng trong repository GitHub.
+Chưa push GitHub và chưa triển khai Render tự động.

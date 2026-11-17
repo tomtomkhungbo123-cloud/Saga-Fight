@@ -1,7 +1,7 @@
 'use strict';
 (()=>{
 // A graph, not a JSON clone: attacks/projectiles must share the same use object.
-const skip=new Set(['poseLayers','poseClock','poseKey','pveAI','netDrawX','netDrawY','netX','netY','netTurn']);
+const skip=new Set(['poseLayers','poseClock','poseKey','thunderCloth','pveAI','netDrawX','netDrawY','netX','netY','netTurn']);
 function pack(value){const seen=new Map(),nodes=[];function visit(v){if(v===undefined)return {u:1};if(typeof v==='number'&&!Number.isFinite(v))return {n:String(v)};if(v===null||typeof v!=='object')return v;if(seen.has(v))return {r:seen.get(v)};const id=nodes.length;seen.set(v,id);const node={a:Array.isArray(v),v:[]};nodes.push(node);for(const k of Object.keys(v).sort())if(!skip.has(k)&&typeof v[k]!=='function')node.v.push([k,visit(v[k])]);return {r:id};}return {root:visit(value),nodes};}
 function unpack(graph){if(!graph||!Array.isArray(graph.nodes)||graph.nodes.length>30000)throw Error('Invalid checkpoint');const objects=graph.nodes.map(n=>n.a?[]:{});function read(v){if(v&&typeof v==='object'){if('r'in v){if(!Number.isInteger(v.r)||!objects[v.r])throw Error('Invalid reference');return objects[v.r];}if(v.u)return undefined;if(v.n)return v.n==='NaN'?NaN:v.n==='Infinity'?Infinity:-Infinity;throw Error('Invalid value');}return v;}graph.nodes.forEach((n,i)=>{if(!Array.isArray(n.v))throw Error('Invalid node');for(const [k,v]of n.v){if(['__proto__','prototype','constructor'].includes(k))throw Error('Unsafe key');objects[i][k]=read(v);}});return read(graph.root);}
 // Normalize sub-nanosecond/sub-pixel noise before it can accumulate across JS engines.
@@ -25,5 +25,5 @@ class Rollback {
  checkpoint(){return this.states.get(this.confirmed);}
  digest(t=this.confirmed){const s=this.states.get(t);return s?{tick:t,hash:hash(s)}:null;}
 }
-window.SagaRollback={build:'6.25.10',Rollback,pack,unpack,hash,canonicalize};
+window.SagaRollback={build:'6.36.0',Rollback,pack,unpack,hash,canonicalize};
 })();

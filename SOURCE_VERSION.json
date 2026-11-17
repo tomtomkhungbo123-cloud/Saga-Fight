@@ -1,0 +1,13 @@
+{
+  "build": "6.36.0",
+  "base": "known Render package 6.25.10",
+  "source_site_version": 73,
+  "source_commit": "dd4e00f2face8079ed9bec13332d85cb76bc6426",
+  "online": "Render hybrid DIRECT + WebSocket fallback + rollback",
+  "protocol": 94,
+  "live_observed": {
+    "health": "6.25.10",
+    "frontend": "6.25.9"
+  },
+  "github_updated": false
+}

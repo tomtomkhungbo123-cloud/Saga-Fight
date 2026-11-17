@@ -1,8 +1,31 @@
-Saga Fight6.25.10/protocol94 — DIRECT recovery to6.25.7
-2026-11-17; Node24.22.1; patch base Render6.25.9.
+Release: 6.36.0 / Render hybrid merge of confirmed Site Version 73
 
-34 passed,0 failed,0 skipped (10.6seconds).
-Groups: clock-start,ping-direct,full-rollback-network,reconnect-regression,render-server,websocket-relay,graphics-online,sdp-publication (replaced withdrawn batching test with recovery assertion).
-Comparison: startDirect,directSignal,peerConnection,directChannel,fallback match6.25.7 after normalizing version/protocol. Entire original6.25.7 transport restored; origin/pair stats reporting is the only retained read-only diagnostic enhancement. Stamps changed to6.25.10/protocol94.
+Passed 144 test cases:
+- 107 rollback/world cases: all 49 fighter pairings on both maps, checkpoint restore/replay,
+  delayed input convergence, rendering isolation, cross-engine trig noise, Aether cinematic.
+- 15 hybrid network/lobby cases: production relay with simulated WebRTC peers,
+  DIRECT, WS fallback, DIRECT-only failure policy, connection recovery, clock/checkpoint
+  pacing, rematch in the same room/channel, stale-checkpoint rejection, Fairi cinematic state.
+- 22 API/visual/UI cases: room revisions and permissions, account endpoints and stats logic,
+  Render HTTP adapter, forged identity headers rejected, iOS metadata, Fairi/Aether finishers,
+  Thunder visual animation, mirror/KO palettes, touch interactions.
 
-No claim of physical iOS recovery before user testing. Restoring a user-reported working revision is a regression containment step; laptop↔iOS failure remains unresolved. No real Safari/Edge/physical-device WebRTC test or GitHub/Render deployment performed.
+Execution: full curated suite produced 143 passes and one test-fixture error.
+The one fixture used an unspaced network stub that triggered instrumentation replacement.
+After correcting only that test stub, its targeted rerun passed. No application change
+was needed for that fixture error. All 144 selected cases have successful results.
+
+Additional checks:
+- 18 Render ICE/route/checkpoint functions unchanged from the known Render baseline.
+- scripts/relay.mjs unchanged byte-for-byte from baseline.
+- Fairi deterministic clone PRNG retained byte-for-byte from baseline.
+- Browser JS, Node server, worker, DB JavaScript syntax passed.
+- Unique HTML IDs, required hybrid controls, all entry assets/install icon references passed.
+- Package/lock version and dependency alignment passed.
+- ZIP contents and SHA-256 manifest verified.
+
+Limits:
+Network tests use real local WebSocket relay and simulated WebRTC peers.
+No real laptop/iPhone/iPad cross-device session or browser layout test was run.
+These results do not establish that DIRECT succeeds on the user's network.
+Supabase remains unconfigured. No GitHub push or Render deployment was performed.

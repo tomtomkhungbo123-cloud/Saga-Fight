@@ -24,13 +24,14 @@ const server=http.createServer(async(req,res)=>{
   res.setHeader('Referrer-Policy','same-origin');
   if(url.pathname==='/healthz'){
    res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});
-   res.end(JSON.stringify({ok:true,build:'6.25.10-aether1',clientBuild:'6.25.10',protocol:94,transport:'hybrid',turnRequired:false}));return;
+   res.end(JSON.stringify({ok:true,build:'6.36.0-aether1',clientBuild:'6.36.0',sourceVersion:73,baseBuild:'6.25.10',protocol:94,transport:'hybrid',turnRequired:false}));return;
   }
   if(url.pathname.startsWith('/api/')){
-   if(req.method!=='POST'){res.writeHead(405);res.end();return;}
+   if(!['GET','POST'].includes(req.method)){res.writeHead(405);res.end();return;}
    const chunks=[];let size=0;
    for await(const chunk of req){size+=chunk.length;if(size>85000){res.writeHead(413,{'Connection':'close'});res.end();return;}chunks.push(chunk);}
-   const request=new Request(url,{method:'POST',headers:req.headers,body:Buffer.concat(chunks)});
+   const headers=new Headers(req.headers);for(const name of [...headers.keys()])if(name.startsWith('oai-'))headers.delete(name);
+   const request=new Request(url,{method:req.method,headers,...(req.method==='POST'?{body:Buffer.concat(chunks)}:{})});
    const leaveBody=url.pathname==='/api/rooms/leave'?await request.clone().json().catch(()=>null):null;
    const response=await api(request,{DB});
    if(leaveBody&&response.ok)relay.roomClosed(leaveBody.code);
@@ -55,7 +56,7 @@ const server=http.createServer(async(req,res)=>{
 const relay=attachRelay(server,DB);
 server.requestTimeout=15000;
 server.headersTimeout=10000;
-server.listen(Number(process.env.PORT||3000),'0.0.0.0',()=>console.log('Saga Fight 6.25.10 Rollback listening on port '+server.address().port));
+server.listen(Number(process.env.PORT||3000),'0.0.0.0',()=>console.log('Saga Fight 6.36.0 Rollback listening on port '+server.address().port));
 for(const signal of ['SIGTERM','SIGINT'])process.on(signal,()=>{
  relay.close();server.close(()=>{DB.close();process.exit(0);});
  setTimeout(()=>process.exit(0),8000).unref();

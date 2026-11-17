@@ -2,9 +2,24 @@ const json=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:
 const fail=(message,status=400)=>{throw Object.assign(new Error(message),{status});};
 const token=()=>crypto.randomUUID()+crypto.randomUUID();
 const hash=async str=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str)))).map(b=>b.toString(16).padStart(2,'0')).join('');
-const fighter=v=>['thunder','soul','cylast','mox','melanta'].includes(v)?v:'thunder';
+const fighter=v=>['thunder','soul','cylast','mox','melanta','fairi','aether'].includes(v)?v:'thunder';
+const accountId=r=>r.headers.get('oai-authenticated-user-id')&&r.headers.get('oai-authenticated-user-email')?r.headers.get('oai-authenticated-user-id'):null;
+const RESULTS=`WITH results AS (
+ SELECT host_user_id user_id,p1 fighter,mode,CASE WHEN winner=0 THEN 1 ELSE 0 END won,finished_at FROM game_matches WHERE winner IS NOT NULL AND host_user_id IS NOT NULL AND (mode='pve' OR COALESCE(host_user_id,'')<>COALESCE(guest_user_id,''))
+ UNION ALL SELECT guest_user_id,p2,mode,CASE WHEN winner=1 THEN 1 ELSE 0 END,finished_at FROM game_matches WHERE winner IS NOT NULL AND mode='online' AND guest_user_id IS NOT NULL AND COALESCE(host_user_id,'')<>COALESCE(guest_user_id,''))`;
+async function playerStats(DB,id){const total=await DB.prepare(RESULTS+' SELECT COUNT(*) played,COALESCE(SUM(won),0) wins FROM results WHERE user_id=?').bind(id).first();const favorite=await DB.prepare(RESULTS+' SELECT fighter,COUNT(*) games FROM results WHERE user_id=? GROUP BY fighter ORDER BY games DESC,MAX(finished_at) DESC,fighter ASC LIMIT 1').bind(id).first();const rank=await DB.prepare(RESULTS+", ranks AS (SELECT user_id,DENSE_RANK() OVER (ORDER BY SUM(won) DESC,CAST(SUM(won) AS REAL)/COUNT(*) DESC) position FROM results WHERE mode='online' GROUP BY user_id) SELECT position FROM ranks WHERE user_id=?").bind(id).first();return {rank:rank?.position??null,played:total.played,wins:total.wins,losses:total.played-total.wins,winRate:total.played?Math.round(total.wins/total.played*1000)/10:0,favorite:favorite?{type:favorite.fighter,games:favorite.games}:null};}
 export async function api(request,env){
  const url=new URL(request.url),now=Date.now();
+ if(url.pathname==='/api/account'){
+  if(request.method!=='GET')return json({error:'Chỉ hỗ trợ GET.'},405);
+  const id=request.headers.get('oai-authenticated-user-id'),email=request.headers.get('oai-authenticated-user-email');if(!id||!email)return json({authenticated:false,user:null});
+  let name=null;const full=request.headers.get('oai-authenticated-user-full-name');if(full&&request.headers.get('oai-authenticated-user-full-name-encoding')==='percent-encoded-utf-8'){try{name=decodeURIComponent(full);}catch{}}
+  return json({authenticated:true,user:{displayName:(name||email).slice(0,120),email}});
+ }
+
+ if(url.pathname==='/api/account/stats'){
+  if(request.method!=='GET')return json({error:'Chỉ hỗ trợ GET.'},405);const id=accountId(request);if(!id)return json({error:'Vui lòng đăng nhập để xem thống kê.'},401);if(!env.DB)return json({error:'Thống kê chưa sẵn sàng.'},503);try{return json({stats:await playerStats(env.DB,id)});}catch{return json({error:'Chưa tải được thống kê.'},503);}
+ }
  if(request.method!=='POST')return json({error:'Chỉ hỗ trợ POST.'},405);
  const origin=request.headers.get('Origin');if(origin&&origin!==url.origin)return json({error:'Không cho phép yêu cầu từ trang khác.'},403);
  if(Number(request.headers.get('Content-Length')||0)>85000)return json({error:'Dữ liệu quá lớn.'},413);
@@ -13,34 +28,67 @@ export async function api(request,env){
  if(!data||typeof data!=='object'||Array.isArray(data))return json({error:'Dữ liệu không hợp lệ.'},400);
  try{
   if(!env.DB)fail('Online chưa sẵn sàng. Vui lòng thử lại.',503);
+  if(url.pathname==='/api/account/pve-start'||url.pathname==='/api/account/pve-finish'){
+   const id=accountId(request);if(!id)fail('Vui lòng đăng nhập để lưu thống kê.',401);if(typeof data.id!=='string'||!/^[-a-f0-9]{36}$/i.test(data.id))fail('Mã trận không hợp lệ.');
+   if(url.pathname.endsWith('pve-start')){if(fighter(data.fighter)!==data.fighter)fail('Chiến binh không hợp lệ.');await env.DB.prepare("INSERT OR IGNORE INTO game_matches(id,mode,p1,host_user_id,created_at) VALUES(?,'pve',?,?,?)").bind(data.id,data.fighter,id,now).run();const match=await env.DB.prepare('SELECT * FROM game_matches WHERE id=?').bind(data.id).first();if(match.host_user_id!==id||match.mode!=='pve'||match.p1!==data.fighter)fail('Trận đấu không thuộc tài khoản này.',403);return json({id:match.id});}
+   const match=await env.DB.prepare('SELECT * FROM game_matches WHERE id=?').bind(data.id).first();if(!match||match.host_user_id!==id||match.mode!=='pve')fail('Trận đấu không thuộc tài khoản này.',403);if(![0,1].includes(data.winner))fail('Kết quả không hợp lệ.');if(match.winner!=null&&match.winner!==data.winner)fail('Trận đấu đã được ghi nhận.',409);await env.DB.prepare('UPDATE game_matches SET winner=?,finished_at=? WHERE id=? AND winner IS NULL').bind(data.winner,now,data.id).run();return json({saved:true});
+  }
   if(url.pathname==='/api/rooms/create'){
    // Expired rooms are disposable; bounded cleanup keeps the live table small.
    await env.DB.prepare('DELETE FROM duel_rooms WHERE code IN (SELECT code FROM duel_rooms WHERE expires_at < ? LIMIT 100)').bind(now).run();
-   const secret=token(),key=await hash(secret),config={p1:fighter(data.p1),p2:fighter(data.p2)},alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+   const secret=token(),key=await hash(secret),config={p1:fighter(data.p1),p2:fighter(data.p2),map:data.map==='forest'?'forest':'cavern',connection:data.connection==='direct'?'direct':'auto',lobby:{stage:'lobby',revision:0,generation:0,ready:[false,false]}},alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
    for(let attempt=0;attempt<4;attempt++){
     const bytes=crypto.getRandomValues(new Uint8Array(6)),code=Array.from(bytes,b=>alphabet[b%alphabet.length]).join('');
-    try{await env.DB.prepare('INSERT INTO duel_rooms(code,host_key,config,status,host_seen,expires_at) VALUES(?,?,?,?,?,?)').bind(code,key,JSON.stringify(config),'waiting',now,now+7200000).run();return json({code,token:secret,role:'host',config},201);}catch(e){if(!String(e).includes('UNIQUE'))throw e;}
+    try{await env.DB.prepare('INSERT INTO duel_rooms(code,host_key,config,status,host_seen,expires_at,host_user_id) VALUES(?,?,?,?,?,?,?)').bind(code,key,JSON.stringify(config),'waiting',now,now+7200000,accountId(request)).run();return json({code,token:secret,role:'host',config},201);}catch(e){if(!String(e).includes('UNIQUE'))throw e;}
    }fail('Chưa tạo được phòng. Vui lòng thử lại.',503);
   }
   const code=String(data.code||'').trim().toUpperCase();if(!/^[A-Z2-9]{6}$/.test(code))fail('Mã phòng gồm 6 ký tự.');
   let room=await env.DB.prepare('SELECT * FROM duel_rooms WHERE code = ? AND expires_at > ?').bind(code,now).first();
-  if(!room||room.status==='closed')fail('Phòng không tồn tại hoặc đã đóng.',404);
+  if(!room||room.status==='closed'&&url.pathname!=='/api/rooms/result')fail('Phòng không tồn tại hoặc đã đóng.',404);
   if(url.pathname==='/api/rooms/join'){
    if(room.host_seen<now-30000)fail('Chủ phòng không còn kết nối. Hãy tạo phòng mới.',409);
    if(room.guest_key)fail('Phòng đã đủ hai người.',409);
-   const secret=token(),config={...JSON.parse(room.config),p2:fighter(data.fighter)};
-   const result=await env.DB.prepare("UPDATE duel_rooms SET guest_key=?,config=?,guest_seen=?,status='joined' WHERE code=? AND guest_key IS NULL AND status='waiting'").bind(await hash(secret),JSON.stringify(config),now,code).run();
+   const secret=token(),config={...JSON.parse(room.config),p2:fighter(data.fighter)};config.lobby={...(config.lobby||{generation:0}),stage:'lobby',revision:(config.lobby?.revision||0)+1,ready:[false,false]};
+   const result=await env.DB.prepare("UPDATE duel_rooms SET guest_key=?,config=?,guest_seen=?,guest_user_id=?,status='joined' WHERE code=? AND guest_key IS NULL AND status='waiting' AND config=?").bind(await hash(secret),JSON.stringify(config),now,accountId(request),code,room.config).run();
    if(!result.meta?.changes)fail('Phòng đã đủ hai người.',409);
    return json({code,token:secret,role:'guest',config});
   }
   const secret=(request.headers.get('Authorization')||'').replace(/^Bearer /,'');if(!secret||secret.length>200)fail('Phiên chơi không hợp lệ.',401);
   const key=await hash(secret),role=key===room.host_key?'host':key===room.guest_key?'guest':null;if(!role)fail('Phiên chơi không hợp lệ.',401);
-  if(url.pathname==='/api/rooms/ice'){
-   if(!env.getIceServers)return json({iceServers:[{urls:['stun:stun.l.google.com:19302','stun:stun.cloudflare.com:3478']}],iceTransportPolicy:'all',turnConfigured:false});
-   return json(await env.getIceServers(code+':'+role));
+  if(url.pathname==='/api/rooms/result'){
+   if(role!=='host')fail('Chỉ chủ phòng được xác nhận kết quả.',403);if(![0,1].includes(data.winner)||typeof data.id!=='string')fail('Kết quả không hợp lệ.');const match=await env.DB.prepare("SELECT * FROM game_matches WHERE id=? AND room_code=? AND mode='online'").bind(data.id,code).first();if(!match)fail('Không tìm thấy trận đấu.',404);if(match.winner!=null&&match.winner!==data.winner)fail('Trận đấu đã được ghi nhận.',409);await env.DB.prepare('UPDATE game_matches SET winner=?,finished_at=? WHERE id=? AND winner IS NULL').bind(data.winner,now,data.id).run();return json({saved:true});
   }
   if(url.pathname==='/api/rooms/leave'){
    await env.DB.prepare("UPDATE duel_rooms SET status='closed' WHERE code=?").bind(code).run();return json({closed:true});
+  }
+  if(url.pathname==='/api/rooms/lobby'){
+   const config=JSON.parse(room.config),l=config.lobby||{stage:'lobby',revision:0,generation:0,ready:[false,false]},id=role==='host'?0:1;
+   if(!Number.isInteger(data.revision)||data.revision!==l.revision)return json({error:'Lựa chọn đã thay đổi. Vui lòng kiểm tra và bấm lại.',config},409);
+   if(data.action==='return'){
+    if(l.stage==='playing'){l.stage='lobby';l.ready=[false,false];}
+   }else{
+    if(l.stage!=='lobby')fail('Trận đấu đã bắt đầu.',409);
+    if(data.action==='select'){
+     if(l.ready[id])fail('Hủy sẵn sàng trước khi đổi lựa chọn.',409);
+     if(data.map!==undefined&&role!=='host')fail('Chỉ chủ phòng được chọn đấu trường.',403);
+     if(data.fighter!==undefined){if(fighter(data.fighter)!==data.fighter)fail('Chiến binh không hợp lệ.');config[id?'p2':'p1']=data.fighter;}
+     if(data.map!==undefined){if(!['forest','cavern'].includes(data.map))fail('Đấu trường không hợp lệ.');config.map=data.map;}
+     l.ready=[false,false];
+    }else if(data.action==='ready'){
+     if(typeof data.value!=='boolean')fail('Trạng thái sẵn sàng không hợp lệ.');
+     if(data.value&&!room.guest_key)fail('Đang chờ người chơi thứ hai.',409);
+     l.ready[id]=data.value;if(l.ready.every(Boolean)){l.stage='playing';l.generation++;l.matchId=crypto.randomUUID();}
+    }else fail('Thao tác phòng không hợp lệ.');
+   }
+   l.revision++;config.lobby=l;
+   const update=env.DB.prepare('UPDATE duel_rooms SET config=? WHERE code=? AND config=?').bind(JSON.stringify(config),code,room.config);let changed;
+   if(l.stage==='playing'&&data.action==='ready'){
+    // This batch commits the frozen participants and ready transition atomically.
+    const insert=env.DB.prepare("INSERT OR IGNORE INTO game_matches(id,mode,room_code,generation,p1,p2,host_user_id,guest_user_id,created_at) SELECT ?,'online',code,?,?,?,host_user_id,guest_user_id,? FROM duel_rooms WHERE code=? AND config=?").bind(l.matchId,l.generation,config.p1,config.p2,now,code,JSON.stringify(config));
+    [changed]=await env.DB.batch([update,insert]);
+   }else changed=await update.run();
+   if(!changed.meta?.changes)return json({error:'Lựa chọn vừa thay đổi. Vui lòng bấm lại.',config:JSON.parse((await env.DB.prepare('SELECT * FROM duel_rooms WHERE code=?').bind(code).first()).config)},409);
+   return json({config});
   }
   if(url.pathname!=='/api/rooms/sync')fail('Không tìm thấy.',404);
   if(role==='host'){

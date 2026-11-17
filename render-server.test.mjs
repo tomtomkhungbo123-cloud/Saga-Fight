@@ -20,7 +20,8 @@ test('Render adapter: HTTPS proxy, room lifecycle, assets and bounded requests',
    return {status:r.status,body:await r.json()};
   };
   assert.equal((await (await fetch(base+'/healthz')).json()).ok,true);
-  assert.match(await (await fetch(base+'/')).text(),/6\.25\.10/);
+  const authHeaders={'oai-authenticated-user-id':'forged','oai-authenticated-user-email':'forged@example.test'};assert.equal((await (await fetch(base+'/api/account',{headers:authHeaders})).json()).authenticated,false);assert.equal((await fetch(base+'/api/account/stats',{headers:authHeaders})).status,401);
+  assert.match(await (await fetch(base+'/')).text(),/6\.36\.0/);
   assert.equal((await fetch(base+'/rollback-core.js')).status,200);assert.equal((await fetch(base+'/online.js')).status,200);
   const audio=await fetch(base+'/audio/bgm/does-not-exist.ogg');assert.equal(audio.status,404);
   assert.equal((await fetch(base+'/server.mjs')).status,404);
