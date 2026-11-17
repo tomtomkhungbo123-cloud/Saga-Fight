@@ -27,7 +27,7 @@ const server=http.createServer(async(req,res)=>{
   res.setHeader('Referrer-Policy','same-origin');
   if(url.pathname==='/healthz'){
    res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});
-   res.end(JSON.stringify({ok:true,...release,build:'6.36.0-auth1',clientBuild:'6.36.0',sourceVersion:78,baseBuild:'6.25.10',protocol:94,transport:'hybrid',turnRequired:false}));return;
+   res.end(JSON.stringify({ok:true,...release,build:'6.36.0-auth2',clientBuild:'6.36.0',sourceVersion:79,baseBuild:'6.25.10',protocol:94,transport:'hybrid',turnRequired:false}));return;
   }
   if(url.pathname.startsWith('/api/')){
    if(!['GET','POST'].includes(req.method)){res.writeHead(405);res.end();return;}

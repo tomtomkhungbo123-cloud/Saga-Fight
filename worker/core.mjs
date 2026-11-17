@@ -14,7 +14,8 @@ export async function api(request,env){
   if(request.method!=='GET')return json({error:'Chỉ hỗ trợ GET.'},405);
   const id=request.headers.get('oai-authenticated-user-id'),email=request.headers.get('oai-authenticated-user-email');if(!id||!email)return json({authenticated:false,user:null});
   let name=null;const full=request.headers.get('oai-authenticated-user-full-name');if(full&&request.headers.get('oai-authenticated-user-full-name-encoding')==='percent-encoded-utf-8'){try{name=decodeURIComponent(full);}catch{}}
-  return json({authenticated:true,user:{displayName:(name||email).slice(0,120),email}});
+  const username=/^[a-z0-9_]{3,24}@players\.sagafight\.invalid$/.test(email)?email.split('@')[0]:null;
+  return json({authenticated:true,user:{displayName:(name||username||email).slice(0,120),email,...(username?{username}:{})}});
  }
 
  if(url.pathname==='/api/account/stats'){

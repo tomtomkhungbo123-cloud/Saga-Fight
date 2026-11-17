@@ -18,3 +18,13 @@ Accounts, password hashes and authentication sessions belong to Supabase Auth. D
 The frontend uses pinned, locally bundled official supabase-js 2.84.0. It submits credentials directly to Supabase, persists/refreshes sessions, and sends an access token only to same-origin game account requests and room create/join. The backend verifies that token using Supabase Auth getUser before associating a match with a user UUID. Room credentials and relay messages remain unchanged. Client-supplied platform identity headers are discarded.
 
 Validation: 144 existing gameplay/network regression tests; 7 auth/bridge checks including rejected spoofed identity, rejected invalid token, verified UUID on PvE match, public-key-only config, and exact Worker/browser asset parity. Email signup confirmation and real-user login require user testing; no account or email was created during implementation.
+
+## Username accounts (auth2)
+
+New registrations ask only for a username, password and password confirmation. Usernames are case-insensitive ASCII letters, digits or underscore, 3–24 characters. The canonical identity is mapped to `username@players.sagafight.invalid`, a reserved non-deliverable address; no real email is collected. Supabase still owns password hashing, uniqueness, sessions and rate limits. Existing email accounts can use their original email in the login field.
+
+Before opening registration, in the SagaFight Supabase project go to Authentication → Sign In / Providers → Email and turn Confirm email off. Leave Email/password sign-in enabled. Check the public `/auth/v1/settings` response has `mailer_autoconfirm: true`. The registration form checks this before sending signup, so it does not create unusable accounts or send confirmation requests when the setting remains on. This project-level change also applies to future legacy email signups.
+
+New accounts have no email recovery channel. Account recovery needs a separate verified admin process. The application does not grant privileges based on editable username metadata. The profile username is derived from the verified internal Auth address. Existing UUIDs/statistics and game networking stay intact.
+
+Validation: username normalization/collisions, invalid names, no signup while confirmation is enabled, real-session-required result handling, old email login compatibility, verified profile username, existing auth/bridge checks. Actual registration is pending the project's Confirm email switch; no real account was created in this update.

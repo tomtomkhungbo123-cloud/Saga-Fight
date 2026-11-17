@@ -1,6 +1,6 @@
 # Cập nhật Saga Fight trên Render
 
-Bản chuẩn bị: 6.36.0-auth1, gameplay 6.36.0, giao thức 94, tài khoản Supabase tương ứng bản test Site Version 78.
+Bản chuẩn bị: 6.36.0-auth2, gameplay 6.36.0, giao thức 94, tài khoản Supabase tương ứng bản test Site Version 79.
 
 Render chạy `server.mjs` và phục vụ giao diện từ `web/`. File `game.js`, `index.html`, `online.js` ở thư mục gốc không được dùng để phục vụ game.
 

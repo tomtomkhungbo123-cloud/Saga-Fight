@@ -1,9 +1,9 @@
 {
-  "build": "6.36.0-auth1",
+  "build": "6.36.0-auth2",
   "frontend": "6.36.0",
   "base": "Render hybrid DIRECT + WebSocket fallback + rollback",
-  "source_site_version": 78,
-  "source_commit": "68f93d9265c4c5da04ca8a582f2bb30a31e12035",
+  "source_site_version": 79,
+  "source_commit": "b0fbb39e3aec54c2c697ae8148bf048f37830931",
   "protocol": 94,
-  "repair": "Restore release files under served web/ directory; Supabase Auth integration; reject mismatched release on build/start"
+  "repair": "Username/password signup without a supplied email; retain legacy email login and verified UUID identity"
 }
