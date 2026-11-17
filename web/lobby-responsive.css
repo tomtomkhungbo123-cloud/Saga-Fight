@@ -1,0 +1,149 @@
+/* Option 2: character lobby. Combat rendering, camera and touch controls stay independent. */
+body>header .brand-wordmark{font:800 26px/1 'Barlow Condensed',Impact,sans-serif;letter-spacing:.01em;margin-left:12px;color:#f6f0e6}
+body>header .edition{display:flex;margin-right:auto;margin-left:22px;white-space:nowrap;font-size:9px;letter-spacing:.12em}
+body>header #accountEntry>span,body>header #accountEntry [data-account-open="register"]{display:none}
+body>header #accountEntry button{min-height:44px;padding:8px 12px;border:1px solid #ffffff24;font-size:10px;letter-spacing:.04em}
+body>header .tools{align-items:center;gap:8px}
+body>header #settingsButton,body>header #sound,body>header #full{font-size:0!important;width:44px;height:44px;padding:0;display:grid;place-items:center;flex:0 0 44px}
+body>header #settingsButton::before{content:'⚙';font:24px/1 Arial}
+body>header #sound::before{content:'♫';font:23px/1 Arial}
+body>header #sound[aria-pressed="false"]::after{content:'';width:23px;height:1px;background:currentColor;position:absolute;transform:rotate(-45deg)}
+body>header #sound{position:relative}
+body>header #full::before{content:'⛶';font:23px/1 Arial}
+body:has(#menu:not([hidden])){--lobby-header:68px;overflow-x:hidden;background:#101012}
+body:has(#menu:not([hidden]))>header{height:calc(var(--lobby-header) + env(safe-area-inset-top));padding:env(safe-area-inset-top) max(24px,env(safe-area-inset-right)) 0 max(24px,env(safe-area-inset-left));gap:12px}
+body:has(#menu:not([hidden]))>header .brand-icon{width:40px;height:40px}
+body:has(#menu:not([hidden]))>main{max-width:1440px;padding:0 max(24px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(24px,env(safe-area-inset-left));margin:auto}
+body:has(#menu:not([hidden])) .arena-top,body:has(#menu:not([hidden])) .bottom,body:has(#menu:not([hidden])) .rotate-hint,body:has(#menu:not([hidden]))>footer{display:none}
+body:has(#menu:not([hidden])) #arena{margin:0;border:0;background:#141216;min-height:0;max-height:none;aspect-ratio:auto}
+/* The stage uses the real, animated roster summaries; no duplicate fighter renderer. */
+#menu{padding:0;min-height:0!important;background:linear-gradient(90deg,#151317d9,#151317f5 65%,#151317fa);touch-action:pan-y}
+#menu .lobby-layout{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.25fr);gap:28px;width:100%;max-width:none;min-height:calc(100dvh - var(--lobby-header,68px) - env(safe-area-inset-top) - max(16px,env(safe-area-inset-bottom)));padding:28px 0;align-items:center}
+#menu .lobby-sidebar{min-width:0;display:flex;flex-direction:column;align-self:stretch;justify-content:center}
+#menu .menu-topline{margin:0 0 12px}#menu .eyebrow{font-size:10px;letter-spacing:.15em;color:#d9bd80}
+#menu h1{font-size:clamp(30px,3.4vw,50px);line-height:1.05;margin:0 0 20px}#menu h1 br{display:none}#menu h1 em{margin-left:.15em}
+#menu .lobby-sidebar>p{display:none}
+#menu .choices,#menu .choices:has(#opponentLabel[hidden]){position:relative;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:30px;align-items:stretch;padding-top:10px}
+#menu .choices::before{content:'VS';position:absolute;left:50%;top:40%;transform:translate(-50%,-50%) rotate(-8deg);font:800 30px/1 'Barlow Condensed',Impact,sans-serif;color:#dac5a5;pointer-events:none;text-shadow:0 2px 15px #000}
+#menu .roster-field{min-width:0}#menu .roster-label{display:none}
+#menu .fighter-summary{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end;min-height:310px;width:100%;padding:0;text-align:center;border:0;border-radius:0;background:transparent;box-shadow:none;overflow:visible}
+#menu .fighter-summary:hover{background:transparent}
+#menu .fighter-summary canvas{display:block;width:100%;height:220px;object-fit:contain;pointer-events:none;filter:drop-shadow(0 8px 18px #0006)}
+#menu #opponentLabel .fighter-summary canvas{transform:scaleX(-1)}
+#menu .fighter-summary .card-index,#menu .fighter-summary .card-style,#menu .fighter-summary::after{display:none}
+#menu .fighter-summary .card-name{display:block;align-self:stretch;min-height:34px;padding:8px 3px;border-top:1px solid color-mix(in srgb,var(--fighter-color) 70%,transparent);color:var(--fighter-color);font:800 clamp(17px,1.9vw,25px)/1.1 'Barlow Condensed',Impact,sans-serif;overflow-wrap:normal;letter-spacing:.015em}
+#menu .fighter-change{display:flex;align-items:center;justify-content:center;align-self:stretch;min-height:46px;margin:14px 0 0;padding:8px 5px;border:1px solid #ffffff40;border-radius:5px;background:#14121788;color:#e0d5cf;font-size:10px;line-height:1.4;letter-spacing:.04em}
+#menu .fighter-summary:hover .fighter-change{border-color:var(--fighter-color);color:var(--fighter-color);background:#ffffff08}
+#menu .fighter-summary:focus-visible{outline:2px solid var(--fighter-color);outline-offset:4px;border-radius:6px}
+#menu .choices:has(#opponentLabel[hidden])::after{content:'?\A CHỜ ĐỐI THỦ';white-space:pre;display:flex;align-items:center;justify-content:center;text-align:center;border:1px dashed #ffffff20;border-radius:8px;color:#9b8e9e;font:600 18px/2.4 'Barlow Condensed',Impact,sans-serif;min-height:200px;align-self:center}
+#menu .lobby-setup{display:flex;flex-direction:column;gap:18px;min-width:0;padding:24px;border:1px solid #ffffff26;border-radius:12px;background:#171419e8;box-shadow:0 16px 44px #0002}
+#menu .modepick{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;margin:0;border:1px solid #ffffff2c;border-radius:6px;overflow:hidden}
+#menu .modepick button{display:flex;align-items:center;justify-content:center;min-height:48px;width:100%;padding:8px 5px;font-size:18px;letter-spacing:0;border:0;border-right:1px solid #ffffff20;border-radius:0;background:transparent;color:#d5cbd5}
+#menu .modepick [data-mode="pve"]{order:0}#menu .modepick [data-mode="pvp"]{order:1}#menu .modepick [data-mode="online"]{order:2}#menu .modepick [data-mode="sandbox"]{order:3;border-right:0}
+#menu .modepick span{display:none}
+#menu .modepick button.selected{background:#edcf8818;box-shadow:inset 0 0 0 1px #edcf88;color:var(--gold)}
+#menu .lobby-mode-note{margin:-6px 0 0;padding:0 0 14px;border-bottom:1px solid #ffffff18;font-size:10px;letter-spacing:.1em;color:#b8acb5;line-height:1.5}
+#menu .lobby-mode-note span{display:none}
+#menu:has([data-mode="pve"].selected) [data-mode-note="pve"],#menu:has([data-mode="pvp"].selected) [data-mode-note="pvp"],#menu:has([data-mode="online"].selected) [data-mode-note="online"],#menu:has([data-mode="sandbox"].selected) [data-mode-note="sandbox"]{display:inline}
+#menu .map-choice{margin:0}#menu .map-choice legend{font-size:11px;font-weight:600;letter-spacing:.13em;color:#d8cfd5;margin-bottom:10px}
+#menu .map-previews{gap:12px}#menu .map-preview{min-height:44px;border-radius:7px;isolation:isolate}
+#menu .map-preview img{height:clamp(85px,14vh,150px)}
+#menu .map-preview-info{display:flex;flex-direction:column;align-items:flex-start;gap:5px;padding:10px 11px;background:#18181c}
+#menu .map-preview strong{font-size:12px;line-height:1.35}#menu .map-size{font-size:8px;letter-spacing:.04em}
+#menu .lobby-launch{display:flex;flex-direction:column;gap:14px;min-width:0}
+#menu #difficultyLabel{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:48px;padding:6px 12px;border:1px solid #ffffff2a;border-radius:6px;font-size:10px;letter-spacing:.06em;color:#c4b9c4}
+#menu #difficulty{width:150px;margin:0;min-height:32px;padding:2px 22px 2px 8px;border:0;background:transparent;color:#f0e6d5;font-size:15px!important}
+#menu #start{display:flex;align-items:center;justify-content:center;gap:18px;min-height:58px;width:100%;margin:0;padding:12px 18px;border-radius:6px;font:800 27px/1.1 'Barlow Condensed',Impact,sans-serif;letter-spacing:.03em;background:linear-gradient(110deg,#edcf88,#f4d999)}
+#menu #start span{font-size:28px}#menu #start:hover{background:#ffe4ab}
+#menu .lobby-launch:has(#start[hidden]):has(#difficultyLabel[hidden]){display:none}
+#menu #onlinePanel{min-width:0;margin:0}#menu #lobbyCard{margin:0 0 14px}
+#menu #onlinePanel .connection-choice{display:block;font-size:11px;line-height:1.5}#menu #onlinePanel .connection-choice select{font-size:13px!important;margin:6px 0;min-height:44px}
+#menu #onlinePanel .connection-choice small{display:block;font-size:10px;color:#ad9faf;line-height:1.5}
+#menu #onlinePanel .online-actions{display:flex;flex-direction:row;flex-wrap:wrap;gap:8px}
+#menu #onlinePanel .join-room{min-width:180px}#menu #onlinePanel .online-hint{font-size:10px}
+#menu #sandboxHint{margin:0;font-size:11px!important;line-height:1.5!important}
+#menu #netError:empty{display:none}
+#arena:fullscreen #menu,body.immersive #menu{height:auto;min-height:100%;padding:env(safe-area-inset-top) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));overflow-y:auto}
+/* iPad: preserve a visible two-fighter stage in both orientations. */
+@media(min-width:700px) and (min-height:600px){
+ #menu .lobby-layout{gap:22px;grid-template-columns:minmax(0,.9fr) minmax(0,1.2fr)}
+ #menu .lobby-setup{padding:20px;gap:16px}
+ #menu .choices{gap:22px}#menu .fighter-summary canvas{height:210px}
+ #menu .fighter-change{font-size:9px}#menu .modepick button{font-size:16px}
+}
+/* Short landscape iPhone: same stage/setup split, with full controls in view. */
+@media(orientation:landscape) and (max-height:600px){
+ body:has(#menu:not([hidden])){--lobby-header:52px}
+ body:has(#menu:not([hidden]))>header{padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right));gap:8px}
+ body:has(#menu:not([hidden]))>main{padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right));padding-bottom:max(10px,env(safe-area-inset-bottom))}
+ body>header .brand-wordmark{font-size:22px;margin-left:8px}body>header .edition{margin-left:4px;font-size:8px;letter-spacing:.04em}
+ body>header .tools{gap:5px}body>header .brand-icon{width:32px!important;height:32px!important}body>header #full{display:none}
+ body>header #accountEntry button{padding:6px 10px;font-size:9px}
+ #menu .lobby-layout{grid-template-columns:minmax(0,.95fr) minmax(0,1.25fr);gap:18px;padding:10px 0;min-height:calc(100dvh - var(--lobby-header) - env(safe-area-inset-top) - max(10px,env(safe-area-inset-bottom)))}
+ #menu .menu-topline{display:none}#menu h1{font-size:25px;line-height:1.02;margin:0 0 6px}#menu h1 br{display:inline}#menu h1 em{margin-left:0}
+ #menu .choices,#menu .choices:has(#opponentLabel[hidden]){gap:22px;padding-top:0}
+ #menu .choices::before{font-size:23px;top:40%}
+ #menu .fighter-summary{min-height:210px}#menu .fighter-summary canvas{height:150px}
+ #menu .fighter-summary .card-name{font-size:17px;min-height:25px;padding:5px 1px}
+ #menu .fighter-change{min-height:44px;font-size:8px;letter-spacing:0;margin-top:8px;padding:5px 2px}
+ #menu .lobby-setup{gap:9px;padding:12px;border-radius:8px}
+ #menu .modepick button{min-height:44px;padding:5px 2px;font-size:14px}
+ #menu .lobby-mode-note{font-size:8px;margin:-2px 0 0;padding-bottom:6px}
+ #menu .map-choice legend{font-size:9px;margin-bottom:6px}
+ #menu .map-previews{gap:8px}#menu .map-preview img{height:49px}
+ #menu .map-preview-info{padding:6px 7px}#menu .map-preview strong{font-size:10px}#menu .map-size{display:none}
+ #menu .map-picked{width:18px;height:18px;line-height:18px;font-size:11px;top:5px;right:5px}
+ #menu .lobby-launch{gap:8px}#menu #difficultyLabel{min-height:36px;padding:4px 9px;font-size:8px}
+ #menu #difficulty{min-height:26px;font-size:12px!important;width:110px}
+ #menu #start{min-height:44px;font-size:22px;padding:6px 12px}
+ #menu #onlinePanel .connection-choice small,#menu #onlinePanel .online-hint{display:none}
+ #menu #onlinePanel .connection-choice select{font-size:12px!important;margin:4px 0}
+ #menu #onlinePanel .online-actions{margin-top:8px}#menu #onlinePanel .join-room{min-width:150px}
+ #menu:has(#onlinePanel:not([hidden])) .map-preview img{height:26px}
+ #menu:has(#onlinePanel:not([hidden])) .lobby-mode-note{display:none}
+ #menu:has(#onlinePanel:not([hidden])) .lobby-setup{gap:7px}
+}
+/* Portrait phones: fighter stage above setup, with ordinary page scrolling. */
+@media(max-width:699px) and (orientation:portrait){
+ body:has(#menu:not([hidden])){--lobby-header:62px}
+ body:has(#menu:not([hidden]))>header{padding-left:max(14px,env(safe-area-inset-left));padding-right:max(14px,env(safe-area-inset-right));gap:8px}
+ body:has(#menu:not([hidden]))>main{padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
+ body>header .brand-wordmark{font-size:21px;margin-left:7px}body>header .brand-icon{width:30px!important;height:30px!important}
+ body>header .edition,body>header #full{display:none}body>header .tools{gap:4px}body>header #accountEntry button{font-size:8px;padding:6px;max-width:100px}
+ body>header #settingsButton,body>header #sound{width:40px;flex-basis:40px}
+ #menu .lobby-layout{display:flex;flex-direction:column;align-items:stretch;gap:22px;padding:20px 0;min-height:0}
+ #menu .menu-topline{display:none}#menu h1{font-size:30px;margin:0 0 10px}
+ #menu .choices{gap:30px;padding-top:0}#menu .fighter-summary{min-height:210px}#menu .fighter-summary canvas{height:150px}
+ #menu .fighter-summary .card-name{font-size:21px}#menu .fighter-change{font-size:8px;margin-top:8px;min-height:44px}
+ #menu .choices::before{font-size:26px;top:35%}
+ #menu .lobby-setup{padding:15px;gap:14px}#menu .modepick button{min-height:44px;font-size:15px}
+ #menu .map-preview img{height:72px}#menu .map-preview strong{font-size:11px}#menu .map-preview-info{padding:8px}
+ #menu #difficulty{font-size:16px!important;width:130px}#menu #start{font-size:25px;min-height:52px}
+ #menu #onlinePanel .online-actions{flex-direction:column}#menu #onlinePanel .join-room{min-width:0}#menu #onlinePanel .connection-choice select{font-size:16px!important}
+}
+@media(max-width:360px) and (orientation:portrait){body>header .brand-wordmark{font-size:18px}body>header .brand-icon{width:26px!important;height:26px!important}body>header .tools{gap:2px}body>header #accountEntry button{font-size:7px;padding-inline:4px}}
+/* Desktop: intentionally bounded, centered lobby rather than a stretched mobile view. */
+@media(min-width:1100px) and (min-height:601px) and (hover:hover) and (pointer:fine){
+ body:has(#menu:not([hidden])){--lobby-header:76px;background:radial-gradient(ellipse at 50% 35%,#252029,#121114 65%)}
+ body:has(#menu:not([hidden]))>header{max-width:1440px;margin:auto;padding:0 40px;height:76px}
+ body:has(#menu:not([hidden]))>main{max-width:1360px;padding:30px 40px 42px}
+ body:has(#menu:not([hidden])) #arena{border:1px solid #ffffff18;border-radius:14px;box-shadow:0 22px 70px #0005}
+ #menu .lobby-layout{padding:30px;min-height:0;gap:32px}
+ #menu .lobby-setup{padding:24px;gap:18px;background:#171419f2}
+ #menu .fighter-summary{min-height:330px}#menu .fighter-summary canvas{height:250px}
+ #menu .fighter-summary .card-name{font-size:25px}#menu .fighter-change{font-size:11px}
+ #menu .modepick button{font-size:19px}
+ #menu .map-preview img{height:130px}#menu .map-preview strong{font-size:14px}
+ #menu #start{font-size:30px;min-height:60px}
+}
+/* Use a stable art backdrop rather than the gameplay camera behind the lobby. */
+#menu{background:linear-gradient(90deg,#121115bd,#151317f2 64%,#151317fa),url('assets/forest-spirit.png') center/cover}
+#menu:has([data-map-choice="cavern"].selected){background-image:linear-gradient(90deg,#121115bd,#151317f2 64%,#151317fa),url('assets/arena.png')}
+@media(orientation:landscape) and (max-height:600px){#menu #difficultyLabel{min-height:44px}#menu #difficulty{min-height:32px}}
+/* Subtle rising fire dust: at most 18 tiny layers; only opacity and transform animate. */
+#menu{isolation:isolate}#menu .lobby-layout{position:relative;z-index:1}
+.lobby-embers{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;border-radius:inherit;contain:strict;--ember-rise:650px;--ember-play:paused}
+.lobby-embers i{position:absolute;bottom:-7px;display:block;width:var(--ember-size);height:var(--ember-size);border-radius:50%;background:radial-gradient(circle,#ffe7aa 0 20%,#f5ae58 40%,#df652a99 72%,transparent 100%);opacity:0;animation:lobby-ember-rise var(--ember-duration) var(--ember-delay) linear infinite;animation-play-state:var(--ember-play);pointer-events:none}
+.lobby-embers i[hidden],.lobby-embers[hidden]{display:none!important}
+@keyframes lobby-ember-rise{0%{transform:translate3d(0,0,0);opacity:0}12%{opacity:var(--ember-peak)}70%{opacity:calc(var(--ember-peak)*.7)}100%{transform:translate3d(var(--ember-drift),calc(-1*var(--ember-rise)),0);opacity:0}}
+@media(prefers-reduced-motion:reduce){.lobby-embers{display:none!important}.lobby-embers i{animation:none}}
