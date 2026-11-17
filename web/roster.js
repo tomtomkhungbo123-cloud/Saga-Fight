@@ -11,7 +11,7 @@ const body=picker.querySelector('.fighter-picker-body'),summaries=[],panels=[];l
 for(let player=0;player<2;player++){
  const select=$('select'+player),field=select.parentElement,grid=field.querySelector('.roster-grid'),selected=previews.find(p=>p.player===player&&p.type===select.value);
  const card=selected.card.cloneNode(true);card.className='fighter-summary';card.id='rosterTrigger'+player;card.removeAttribute('data-roster-type');card.removeAttribute('data-roster-player');card.removeAttribute('aria-pressed');card.setAttribute('aria-haspopup','dialog');card.setAttribute('aria-controls','fighterPicker');card.querySelector('.card-check')?.remove();
- const change=document.createElement('span');change.className='fighter-change';change.textContent=player?'ĐỔI ĐỐI THỦ ↗':'ĐỔI CHIẾN BINH ↗';card.append(change);field.append(card);
+ const change=document.createElement('span');change.className='fighter-change';change.textContent=player?'ĐỔI ĐỐI THỦ':'ĐỔI CHIẾN BINH';card.append(change);field.append(card);
  grid.className='fighter-picker-grid';grid.setAttribute('aria-label','Danh sách chiến binh');grid.removeAttribute('aria-labelledby');body.append(grid);panels.push(grid);
  summaries.push({card,type:select.value,player,canvas:card.querySelector('canvas'),fighter:makeFighter(select.value,player),painted:false,summary:true});
  card.addEventListener('click',()=>open(player));

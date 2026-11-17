@@ -147,3 +147,95 @@ body:has(#menu:not([hidden])) #arena{margin:0;border:0;background:#141216;min-he
 .lobby-embers i[hidden],.lobby-embers[hidden]{display:none!important}
 @keyframes lobby-ember-rise{0%{transform:translate3d(0,0,0);opacity:0}12%{opacity:var(--ember-peak)}70%{opacity:calc(var(--ember-peak)*.7)}100%{transform:translate3d(var(--ember-drift),calc(-1*var(--ember-rise)),0);opacity:0}}
 @media(prefers-reduced-motion:reduce){.lobby-embers{display:none!important}.lobby-embers i{animation:none}}
+/* Keyboard/mouse desktops never acquire the phone gamepad on entering fullscreen. */
+@media(hover:hover) and (pointer:fine){
+ body #touch,body .touch-toolbar,body #touchToggle{display:none!important}
+ html:fullscreen body:has(#menu:not([hidden])){overflow:hidden}
+ html:fullscreen body:has(#menu:not([hidden]))>main{max-width:none;width:100%;margin:0;padding:0}
+ html:fullscreen body:has(#menu:not([hidden]))>header{width:100%;max-width:1440px;margin:auto}
+ html:fullscreen body:has(#menu:not([hidden])) #arena,
+ body.immersive:has(#menu:not([hidden])) #arena{width:100%;height:calc(100dvh - var(--lobby-header,68px) - env(safe-area-inset-top));min-height:0;max-height:none;margin:0;border:0;border-radius:0;box-shadow:none}
+ html:fullscreen body:has(#menu:not([hidden])) #menu,
+ body.immersive:has(#menu:not([hidden])) #menu,
+ #arena:fullscreen #menu{height:100%;min-height:100%!important;max-height:100%;padding:0;overflow-y:auto;overscroll-behavior:contain}
+ html:fullscreen #menu .lobby-layout,
+ body.immersive #menu .lobby-layout,
+ #arena:fullscreen #menu .lobby-layout{min-height:100%;max-width:1440px;margin:auto;padding:clamp(20px,4vh,48px) clamp(24px,4vw,64px);align-items:center}
+ /* CSS fallback follows the same header + lobby split as native desktop fullscreen. */
+ body.immersive:has(#menu:not([hidden]))>header{position:fixed;inset:0 0 auto;z-index:30;width:100%;max-width:none;background:#141216}
+ body.immersive:has(#menu:not([hidden])) #arena{top:calc(var(--lobby-header,68px) + env(safe-area-inset-top));bottom:0}
+ /* Combat uses the complete desktop viewport; Esc remains available for pause/exit. */
+ html:fullscreen body.playing>header,html:fullscreen body.playing>footer,
+ html:fullscreen body.playing .arena-top,html:fullscreen body.playing .bottom,
+ html:fullscreen body.playing .rotate-hint{display:none}
+ html:fullscreen body.playing>main{max-width:none;margin:0;padding:0}
+ html:fullscreen body.playing #arena{position:fixed;inset:0;width:100vw;height:100dvh;min-height:0;max-height:none;border:0;border-radius:0;z-index:20}
+ /* Compatibility if a browser/session still fullscreened only the legacy arena. */
+ #arena:fullscreen:has(#menu:not([hidden])){height:100dvh;min-height:0;max-height:none;border:0;border-radius:0}
+}
+
+/* Title accent matches the supplied gold Saga symbol. */
+#menu h1 em{color:#edcf89}
+/* Supplied VS letterforms, traced as one scalable mark with no grey backdrop. */
+#menu .choices::before{content:'';display:block;width:56px;height:49px;background:url('assets/vs-mark.svg') center/contain no-repeat;transform:translate(-50%,-50%);font-size:0;text-shadow:none}
+@media(orientation:landscape) and (max-height:600px){#menu .choices::before{width:36px;height:31px}}
+@media(max-width:699px) and (orientation:portrait){#menu .choices::before{width:42px;height:36px}}
+
+/* Platform-independent, flat game icons. Audio state still comes from SagaAudio. */
+body>header #settingsButton::before,body>header #sound::before,body>header #full::before{content:'';display:block;width:23px;height:23px;background:currentColor;mask:center/contain no-repeat;-webkit-mask:center/contain no-repeat}
+body>header #settingsButton::before{mask-image:url('assets/ui-gear.svg');-webkit-mask-image:url('assets/ui-gear.svg')}
+body>header #sound::before{mask-image:url('assets/ui-sound-on.svg');-webkit-mask-image:url('assets/ui-sound-on.svg')}
+body>header #sound[aria-pressed="false"]::before{mask-image:url('assets/ui-sound-off.svg');-webkit-mask-image:url('assets/ui-sound-off.svg')}
+body>header #sound[aria-pressed="false"]::after{display:none}
+body>header #full::before{mask-image:url('assets/ui-fullscreen.svg');-webkit-mask-image:url('assets/ui-fullscreen.svg')}
+body>header :is(#settingsButton,#sound,#full){color:#edcf89;border-color:#edcf8938;background:#17151b}
+body>header :is(#settingsButton,#sound,#full):hover{background:#edcf8914;border-color:#edcf89}
+body>header :is(#settingsButton,#sound,#full):focus-visible{outline:2px solid #edcf89;outline-offset:3px}
+/* Keep the game's native value source; render the choices in our own layer. */
+#menu #difficulty[hidden]{display:none!important}
+#difficultyTrigger{display:flex;align-items:center;justify-content:space-between;gap:24px;min-width:150px;min-height:36px;padding:4px 8px;border:0;background:transparent;color:#f0e6d5;font-family:inherit;font-size:15px;font-weight:600;line-height:1.2;text-align:left;letter-spacing:0;touch-action:manipulation}
+#difficultyTrigger svg{width:18px;height:18px;fill:none;stroke:#edcf89;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .15s}
+#difficultyTrigger[aria-expanded="true"] svg{transform:rotate(180deg)}
+#difficultyTrigger:focus-visible{outline:2px solid #edcf89;outline-offset:2px}
+.difficulty-menu{position:fixed;z-index:1000;box-sizing:border-box;width:280px;padding:6px;border:1px solid #edcf8970;border-radius:8px;background:#1c191f;box-shadow:0 12px 36px #0008;overflow:auto;overscroll-behavior:contain;color:#eee4d4}
+.difficulty-menu[hidden]{display:none!important}
+.difficulty-menu [role="option"]{display:flex;align-items:center;gap:12px;width:100%;min-height:48px;padding:10px 12px;border:1px solid transparent;border-radius:4px;background:transparent;color:#d4cbd0;text-align:left;letter-spacing:.02em;font-family:inherit;font-size:15px;font-weight:600;line-height:1.25;touch-action:manipulation}
+.difficulty-menu [role="option"]+[role="option"]{margin-top:3px}
+.difficulty-menu [role="option"]::before{content:'';width:16px;height:16px;flex:0 0 16px;clip-path:polygon(10% 50%,25% 35%,43% 55%,80% 12%,94% 25%,44% 86%);background:transparent}
+.difficulty-menu [aria-selected="true"]{color:#edcf89;background:#edcf8912;border-color:#edcf894d}
+.difficulty-menu [aria-selected="true"]::before{background:#edcf89}
+.difficulty-menu [role="option"]:is(:hover,:focus-visible){outline:0;border-color:#edcf89;background:#edcf8920;color:#fff0c9}
+.difficulty-menu [data-value="hell"]{color:#ed9e92}
+.difficulty-menu [data-value="hell"]::after{content:'';margin-left:auto;width:5px;height:16px;background:linear-gradient(to top,#a14034,#edb089);transform:skew(-12deg)}
+@media(orientation:landscape) and (max-height:600px){#difficultyTrigger{min-width:110px;min-height:32px;font-size:13px}.difficulty-menu [role="option"]{min-height:44px;padding:7px 12px}}
+@media(max-width:699px) and (orientation:portrait){#difficultyTrigger{min-width:130px;min-height:40px;font-size:16px}}
+@media(prefers-reduced-motion:reduce){#difficultyTrigger svg{transition:none}}
+/* Touch surfaces keep their symbols opaque while only the fill is adjustable. */
+:root{--control-opacity:.9}
+#touch button{background:rgb(37 33 46 / var(--control-opacity))}
+#touch .touch-main .attack{background:rgb(214 185 119 / var(--control-opacity));color:#211720}
+#touch .touch-main [data-do="jump"]{background:rgb(58 78 86 / var(--control-opacity))}
+#touch button.pressed{background:rgb(104 87 54 / var(--control-opacity));border-color:#edcf89}
+#touch .touch-move::before{background:rgb(21 17 29 / calc(var(--control-opacity)*.5))}
+#settings #controlOpacity{display:block;width:100%;min-height:44px;margin:10px 0 0;accent-color:#edcf89;touch-action:pan-x}
+#controlOpacityValue{font-size:20px;color:#edcf89;font-weight:700}
+#settings .preview-controls span{background:rgb(51 42 63 / var(--control-opacity))}
+#settings .preview-controls .preview-attack{background:rgb(214 185 119 / var(--control-opacity))}
+#settings .virtual-controls{margin:0 0 12px;padding:0;border:0}
+#settings .virtual-controls legend{font-size:14px;margin-bottom:10px}
+#settings .virtual-controls label{display:flex;gap:12px;align-items:center;padding:12px;border:1px solid #ffffff24;border-radius:6px;margin-bottom:8px;min-height:62px;cursor:pointer}
+#settings .virtual-controls label:has(:checked){border-color:#edcf89;background:#edcf890c}
+#settings .virtual-controls input{accent-color:#edcf89;width:19px;height:19px;margin:0;flex:none}
+#settings .virtual-controls small{display:block;color:#b9a8c3;font-size:11px;line-height:1.5;margin-top:3px}
+#touch .joystick-zone{display:none;position:absolute;left:0;bottom:0;width:100%;height:max(150px,calc(var(--pad-unit)*3));touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;pointer-events:auto}
+#touch:not([data-virtual-control="buttons"]) .joystick-zone{display:block}
+#touch:not([data-virtual-control="buttons"]) .touch-move>button,#touch:not([data-virtual-control="buttons"]) .touch-move::before{display:none}
+.joystick-base{position:absolute;left:50%;top:calc(100% - var(--pad-unit)*1.05 - 6px);width:calc(var(--pad-unit)*2.1);height:calc(var(--pad-unit)*2.1);transform:translate(-50%,-50%);border:2px solid #edcf8970;border-radius:50%;background:rgb(31 27 40 / var(--control-opacity));box-shadow:inset 0 0 0 5px #edcf8909,0 3px 0 #09071066;pointer-events:none}
+.joystick-guide{position:absolute;inset:18%;border:1px solid #edcf892b;border-radius:50%}
+.joystick-thumb{position:absolute;inset:29%;border:2px solid #edcf89a8;border-radius:50%;background:rgb(181 151 90 / var(--control-opacity));box-shadow:0 2px 8px #0004}
+#touch[data-virtual-control="floating"] .joystick-base{opacity:0}
+#touch[data-virtual-control="floating"] .joystick-zone::after{content:'CHẠM & KÉO';position:absolute;bottom:calc(var(--pad-unit)*.9);left:0;right:0;text-align:center;font-size:8px;letter-spacing:.12em;color:#edcf8980;pointer-events:none}
+#touch[data-virtual-control="floating"] .joystick-zone.active .joystick-base{opacity:1}
+#touch[data-virtual-control="floating"] .joystick-zone.active::after{display:none}
+#touch .joystick-zone.active .joystick-base{border-color:#edcf89}
+body.paused #touch .joystick-zone,body.help-open #touch .joystick-zone{pointer-events:none}

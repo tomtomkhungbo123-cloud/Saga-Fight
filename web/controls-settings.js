@@ -1,7 +1,8 @@
 // Device-local touch layout. Only runs on settings/viewport changes, never per frame.
 (()=>{
  const $=id=>document.getElementById(id),key='saga-fight.controls.scale.v1';
- let percent=100;
+ let percent=100,opacity=90,mode='buttons';
+ try{const saved=JSON.parse(localStorage.getItem('saga-fight.controls.virtual.v1')||'null');if(saved){if(['buttons','fixed','floating'].includes(saved.mode))mode=saved.mode;if(Number.isFinite(saved.opacity))opacity=Math.max(20,Math.min(100,saved.opacity));}}catch{}
  try{const saved=Number(localStorage.getItem(key));if(Number.isFinite(saved)&&saved>=80&&saved<=140)percent=Math.round(saved/5)*5;}catch{}
  function apply(save=false){
   const pad=$('touch'),portrait=window.matchMedia('(orientation:portrait)').matches;
@@ -10,10 +11,16 @@
   const usable=width-(parseFloat(style.paddingLeft)||0)-(parseFloat(style.paddingRight)||0)-(parseFloat(style.columnGap)||0);
   const unit=Math.max(35,Math.min(base*percent/100,usable/(narrow?6.82:7.02)));
   pad.style.setProperty('--pad-unit',unit+'px');
+  pad.dataset.virtualControl=mode;
+  document.documentElement.style.setProperty('--control-opacity',opacity/100);
+  $('controlOpacity').value=opacity;$('controlOpacityValue').textContent=opacity+'%';
+  document.querySelectorAll('[name="virtualControl"]').forEach(input=>input.checked=input.value===mode);
   $('controlSize').value=percent;$('controlSizeValue').textContent=percent+'%';
   $('settings').style.setProperty('--preview-size',44*percent/100+'px');
-  if(save)try{localStorage.setItem(key,String(percent));}catch{}
+  if(save)try{localStorage.setItem(key,String(percent));localStorage.setItem('saga-fight.controls.virtual.v1',JSON.stringify({mode,opacity}));}catch{}
  }
+ $('controlOpacity').addEventListener('input',()=>{opacity=Math.max(20,Math.min(100,Number($('controlOpacity').value)||90));apply(true);});
+ document.querySelectorAll('[name="virtualControl"]').forEach(input=>input.addEventListener('change',()=>{window.virtualStick?.reset();mode=input.value;apply(true);}));
  $('controlSize').addEventListener('input',()=>{percent=Math.max(80,Math.min(140,Number($('controlSize').value)||100));apply(true);});
  $('resetControlSize').onclick=()=>{percent=100;apply(true);};
  $('closeSettings').onclick=()=>$('settings').close();
