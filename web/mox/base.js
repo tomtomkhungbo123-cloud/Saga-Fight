@@ -2,12 +2,13 @@
 (()=>{
 'use strict';
 const MOX={q:{cd:2,name:'Chuyển dạng'},w:{cd:5,name:'Song hỏa cầu'},e:{cd:4,name:'Lướt ảnh'},r:{cd:15,name:'Thiên giáng'}};
+function moxMuzzle(hand=0,kind='basic'){return {x:kind==='r'?(hand?78:86):kind==='w'?(hand?48:56):(hand?66:74),y:kind==='r'?101:kind==='w'?86:(hand?102:98)};}
 const MOX_W_RANGE=500,MOX_R_RANGE={melee:300,ranged:450};
 function moxArcPoint(b,t){if(b.k==='r')t=t*t*(3-2*t);return {x:b.sx+(b.tx-b.sx)*t,y:b.sy+(b.ty-b.sy)*t+(b.k==='r'?Math.sin(t*Math.PI)*b.bend:Math.sin(t*Math.PI*2)*b.bend*(1-.35*t))};}
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 class MoxGame{
  constructor(){this.mode='dummy';this.free=false;this.reset();}
- reset(){this.t=0;this.p={x:490,y:0,vx:0,vy:0,dir:1,turn:0,hp:1500,max:1500,form:0,cc:0,immune:0,invuln:0};this.e={x:825,y:0,vx:0,turn:0,hp:3000,max:3000,stun:0,burn:0,burnClock:0,respawn:0};this.cd={q:0,w:0,e:0,r:0,attack:0};this.action=null;this.anim={k:'idle',t:0};this.nextHand=0;this.punchPose={front:0,back:0,roll:0};this.punchVelocity={front:0,back:0,roll:0};this.balls=[];this.fx=[];this.events=[];this.buffer=null;this.damage=0;this.last='Sẵn sàng chiến đấu';this.aiClock=0;this.combo=0;}
+ reset(){this.t=0;this.p={x:490,y:0,vx:0,vy:0,dir:1,turn:0,hp:1500,max:1500,form:0,cc:0,immune:0,invuln:0};this.e={x:825,y:0,vx:0,turn:0,hp:3000,max:3000,stun:0,burn:0,burnClock:0,respawn:0};this.cd={q:0,w:0,e:0,r:0,attack:0};this.action=null;this.anim={k:'idle',t:0};this.nextHand=0;this.nextShotHand=0;this.punchPose={front:0,back:0,roll:0};this.punchVelocity={front:0,back:0,roll:0};this.balls=[];this.fx=[];this.events=[];this.buffer=null;this.damage=0;this.last='Sẵn sàng chiến đấu';this.aiClock=0;this.combo=0;}
  distance(){return Math.hypot(this.e.x-this.p.x,this.e.y-this.p.y);}
  emit(k,data={}){this.events.push({k,...data});}
  effect(k,x,y,life=.5,data={}){this.fx.push({k,x,y,life,max:life,...data});}
@@ -80,5 +81,5 @@ class MoxGame{
 }
 if(typeof module!=='undefined')module.exports={MoxGame,MOX,MOX_W_RANGE,MOX_R_RANGE,moxArcPoint};
 
-window.MoxBase={MoxGame,MOX,MOX_W_RANGE,MOX_R_RANGE,moxArcPoint,clamp};
+window.MoxBase={MoxGame,MOX,MOX_W_RANGE,MOX_R_RANGE,moxArcPoint,moxMuzzle,clamp};
 })();

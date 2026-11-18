@@ -3,8 +3,10 @@
   "build": "1.4",
   "source_commit": "91090354a4c8fcba7dddc18f08517306bcd02377",
   "engine_sha256": "63325248695dc3b491f657681c7bf0215185451ad841cf92313c8c84cfa79a7d",
-  "visual_helpers_sha256": "16eb4a39560527ccb3483c0ce90e5a41bff5d6dbd36e2eccc61baf416ec4e56a",
-  "visual_effects_sha256": "7479a0b72ec1aa5567d1c6ba110547f0a4c25d3417d2b01ab3c0d03fc36e607b",
+  "visual_helpers_sha256": "3ab10a7410be7c8cc415a6c79ef25ce8d0483fd98554455e388b1643386d45a8",
+  "visual_effects_sha256": "5aa5b6b7057524b094033cab58eaa3e705266d6c137cc1ee03209979aeca2398",
   "policy": "Original drawing functions copied verbatim. Shared arena uses 1000 HP, original 300/700 ranges, W500, R400/350; native lab physics/respawn replaced by arena physics.",
-  "visual_update_6_7": "Cached gauntlet halo only; original silhouette paths unchanged."
+  "visual_update_6_7": "Cached gauntlet halo only; original silhouette paths unchanged.",
+  "visual_update_mox18": "Approved Mox Lab v18 model, gait, alternating hands and inertial energy; old straight punch streak removed, ribbon/slam helpers retained.",
+  "lab_source_commit": "f53cbb0604b67992a294e4a87a70a5643388330d"
 }

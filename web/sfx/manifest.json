@@ -651,7 +651,33 @@
       "duration": 1.08,
       "gain": 0.65,
       "priority": 3
+    },
+    {
+      "id": "mox_punch_hit",
+      "group": "Mox",
+      "label": "Đấm trúng · Da thịt (âm thanh cung cấp)",
+      "event": "mox.melee.confirmedHit",
+      "file": "wav/mox_punch_hit.wav",
+      "duration": 0.55,
+      "gain": 0.85,
+      "priority": 2,
+      "max_instances": 3,
+      "min_interval_ms": 35,
+      "sha256": "96b7895b81fd9953ff8e305752054e714ff37568a01ab200aa80e16aaee169de"
+    },
+    {
+      "id": "mox_punch_whiff",
+      "group": "Mox",
+      "label": "Đấm hụt · Vung tay trong không khí",
+      "event": "mox.melee.whiff",
+      "file": "wav/mox_punch_whiff.wav",
+      "duration": 0.19,
+      "gain": 0.64,
+      "priority": 1,
+      "max_instances": 3,
+      "min_interval_ms": 35,
+      "sha256": "77beea56d7ceb056b840e950ae19ff20450fe80b6e5c706ff7f84c8a3ef053b1"
     }
   ],
-  "revision": "56"
+  "revision": "mox-punch10"
 }
