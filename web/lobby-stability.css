@@ -125,3 +125,39 @@ html.touch-layout body>header :is(#accountEntry button,#settingsButton,#sound,#f
 /* These modes already put the arena edge at the viewport edge. */
 html.touch-layout #arena:fullscreen:has(#menu:not([hidden])),html.touch-layout body.immersive:has(#menu:not([hidden])) #arena{padding:0}
 @media(max-width:699px) and (orientation:portrait){html.touch-layout #menu .lobby-setup{grid-template-rows:44px 16px 78px minmax(0,1fr)}}
+
+/* A joined room has no tabs: collapse its grid track, not the tracks below it. */
+#menu .lobby-setup:has(.room-session){grid-template-rows:0 20px 110px minmax(0,1fr)}
+#menu .lobby-setup:has(.room-session)>.modepick{display:none}
+#menu #onlinePanel.room-session{display:block;min-height:0;height:auto;overflow:visible}
+#menu #onlinePanel.room-session .connection-choice{display:none}
+#menu #onlinePanel.room-session #lobbyCard{height:auto;min-height:min-content;max-height:none;margin:0;padding:12px;gap:6px;flex-shrink:0;overflow:visible}
+#menu .room-session #lobbyCode{font-size:30px;line-height:1.1;letter-spacing:.14em}
+#menu .room-session #lobbyPlayers{font-size:10px;line-height:1.5}
+#menu .room-session #lobbyState{font-size:11px;line-height:1.5}
+#menu .room-session #lobbyCard>div{display:flex;flex-wrap:wrap;gap:6px}
+#menu .room-session #lobbyCard button{min-height:44px;padding:8px 10px;font-size:10px;flex:1 1 100px}
+#menu .room-session #lobbyCard button[hidden]{display:none}
+html.touch-layout #menu .lobby-setup:has(.room-session){grid-template-rows:0 16px 84px minmax(0,1fr)}
+@media(min-width:700px) and (min-height:601px){html.touch-layout #menu .lobby-setup:has(.room-session){grid-template-rows:0 18px 100px minmax(0,1fr)}}
+@media(orientation:landscape) and (max-height:600px){
+ #menu .lobby-setup:has(.room-session),html.touch-layout #menu .lobby-setup:has(.room-session){grid-template-rows:0 16px 58px minmax(0,1fr)}
+ #menu .room-session #lobbyCard small{font-size:8px}
+ #menu .room-session #lobbyCode{font-size:26px}
+}
+@media(max-width:699px) and (orientation:portrait){html.touch-layout #menu .lobby-setup:has(.room-session){grid-template-rows:0 16px 70px minmax(0,1fr)}}
+#netCurtain{padding:max(18px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) max(18px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left));overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y}
+#netCurtain strong{font:800 clamp(22px,3vw,32px)/1.2 'Barlow Condensed',Arial,sans-serif}
+#netCurtain p{max-width:620px;font-size:13px;line-height:1.6}
+#netCurtain .net-recovery-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:12px}
+#netCurtain .net-recovery-actions button{min-height:44px;padding:12px 18px}
+#netCurtain #netRetry{background:#edcf89;color:#211b25;border-color:#edcf89}
+body:has(#netCurtain:not([hidden])) #touch,body:has(#netCurtain:not([hidden])) .touch-toolbar{visibility:hidden;pointer-events:none}
+/* Explicit placement keeps hidden tabs from shifting auto-placed items upward. */
+#menu .lobby-setup>.modepick{grid-row:1}
+#menu .lobby-setup>.lobby-mode-note{grid-row:2}
+#menu .lobby-setup>.map-choice{grid-row:3}
+#menu .lobby-setup>.lobby-details{grid-row:4}
+#menu #onlinePanel.room-session :is(.online-actions,.online-hint,.connection-choice){display:none}
+#menu .room-session #lobbyCard>#lobbyReady{flex:0 0 44px;height:44px}
+@media(orientation:landscape) and (max-height:600px){#menu #onlinePanel.room-session #lobbyCard{padding:8px;gap:4px}}
