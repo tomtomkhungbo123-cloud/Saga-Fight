@@ -15,7 +15,8 @@
         if (menu.hidden || panel.hidden || card.hidden) return;
         // Close the mobile keyboard before revealing the new room card.
         card.focus({preventScroll: true});
-        card.scrollIntoView({block: 'nearest', inline: 'nearest', behavior: 'instant'});
+        const details = card.closest('.lobby-details');
+        if (details) details.scrollTop = 0;
       });
     }
     wasVisible = visible;
@@ -24,5 +25,9 @@
   for (const element of [menu, panel, card]) {
     observer.observe(element, {attributes: true, attributeFilter: ['hidden']});
   }
+  document.querySelectorAll('[data-mode]').forEach(button => button.addEventListener('click', () => {
+    const details = menu.querySelector('.lobby-details');
+    if (details) details.scrollTop = 0;
+  }));
   sync();
 })();

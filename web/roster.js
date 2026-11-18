@@ -21,7 +21,7 @@ function sync(){for(const p of previews){const selected=$('select'+p.player).val
  p.card.style.setProperty('--fighter-color',colors[type]);p.card.querySelector('.card-name').textContent=names[type];p.card.querySelector('.card-style').textContent=option.card.querySelector('.card-style').textContent;p.card.querySelector('.card-index').textContent=option.card.querySelector('.card-index').textContent;
  p.card.setAttribute('aria-expanded',String(picker.open&&activePlayer===player));p.card.setAttribute('aria-label','Đổi chiến binh '+(player?'đối thủ':'P1')+': '+names[type]);}
 }
-function restoreFocus(){activePlayer=null;document.body.classList.remove('fighter-picker-open');sync();summaries[returnPlayer].card.focus();}
+function restoreFocus(){activePlayer=null;document.body.classList.remove('fighter-picker-open');sync();summaries[returnPlayer].card.focus({preventScroll:true});}
 function close(){if(!picker.open)return;picker.close();restoreFocus();}
 function editable(player){return window.riftNet?.room?window.riftNet.canEdit(player):phase==='menu';}
 function open(player){if(!editable(player))return;activePlayer=returnPlayer=player;$('fighterPickerPlayer').textContent=$('rosterLabel'+player).textContent;sync();picker.showModal();summaries[player].card.setAttribute('aria-expanded','true');document.body.classList.add('fighter-picker-open');previews.find(p=>p.player===player&&p.type===$('select'+player).value)?.card.focus();}

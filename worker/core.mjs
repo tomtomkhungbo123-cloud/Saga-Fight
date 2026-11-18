@@ -7,7 +7,21 @@ const accountId=r=>r.headers.get('oai-authenticated-user-id')&&r.headers.get('oa
 const RESULTS=`WITH results AS (
  SELECT host_user_id user_id,p1 fighter,mode,CASE WHEN winner=0 THEN 1 ELSE 0 END won,finished_at FROM game_matches WHERE winner IS NOT NULL AND host_user_id IS NOT NULL AND (mode='pve' OR COALESCE(host_user_id,'')<>COALESCE(guest_user_id,''))
  UNION ALL SELECT guest_user_id,p2,mode,CASE WHEN winner=1 THEN 1 ELSE 0 END,finished_at FROM game_matches WHERE winner IS NOT NULL AND mode='online' AND guest_user_id IS NOT NULL AND COALESCE(host_user_id,'')<>COALESCE(guest_user_id,''))`;
-async function playerStats(DB,id){const total=await DB.prepare(RESULTS+' SELECT COUNT(*) played,COALESCE(SUM(won),0) wins FROM results WHERE user_id=?').bind(id).first();const favorite=await DB.prepare(RESULTS+' SELECT fighter,COUNT(*) games FROM results WHERE user_id=? GROUP BY fighter ORDER BY games DESC,MAX(finished_at) DESC,fighter ASC LIMIT 1').bind(id).first();const rank=await DB.prepare(RESULTS+", ranks AS (SELECT user_id,DENSE_RANK() OVER (ORDER BY SUM(won) DESC,CAST(SUM(won) AS REAL)/COUNT(*) DESC) position FROM results WHERE mode='online' GROUP BY user_id) SELECT position FROM ranks WHERE user_id=?").bind(id).first();return {rank:rank?.position??null,played:total.played,wins:total.wins,losses:total.played-total.wins,winRate:total.played?Math.round(total.wins/total.played*1000)/10:0,favorite:favorite?{type:favorite.fighter,games:favorite.games}:null};}
+// Ranked matches require two distinct authenticated participants; practice never ranks.
+const RANK_RESULTS=`WITH ranked_results AS (
+ SELECT host_user_id user_id,p1 fighter,CASE WHEN winner=0 THEN 1 ELSE 0 END won,finished_at FROM game_matches WHERE mode='online' AND winner IS NOT NULL AND host_user_id IS NOT NULL AND guest_user_id IS NOT NULL AND host_user_id<>guest_user_id
+ UNION ALL SELECT guest_user_id,p2,CASE WHEN winner=1 THEN 1 ELSE 0 END,finished_at FROM game_matches WHERE mode='online' AND winner IS NOT NULL AND host_user_id IS NOT NULL AND guest_user_id IS NOT NULL AND host_user_id<>guest_user_id
+), totals AS (SELECT user_id,COUNT(*) played,SUM(won) wins,CAST(SUM(won) AS REAL)/COUNT(*) rate FROM ranked_results GROUP BY user_id), ranks AS (SELECT *,DENSE_RANK() OVER (ORDER BY wins DESC,rate DESC) position FROM totals)`;
+async function leaderboard(DB,id,page){
+ const total=(await DB.prepare(RANK_RESULTS+' SELECT COUNT(*) count FROM ranks').first()).count;
+ const pages=Math.max(1,Math.ceil(total/25));page=Math.min(page,pages);
+ const selection=` SELECT r.*,COALESCE(p.display_name,'Chiến binh ẩn danh') display_name,(SELECT fighter FROM ranked_results f WHERE f.user_id=r.user_id GROUP BY fighter ORDER BY COUNT(*) DESC,MAX(finished_at) DESC,fighter ASC LIMIT 1) favorite FROM ranks r LEFT JOIN player_profiles p ON p.user_id=r.user_id`;
+ const map=r=>({rank:r.position,name:r.display_name,played:r.played,wins:r.wins,losses:r.played-r.wins,winRate:Math.round(r.rate*1000)/10,favorite:r.favorite,isMe:r.user_id===id});
+ const entries=(await DB.prepare(RANK_RESULTS+selection+' ORDER BY position ASC,r.user_id ASC LIMIT 25 OFFSET ?').bind((page-1)*25).all()).results.map(map);
+ const mine=id?await DB.prepare(RANK_RESULTS+selection+' WHERE r.user_id=?').bind(id).first():null;
+ return {entries,me:mine?map(mine):null,authenticated:!!id,total,page,pages,updatedAt:Date.now()};
+}
+async function playerStats(DB,id){const total=await DB.prepare(RESULTS+' SELECT COUNT(*) played,COALESCE(SUM(won),0) wins FROM results WHERE user_id=?').bind(id).first();const favorite=await DB.prepare(RESULTS+' SELECT fighter,COUNT(*) games FROM results WHERE user_id=? GROUP BY fighter ORDER BY games DESC,MAX(finished_at) DESC,fighter ASC LIMIT 1').bind(id).first();const rank=await DB.prepare(RANK_RESULTS+' SELECT position FROM ranks WHERE user_id=?').bind(id).first();return {rank:rank?.position??null,played:total.played,wins:total.wins,losses:total.played-total.wins,winRate:total.played?Math.round(total.wins/total.played*1000)/10:0,favorite:favorite?{type:favorite.fighter,games:favorite.games}:null};}
 export async function api(request,env){
  const url=new URL(request.url),now=Date.now();
  if(url.pathname==='/api/account'){
@@ -18,6 +32,12 @@ export async function api(request,env){
   return json({authenticated:true,user:{displayName:(name||username||email).slice(0,120),email,...(username?{username}:{})}});
  }
 
+ if(url.pathname==='/api/leaderboard'){
+  if(request.method!=='GET')return json({error:'Chỉ hỗ trợ GET.'},405);
+  if(!env.DB)return json({error:'Bảng xếp hạng chưa sẵn sàng.'},503);
+  const page=Number(url.searchParams.get('page')||1);if(!Number.isSafeInteger(page)||page<1||page>100000)return json({error:'Trang không hợp lệ.'},400);
+  try{return json(await leaderboard(env.DB,accountId(request),page));}catch{return json({error:'Chưa tải được bảng xếp hạng. Vui lòng thử lại.'},503);}
+ }
  if(url.pathname==='/api/account/stats'){
   if(request.method!=='GET')return json({error:'Chỉ hỗ trợ GET.'},405);const id=accountId(request);if(!id)return json({error:'Vui lòng đăng nhập để xem thống kê.'},401);if(!env.DB)return json({error:'Thống kê chưa sẵn sàng.'},503);try{return json({stats:await playerStats(env.DB,id)});}catch{return json({error:'Chưa tải được thống kê.'},503);}
  }

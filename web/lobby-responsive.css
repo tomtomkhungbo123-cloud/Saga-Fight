@@ -45,7 +45,7 @@ body:has(#menu:not([hidden])) #arena{margin:0;border:0;background:#141216;min-he
 #menu .lobby-mode-note{margin:-6px 0 0;padding:0 0 14px;border-bottom:1px solid #ffffff18;font-size:10px;letter-spacing:.1em;color:#b8acb5;line-height:1.5}
 #menu .lobby-mode-note span{display:none}
 #menu:has([data-mode="pve"].selected) [data-mode-note="pve"],#menu:has([data-mode="pvp"].selected) [data-mode-note="pvp"],#menu:has([data-mode="online"].selected) [data-mode-note="online"],#menu:has([data-mode="sandbox"].selected) [data-mode-note="sandbox"]{display:inline}
-#menu .map-choice{margin:0}#menu .map-choice legend{font-size:11px;font-weight:600;letter-spacing:.13em;color:#d8cfd5;margin-bottom:10px}
+#menu .map-choice{margin:0}#menu .map-choice .map-legend{font-size:11px;font-weight:600;letter-spacing:.13em;color:#d8cfd5;margin-bottom:10px}
 #menu .map-previews{gap:12px}#menu .map-preview{min-height:44px;border-radius:7px;isolation:isolate}
 #menu .map-preview img{height:clamp(85px,14vh,150px)}
 #menu .map-preview-info{display:flex;flex-direction:column;align-items:flex-start;gap:5px;padding:10px 11px;background:#18181c}
@@ -89,7 +89,7 @@ body:has(#menu:not([hidden])) #arena{margin:0;border:0;background:#141216;min-he
  #menu .lobby-setup{gap:9px;padding:12px;border-radius:8px}
  #menu .modepick button{min-height:44px;padding:5px 2px;font-size:14px}
  #menu .lobby-mode-note{font-size:8px;margin:-2px 0 0;padding-bottom:6px}
- #menu .map-choice legend{font-size:9px;margin-bottom:6px}
+ #menu .map-choice .map-legend{font-size:9px;margin-bottom:6px}
  #menu .map-previews{gap:8px}#menu .map-preview img{height:49px}
  #menu .map-preview-info{padding:6px 7px}#menu .map-preview strong{font-size:10px}#menu .map-size{display:none}
  #menu .map-picked{width:18px;height:18px;line-height:18px;font-size:11px;top:5px;right:5px}
@@ -99,9 +99,6 @@ body:has(#menu:not([hidden])) #arena{margin:0;border:0;background:#141216;min-he
  #menu #onlinePanel .connection-choice small,#menu #onlinePanel .online-hint{display:none}
  #menu #onlinePanel .connection-choice select{font-size:12px!important;margin:4px 0}
  #menu #onlinePanel .online-actions{margin-top:8px}#menu #onlinePanel .join-room{min-width:150px}
- #menu:has(#onlinePanel:not([hidden])) .map-preview img{height:26px}
- #menu:has(#onlinePanel:not([hidden])) .lobby-mode-note{display:none}
- #menu:has(#onlinePanel:not([hidden])) .lobby-setup{gap:7px}
 }
 /* Portrait phones: fighter stage above setup, with ordinary page scrolling. */
 @media(max-width:699px) and (orientation:portrait){
@@ -239,3 +236,116 @@ body>header :is(#settingsButton,#sound,#full):focus-visible{outline:2px solid #e
 #touch[data-virtual-control="floating"] .joystick-zone.active::after{display:none}
 #touch .joystick-zone.active .joystick-base{border-color:#edcf89}
 body.paused #touch .joystick-zone,body.help-open #touch .joystick-zone{pointer-events:none}
+/* iPhone/iPad lobby occupies the visible viewport, including Safari chrome changes.
+   Long Online content and dialogs scroll inside their own panels, never the page. */
+html.touch-layout:has(#menu:not([hidden])),html.touch-layout body:has(#menu:not([hidden])){height:var(--lobby-viewport,100dvh);overflow:hidden;overscroll-behavior:none}
+html.touch-layout body:has(#menu:not([hidden])){position:fixed;inset:0 0 auto;width:100%;display:flex;flex-direction:column}
+html.touch-layout body:has(#menu:not([hidden]))>header{flex:none;min-height:0;width:100%;max-width:none;margin:0}
+html.touch-layout body:has(#menu:not([hidden]))>main{flex:1;min-height:0;width:100%;max-width:none;margin:0;padding:0 max(12px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));overflow:hidden}
+html.touch-layout body:has(#menu:not([hidden])) #arena{height:100%;min-height:0;max-height:100%;border:0;border-radius:0;overflow:hidden;aspect-ratio:auto}
+html.touch-layout body:has(#menu:not([hidden])) #menu{height:100%;min-height:0!important;max-height:100%;padding:0;overflow:hidden}
+html.touch-layout #menu .lobby-layout{height:100%;min-height:0;max-height:100%;padding:12px 0;gap:16px;align-items:stretch}
+html.touch-layout #menu .lobby-sidebar{display:grid;grid-template-rows:auto minmax(0,1fr);min-height:0;gap:8px}
+html.touch-layout #menu .menu-topline{display:none}
+html.touch-layout #menu h1{margin:0;font-size:clamp(24px,3.4vw,40px)}
+html.touch-layout #menu .choices,html.touch-layout #menu .choices:has(#opponentLabel[hidden]){padding:0;min-height:0;height:100%;gap:22px}
+html.touch-layout #menu .roster-field{min-height:0;height:100%}
+html.touch-layout #menu .fighter-summary{height:100%;min-height:0;justify-content:center}
+html.touch-layout #menu .fighter-summary canvas{flex:1;min-height:0;height:0;max-height:300px;width:100%}
+html.touch-layout #menu .fighter-summary .card-name{flex:none;min-height:24px;font-size:clamp(16px,2.2vw,24px);padding:5px 0}
+html.touch-layout #menu .fighter-change{flex:none;min-height:44px;margin-top:8px;font-size:9px;padding:6px 2px}
+html.touch-layout #menu .choices:has(#opponentLabel[hidden])::after{min-height:0}
+html.touch-layout #menu .lobby-setup{min-height:0;max-height:100%;padding:14px;gap:10px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}
+html.touch-layout #menu .modepick{flex:none;min-height:44px}
+html.touch-layout #menu .modepick button{min-height:44px}
+html.touch-layout #menu .lobby-mode-note{display:none}
+html.touch-layout #menu .map-choice{display:flex;flex-direction:column;flex:1;min-height:60px}
+html.touch-layout #menu .map-choice .map-legend{flex:none;font-size:10px;margin-bottom:4px}
+html.touch-layout #menu .map-previews{flex:1;min-height:44px;gap:8px}
+html.touch-layout #menu .map-preview{display:flex;flex-direction:column;min-height:44px}
+html.touch-layout #menu .map-preview img{flex:1;width:100%;height:0;min-height:0;max-height:150px;object-fit:cover}
+html.touch-layout #menu .map-preview-info{flex:none;min-height:28px;padding:6px 8px;gap:0}
+html.touch-layout #menu .map-preview strong{font-size:11px;line-height:1.3}
+html.touch-layout #menu .map-size{display:none}
+html.touch-layout #menu .lobby-launch{flex:none;gap:8px}
+html.touch-layout #menu #difficultyLabel{min-height:44px;padding:0 10px}
+html.touch-layout #difficultyTrigger{min-height:42px;font-size:14px}
+html.touch-layout #menu #start{min-height:44px;padding:8px 12px;font-size:24px}
+html.touch-layout #menu #onlinePanel{flex:none}
+/* Landscape phones have a small height budget: preserve 44px touch targets. */
+@media(orientation:landscape) and (max-height:600px){
+ html.touch-layout body:has(#menu:not([hidden])){--lobby-header:48px}
+ html.touch-layout #menu .lobby-layout{padding:6px 0;gap:14px}
+ html.touch-layout #menu .lobby-setup{padding:8px;gap:6px}
+ html.touch-layout #menu .map-choice{min-height:58px}
+ html.touch-layout #menu .map-choice .map-legend{font-size:9px;line-height:12px;margin-bottom:2px}
+ html.touch-layout #menu .map-preview-info{min-height:24px;padding:5px 6px}
+ html.touch-layout #menu .map-preview strong{font-size:10px}
+ html.touch-layout #menu .fighter-change{margin-top:4px;font-size:8px}
+ html.touch-layout #menu h1{font-size:24px}
+ html.touch-layout #menu .fighter-summary canvas{max-height:220px}
+ html.touch-layout #menu .lobby-launch{gap:6px}
+}
+@media(max-width:699px) and (orientation:portrait){
+ html.touch-layout #menu .lobby-layout{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(130px,.85fr) minmax(230px,1.25fr);gap:12px;padding:8px 0}
+ html.touch-layout #menu .lobby-sidebar{gap:4px}
+ html.touch-layout #menu h1{font-size:26px;line-height:1.05}
+ html.touch-layout #menu h1 br{display:none}
+ html.touch-layout #menu h1 em{margin-left:.15em}
+ html.touch-layout #menu .fighter-summary canvas{max-height:200px}
+ html.touch-layout #menu .fighter-summary .card-name{font-size:18px}
+ html.touch-layout #menu .fighter-change{margin-top:4px}
+ html.touch-layout #menu .lobby-setup{padding:10px;gap:8px}
+ html.touch-layout #menu .modepick button{font-size:14px}
+ html.touch-layout #difficultyTrigger{font-size:16px}
+}
+/* Legacy arena-only fullscreen has no separate header; safe areas belong here. */
+html.touch-layout #arena:fullscreen:has(#menu:not([hidden])){height:var(--lobby-viewport,100dvh);padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
+html.touch-layout body.immersive:has(#menu:not([hidden])) #arena{height:var(--lobby-viewport,100dvh);max-height:none;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
+
+/* Keep room-code entry usable when the on-screen keyboard reduces the viewport. */
+html.touch-layout.lobby-keyboard #menu .lobby-layout{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr)}
+html.touch-layout.lobby-keyboard #menu .lobby-sidebar{display:none}
+/* Do not stretch tablet map cards into empty columns on taller screens. */
+html.touch-layout #menu .map-preview img{max-height:none}
+@media(min-width:700px) and (min-height:601px){
+ html.touch-layout #menu .lobby-sidebar{align-self:center;height:min(100%,480px)}
+ html.touch-layout #menu .lobby-setup{align-self:center;height:auto;padding:20px;gap:14px}
+ html.touch-layout #menu .map-choice{flex:none}
+ html.touch-layout #menu .map-preview img{flex:none;height:clamp(100px,18dvh,180px)}
+}
+/* Shared mobile heading: retain the invitation and keep the title on one line. */
+html.touch-layout #menu .lobby-sidebar{grid-template-rows:auto auto minmax(0,1fr);gap:6px}
+html.touch-layout #menu .menu-topline{display:block;margin:0}
+html.touch-layout #menu .eyebrow{font-size:9px;line-height:1.4;letter-spacing:.12em}
+html.touch-layout #menu h1{white-space:nowrap;font-size:clamp(18px,2.8vw,32px);line-height:1.1;letter-spacing:-.015em}
+html.touch-layout #menu h1 br{display:none}
+html.touch-layout #menu h1 em{margin-left:.15em}
+/* Tablet stage and setup share the same top/bottom edges and visual weight. */
+@media(min-width:700px) and (min-height:601px){
+ html.touch-layout #menu .lobby-layout{max-width:1180px;margin:auto;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:clamp(24px,3vw,40px);align-items:center;padding:20px 12px}
+ html.touch-layout #menu .lobby-sidebar,html.touch-layout #menu .lobby-setup{height:min(100%,480px);align-self:center}
+ html.touch-layout #menu .lobby-sidebar{padding:20px 0;gap:10px}
+ html.touch-layout #menu .choices,html.touch-layout #menu .choices:has(#opponentLabel[hidden]){gap:24px}
+ html.touch-layout #menu .fighter-summary canvas{align-self:center;width:125%;max-width:none;max-height:none;object-fit:contain}
+ html.touch-layout #menu .fighter-summary .card-name{font-size:clamp(18px,2.1vw,25px);min-height:32px}
+ html.touch-layout #menu .fighter-change{margin-top:8px;font-size:10px}
+ html.touch-layout #menu .choices::before{top:44%;width:52px;height:45px}
+ html.touch-layout #menu .lobby-setup{padding:20px;gap:14px}
+ html.touch-layout #menu .map-choice{flex:1;min-height:60px}
+ html.touch-layout #menu .map-preview img{flex:1;height:0;min-height:0}
+ html.touch-layout #menu .modepick button{font-size:16px}
+}
+@media(orientation:landscape) and (max-height:600px){
+ html.touch-layout #menu .eyebrow{font-size:8px;letter-spacing:.1em}
+ html.touch-layout #menu .lobby-sidebar{gap:4px}
+ html.touch-layout #menu h1{font-size:clamp(17px,2.65vw,26px)}
+}
+@media(max-width:699px) and (orientation:portrait){
+ html.touch-layout #menu h1{font-size:clamp(23px,6.5vw,30px)}
+ html.touch-layout #menu .lobby-sidebar{gap:3px}
+}
+@media(min-width:700px) and (min-height:601px){
+ html.touch-layout #menu h1{font-size:clamp(26px,3.3vw,38px)}
+ html.touch-layout #menu .fighter-summary canvas{width:140%}
+}

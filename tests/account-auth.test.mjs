@@ -22,3 +22,9 @@ test('server rejects spoofed identity and validates Supabase session before savi
   globalThis.fetch=async()=>Response.json({error:'invalid'},{status:401});response=await call('/api/account',null,{'X-Saga-Auth':'invalid-session'});assert.equal(response.status,401);
  }finally{globalThis.fetch=original;DB.close();}
 });
+test('leaderboard profiles use verified usernames only and do not publish email metadata',async()=>{
+ const DB=localDB(),original=globalThis.fetch;let user={id:'one',email:'andy@players.sagafight.invalid',user_metadata:{display_name:'Private Person'}};
+ globalThis.fetch=async()=>Response.json(user);
+ const get=path=>authenticatedApi(new Request(origin+path,{headers:{'X-Saga-Auth':'session'}}),{...env,DB},api);
+ try{assert.equal((await get('/api/account')).status,200);assert.equal((await DB.prepare('SELECT display_name FROM player_profiles WHERE user_id=?').bind('one').first()).display_name,'andy');user={id:'two',email:'private@example.test',user_metadata:{display_name:'Private Person'}};await get('/api/account');assert.equal((await DB.prepare('SELECT display_name FROM player_profiles WHERE user_id=?').bind('two').first()).display_name,'Chiến binh ẩn danh');const r=await authenticatedApi(new Request(origin+'/api/leaderboard',{headers:{'oai-authenticated-user-id':'spoof','oai-authenticated-user-email':'fake@test.invalid'}}),{...env,DB},api);assert.equal((await r.json()).authenticated,false);}finally{globalThis.fetch=original;DB.close();}
+});

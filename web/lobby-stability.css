@@ -1,0 +1,127 @@
+/* A mode switch changes only the details pane. Stage, tabs and maps keep their bounds. */
+#menu .lobby-layout{height:min(660px,calc(100dvh - 160px));min-height:0;align-items:stretch}
+#menu .lobby-sidebar{display:grid;grid-template-rows:auto auto minmax(0,1fr);height:100%;min-height:0;align-self:stretch;gap:8px}
+#menu .menu-topline,#menu h1{margin:0}
+#menu .choices,#menu .choices:has(#opponentLabel[hidden]){height:100%;min-height:0;padding-top:0}
+#menu .roster-field{height:100%;min-height:0}
+#menu .fighter-summary{height:100%;min-height:0;justify-content:center}
+#menu .fighter-summary canvas{flex:1;height:0;min-height:0;max-height:300px}
+#menu .fighter-summary .card-name,#menu .fighter-change{flex:none}
+#menu .choices:has(#opponentLabel[hidden])::after{min-height:0;height:100%;align-self:stretch}
+#menu .lobby-setup{display:grid;grid-template-rows:48px 190px minmax(0,1fr);height:100%;min-height:0;align-self:stretch;gap:14px;overflow:hidden}
+#menu .modepick{height:100%;min-height:0;flex:none}
+#menu .modepick button{height:100%;min-height:0}
+#menu .map-choice{display:flex;flex-direction:column;height:100%;min-height:0;min-width:0;margin:0;flex:none}
+#menu .map-choice .map-legend{line-height:14px;margin-bottom:6px}
+#menu .map-previews{flex:1;min-height:0;height:100%;gap:10px}
+#menu .map-preview{display:flex;flex-direction:column;min-height:0;height:100%;overflow:hidden}
+#menu .map-preview img{display:block;flex:1;height:0;min-height:0;max-height:none;width:100%;object-fit:cover}
+#menu .map-preview-info{flex:none;min-height:30px;padding:7px 9px}
+#menu .map-size{display:none}
+#menu .lobby-details{display:flex;flex-direction:column;gap:10px;min-height:0;min-width:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#edcf8960 transparent;touch-action:pan-y;-webkit-overflow-scrolling:touch}
+#menu .lobby-details>*{flex:none}
+#menu .lobby-mode-note{margin:0;padding-bottom:8px}
+#menu .lobby-launch{margin-top:auto;gap:8px}
+#menu #sandboxHint{font-size:11px!important;line-height:1.5!important}
+#menu #onlinePanel{margin:0}
+#menu #onlinePanel .online-hint{margin:8px 0 0}
+/* Fullscreen uses the existing arena/document height, with the same inner grid. */
+html:fullscreen #menu .lobby-layout,body.immersive #menu .lobby-layout,#arena:fullscreen #menu .lobby-layout{height:100%;min-height:0}
+/* Phone/tablet viewport bounds come from the existing mobile shell. */
+html.touch-layout #menu .lobby-layout{height:100%;min-height:0;align-items:stretch}
+html.touch-layout #menu .lobby-sidebar{height:100%;align-self:stretch}
+html.touch-layout #menu .lobby-setup{display:grid;grid-template-rows:44px minmax(72px,1fr) minmax(110px,1.25fr);height:100%;min-height:0;align-self:stretch;overflow:hidden;gap:8px}
+html.touch-layout #menu .map-choice{flex:none;height:100%;min-height:0}
+html.touch-layout #menu .map-previews{min-height:0}
+html.touch-layout #menu .map-preview img{display:block;flex:1;height:0;min-height:0;max-height:none}
+html.touch-layout #menu .map-preview-info{min-height:24px;padding:5px 6px}
+html.touch-layout #menu .modepick{min-height:0}
+html.touch-layout #menu .modepick button{min-height:0;height:100%}
+html.touch-layout #menu .lobby-details{gap:6px}
+html.touch-layout #menu .lobby-launch{gap:6px}
+html.touch-layout #menu .choices:has(#opponentLabel[hidden])::after{min-height:0}
+html.touch-layout #menu .lobby-mode-note{display:none}
+@media(min-width:700px) and (min-height:601px){
+ html.touch-layout #menu .lobby-layout{align-items:center}
+ html.touch-layout #menu .lobby-sidebar,html.touch-layout #menu .lobby-setup{height:min(100%,480px);align-self:center}
+ html.touch-layout #menu .lobby-setup{grid-template-rows:44px 178px minmax(0,1fr);gap:14px}
+}
+@media(orientation:landscape) and (max-height:600px){
+ #menu .lobby-layout{height:calc(100dvh - var(--lobby-header,52px) - 20px)}
+ #menu .lobby-setup{grid-template-rows:44px 86px minmax(0,1fr);gap:6px;padding:8px}
+ html.touch-layout #menu .lobby-layout{height:100%}
+ html.touch-layout #menu .lobby-setup{grid-template-rows:44px 100px minmax(0,1fr);gap:6px}
+ html.touch-layout #menu .lobby-details{gap:6px}
+ #menu .map-choice .map-legend{line-height:12px;margin-bottom:3px}
+ #menu .map-preview strong{font-size:10px}
+ #menu .lobby-mode-note{display:none}
+ #menu #onlinePanel .connection-choice{font-size:10px}
+ #menu #onlinePanel .connection-choice select{margin:3px 0;min-height:40px;font-size:12px!important}
+ #menu #onlinePanel .online-actions{margin-top:6px;gap:6px;flex-wrap:nowrap}
+ #menu #onlinePanel .online-actions button,#menu #onlinePanel .online-actions input{min-height:44px}
+ #menu #onlinePanel .online-actions>#createRoom{padding:8px 10px;font-size:10px;flex:none}
+ #menu #onlinePanel .join-room{flex:1;min-width:0}
+ #menu #onlinePanel .join-room input{width:100%;min-width:0;font-size:16px}
+ #menu #onlinePanel .join-room button{padding:6px;font-size:10px;white-space:nowrap}
+ #menu #onlinePanel .connection-choice small,#menu #onlinePanel .online-hint{display:none}
+}
+@media(max-width:699px) and (orientation:portrait){
+ html.touch-layout #menu .lobby-layout{grid-template-rows:minmax(130px,.85fr) minmax(230px,1.25fr)}
+ html.touch-layout #menu .lobby-setup{grid-template-rows:44px 84px minmax(0,1fr)}
+}
+html.touch-layout.lobby-keyboard #menu .lobby-layout{grid-template-rows:minmax(0,1fr)}
+html.touch-layout.lobby-keyboard #menu .lobby-setup{grid-template-rows:36px 54px minmax(44px,1fr);padding:4px;gap:4px}
+html.touch-layout.lobby-keyboard #menu .map-choice .map-legend{display:none}
+
+#menu .lobby-details .lobby-launch{position:sticky;bottom:0;z-index:1;background:#171419}
+@media(orientation:landscape) and (max-height:360px){html.touch-layout #menu .lobby-setup{grid-template-rows:44px 78px minmax(0,1fr)}}
+/* The waiting-opponent placeholder uses exactly the same two stage tracks. */
+#menu .choices,#menu .choices:has(#opponentLabel[hidden]){grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}
+@media(orientation:landscape) and (max-height:600px){
+ html:not(.touch-layout) #menu .lobby-layout{height:calc(100dvh - var(--lobby-header,52px) - 24px)}
+}
+/* Each mode keeps its short description directly below the fixed tab row. */
+#menu .lobby-setup{grid-template-rows:48px 20px 166px minmax(0,1fr)}
+#menu .lobby-setup>.lobby-mode-note{display:flex;align-items:center;height:100%;min-height:0;margin:0;padding:0 0 2px;border-bottom:1px solid #ffffff18;font-size:9px;line-height:12px;letter-spacing:.08em;overflow:hidden}
+html.touch-layout #menu .lobby-setup{grid-template-rows:44px 16px minmax(60px,1fr) minmax(110px,1.25fr)}
+html.touch-layout #menu .lobby-setup>.lobby-mode-note{display:flex;font-size:8px}
+@media(min-width:700px) and (min-height:601px){html.touch-layout #menu .lobby-setup{grid-template-rows:44px 18px 148px minmax(0,1fr)}}
+@media(orientation:landscape) and (max-height:600px){
+ #menu .lobby-setup{grid-template-rows:44px 16px 64px minmax(0,1fr)}
+ html.touch-layout #menu .lobby-setup{grid-template-rows:44px 16px 78px minmax(0,1fr)}
+}
+@media(max-width:699px) and (orientation:portrait){html.touch-layout #menu .lobby-setup{grid-template-rows:44px 16px 62px minmax(0,1fr)}}
+@media(orientation:landscape) and (max-height:360px){html.touch-layout #menu .lobby-setup{grid-template-rows:44px 16px 56px minmax(0,1fr)}}
+html.touch-layout.lobby-keyboard #menu .lobby-setup{grid-template-rows:28px 12px 36px minmax(44px,1fr)}
+/* A compact waiting card sits inside the opponent column, clear of the VS mark. */
+#menu .choices:has(#opponentLabel[hidden])::after{content:none;display:none}
+#menu .opponent-wait{display:none;grid-column:2;min-width:0;margin:0 4px 0 24px;padding:18px 6px;border:1px dashed #edcf8945;border-radius:10px;background:#15121945;color:#bdb0bc;align-self:center;justify-self:stretch;height:clamp(110px,55%,220px);max-height:100%;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center}
+#menu .choices:has(#opponentLabel[hidden])>.opponent-wait{display:flex}
+#menu .opponent-wait>span{font:700 30px/1 'Barlow Condensed',Impact,sans-serif;color:#edcf89a8}
+#menu .opponent-wait>strong{font:600 16px/1.3 'Barlow Condensed',Impact,sans-serif;letter-spacing:.04em}
+@media(orientation:landscape) and (max-height:600px){#menu .opponent-wait{padding:12px 4px;gap:8px;height:clamp(90px,55%,150px)}#menu .opponent-wait>strong{font-size:13px}#menu .opponent-wait>span{font-size:26px}}
+@media(max-width:699px) and (orientation:portrait){#menu .opponent-wait{padding:10px 4px;gap:6px;height:75%;max-height:140px}#menu .opponent-wait>strong{font-size:13px}}
+
+html.touch-layout.lobby-keyboard #menu .lobby-setup>.lobby-mode-note{padding:0;font-size:7px;line-height:10px}
+/* Extend the lobby art through the safe areas; inset interactive content instead. */
+html.touch-layout body:has(#menu:not([hidden]))>main{padding:0}
+html.touch-layout #menu .lobby-layout{padding:12px max(20px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left))}
+html.touch-layout body:has(#menu:not([hidden]))>header{padding-right:calc(max(16px,env(safe-area-inset-right)) + 10px);padding-left:calc(max(16px,env(safe-area-inset-left)) + 4px)}
+html.touch-layout body>header .tools{gap:8px;flex-shrink:0}
+html.touch-layout body>header :is(#accountEntry button,#settingsButton,#sound,#full){min-height:44px;border-radius:7px}
+@media(orientation:landscape) and (max-height:600px){
+ html.touch-layout body:has(#menu:not([hidden])){--lobby-header:60px}
+ html.touch-layout #menu .lobby-layout{padding-top:6px;padding-bottom:max(8px,env(safe-area-inset-bottom))}
+}
+@media(min-width:700px) and (min-height:601px){
+ html.touch-layout #menu .lobby-layout{padding:20px max(24px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(24px,env(safe-area-inset-left))}
+ html.touch-layout body:has(#menu:not([hidden]))>header{padding-right:calc(max(24px,env(safe-area-inset-right)) + 8px);padding-left:max(24px,env(safe-area-inset-left))}
+}
+@media(max-width:699px) and (orientation:portrait){
+ html.touch-layout #menu .lobby-layout{padding:8px max(14px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left))}
+ html.touch-layout body:has(#menu:not([hidden]))>header{padding-right:max(14px,env(safe-area-inset-right));padding-left:max(14px,env(safe-area-inset-left))}
+ html.touch-layout body>header .tools{gap:6px}
+}
+/* These modes already put the arena edge at the viewport edge. */
+html.touch-layout #arena:fullscreen:has(#menu:not([hidden])),html.touch-layout body.immersive:has(#menu:not([hidden])) #arena{padding:0}
+@media(max-width:699px) and (orientation:portrait){html.touch-layout #menu .lobby-setup{grid-template-rows:44px 16px 78px minmax(0,1fr)}}
