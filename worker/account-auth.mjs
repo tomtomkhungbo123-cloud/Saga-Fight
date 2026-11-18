@@ -11,13 +11,14 @@ export async function accountRequest(original,env){
  for(const name of [...headers.keys()])if(name.startsWith('oai-'))headers.delete(name);
  const path=new URL(original.url).pathname;
  const token=headers.get('X-Saga-Auth');headers.delete('X-Saga-Auth');
- const relevant=path.startsWith('/api/account')||path==='/api/leaderboard'||['/api/rooms/create','/api/rooms/join'].includes(path);
+ const relevant=path.startsWith('/api/account')||path.startsWith('/api/admin/')||path==='/api/leaderboard'||['/api/rooms/create','/api/rooms/join'].includes(path);
  if(token&&relevant){
   const config=authConfig(env);if(!config)return new Response(JSON.stringify({error:'Tài khoản chưa được cấu hình.'}),{status:503,headers:{'Content-Type':'application/json'}});
   if(token.length>12000)throw Object.assign(Error('Phiên đăng nhập không hợp lệ.'),{status:401});
   let response;try{response=await fetch(config.url+'/auth/v1/user',{headers:{apikey:config.key,Authorization:'Bearer '+token},signal:AbortSignal.timeout(5000)});}catch{throw Object.assign(Error('Chưa kết nối được dịch vụ tài khoản.'),{status:503});}
   if(!response.ok)throw Object.assign(Error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.'),{status:response.status>=500?503:401});
   const user=await response.json();if(!user.id||!user.email)throw Object.assign(Error('Tài khoản không hợp lệ.'),{status:401});
+  if(user.app_metadata?.saga_role==='admin')headers.set('oai-saga-admin','true');
   headers.set('oai-authenticated-user-id',user.id);headers.set('oai-authenticated-user-email',user.email);
   headers.set('oai-authenticated-user-full-name',encodeURIComponent(String(user.user_metadata?.display_name||user.email).slice(0,80)));
   headers.set('oai-authenticated-user-full-name-encoding','percent-encoded-utf-8');

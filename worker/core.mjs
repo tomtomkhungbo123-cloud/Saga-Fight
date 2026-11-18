@@ -7,21 +7,26 @@ const accountId=r=>r.headers.get('oai-authenticated-user-id')&&r.headers.get('oa
 const RESULTS=`WITH results AS (
  SELECT host_user_id user_id,p1 fighter,mode,CASE WHEN winner=0 THEN 1 ELSE 0 END won,finished_at FROM game_matches WHERE winner IS NOT NULL AND host_user_id IS NOT NULL AND (mode='pve' OR COALESCE(host_user_id,'')<>COALESCE(guest_user_id,''))
  UNION ALL SELECT guest_user_id,p2,mode,CASE WHEN winner=1 THEN 1 ELSE 0 END,finished_at FROM game_matches WHERE winner IS NOT NULL AND mode='online' AND guest_user_id IS NOT NULL AND COALESCE(host_user_id,'')<>COALESCE(guest_user_id,''))`;
+const INITIAL_SEASON={id:0,name:'Mùa 1',started_at:0,ended_at:null};
+async function seasons(DB){const rows=(await DB.prepare('SELECT id,name,started_at,ended_at FROM ranked_seasons ORDER BY id DESC LIMIT 100').all()).results;return rows.length?rows:[INITIAL_SEASON];}
+async function activeSeason(DB){return await DB.prepare('SELECT id,name,started_at,ended_at FROM ranked_seasons WHERE ended_at IS NULL').first()||INITIAL_SEASON;}
+function seasonInfo(s){return {id:s.id,name:s.name,startedAt:s.started_at,endedAt:s.ended_at};}
 // Ranked matches require two distinct authenticated participants; practice never ranks.
-const RANK_RESULTS=`WITH ranked_results AS (
- SELECT host_user_id user_id,p1 fighter,CASE WHEN winner=0 THEN 1 ELSE 0 END won,finished_at FROM game_matches WHERE mode='online' AND winner IS NOT NULL AND host_user_id IS NOT NULL AND guest_user_id IS NOT NULL AND host_user_id<>guest_user_id
- UNION ALL SELECT guest_user_id,p2,CASE WHEN winner=1 THEN 1 ELSE 0 END,finished_at FROM game_matches WHERE mode='online' AND winner IS NOT NULL AND host_user_id IS NOT NULL AND guest_user_id IS NOT NULL AND host_user_id<>guest_user_id
-), totals AS (SELECT user_id,COUNT(*) played,SUM(won) wins,CAST(SUM(won) AS REAL)/COUNT(*) rate FROM ranked_results GROUP BY user_id), ranks AS (SELECT *,DENSE_RANK() OVER (ORDER BY wins DESC,rate DESC) position FROM totals)`;
-async function leaderboard(DB,id,page){
+function rankResults(s){const start=Number(s.started_at),end=s.ended_at==null?'NULL':Number(s.ended_at);return `WITH season_window AS (SELECT ${start} start,${end} end), ranked_results AS (
+ SELECT host_user_id user_id,p1 fighter,CASE WHEN winner=0 THEN 1 ELSE 0 END won,finished_at FROM game_matches WHERE mode='online' AND winner IS NOT NULL AND host_user_id IS NOT NULL AND guest_user_id IS NOT NULL AND host_user_id<>guest_user_id AND EXISTS(SELECT 1 FROM season_window s WHERE created_at>=s.start AND finished_at>=s.start AND (s.end IS NULL OR finished_at<s.end))
+ UNION ALL SELECT guest_user_id,p2,CASE WHEN winner=1 THEN 1 ELSE 0 END,finished_at FROM game_matches WHERE mode='online' AND winner IS NOT NULL AND host_user_id IS NOT NULL AND guest_user_id IS NOT NULL AND host_user_id<>guest_user_id AND EXISTS(SELECT 1 FROM season_window s WHERE created_at>=s.start AND finished_at>=s.start AND (s.end IS NULL OR finished_at<s.end))
+), totals AS (SELECT user_id,COUNT(*) played,SUM(won) wins,CAST(SUM(won) AS REAL)/COUNT(*) rate FROM ranked_results GROUP BY user_id), ranks AS (SELECT *,DENSE_RANK() OVER (ORDER BY wins DESC,rate DESC) position FROM totals)`;}
+async function leaderboard(DB,id,page,season){
+ const RANK_RESULTS=rankResults(season);
  const total=(await DB.prepare(RANK_RESULTS+' SELECT COUNT(*) count FROM ranks').first()).count;
  const pages=Math.max(1,Math.ceil(total/25));page=Math.min(page,pages);
  const selection=` SELECT r.*,COALESCE(p.display_name,'Chiến binh ẩn danh') display_name,(SELECT fighter FROM ranked_results f WHERE f.user_id=r.user_id GROUP BY fighter ORDER BY COUNT(*) DESC,MAX(finished_at) DESC,fighter ASC LIMIT 1) favorite FROM ranks r LEFT JOIN player_profiles p ON p.user_id=r.user_id`;
  const map=r=>({rank:r.position,name:r.display_name,played:r.played,wins:r.wins,losses:r.played-r.wins,winRate:Math.round(r.rate*1000)/10,favorite:r.favorite,isMe:r.user_id===id});
  const entries=(await DB.prepare(RANK_RESULTS+selection+' ORDER BY position ASC,r.user_id ASC LIMIT 25 OFFSET ?').bind((page-1)*25).all()).results.map(map);
  const mine=id?await DB.prepare(RANK_RESULTS+selection+' WHERE r.user_id=?').bind(id).first():null;
- return {entries,me:mine?map(mine):null,authenticated:!!id,total,page,pages,updatedAt:Date.now()};
+ return {season:seasonInfo(season),entries,me:mine?map(mine):null,authenticated:!!id,total,page,pages,updatedAt:Date.now()};
 }
-async function playerStats(DB,id){const total=await DB.prepare(RESULTS+' SELECT COUNT(*) played,COALESCE(SUM(won),0) wins FROM results WHERE user_id=?').bind(id).first();const favorite=await DB.prepare(RESULTS+' SELECT fighter,COUNT(*) games FROM results WHERE user_id=? GROUP BY fighter ORDER BY games DESC,MAX(finished_at) DESC,fighter ASC LIMIT 1').bind(id).first();const rank=await DB.prepare(RANK_RESULTS+' SELECT position FROM ranks WHERE user_id=?').bind(id).first();return {rank:rank?.position??null,played:total.played,wins:total.wins,losses:total.played-total.wins,winRate:total.played?Math.round(total.wins/total.played*1000)/10:0,favorite:favorite?{type:favorite.fighter,games:favorite.games}:null};}
+async function playerStats(DB,id){const total=await DB.prepare(RESULTS+' SELECT COUNT(*) played,COALESCE(SUM(won),0) wins FROM results WHERE user_id=?').bind(id).first();const favorite=await DB.prepare(RESULTS+' SELECT fighter,COUNT(*) games FROM results WHERE user_id=? GROUP BY fighter ORDER BY games DESC,MAX(finished_at) DESC,fighter ASC LIMIT 1').bind(id).first();const rank=await DB.prepare(rankResults(await activeSeason(DB))+' SELECT position FROM ranks WHERE user_id=?').bind(id).first();return {rank:rank?.position??null,played:total.played,wins:total.wins,losses:total.played-total.wins,winRate:total.played?Math.round(total.wins/total.played*1000)/10:0,favorite:favorite?{type:favorite.fighter,games:favorite.games}:null};}
 export async function api(request,env){
  const url=new URL(request.url),now=Date.now();
  if(url.pathname==='/api/account'){
@@ -29,14 +34,40 @@ export async function api(request,env){
   const id=request.headers.get('oai-authenticated-user-id'),email=request.headers.get('oai-authenticated-user-email');if(!id||!email)return json({authenticated:false,user:null});
   let name=null;const full=request.headers.get('oai-authenticated-user-full-name');if(full&&request.headers.get('oai-authenticated-user-full-name-encoding')==='percent-encoded-utf-8'){try{name=decodeURIComponent(full);}catch{}}
   const username=/^[a-z0-9_]{3,24}@players\.sagafight\.invalid$/.test(email)?email.split('@')[0]:null;
-  return json({authenticated:true,user:{displayName:(name||username||email).slice(0,120),email,...(username?{username}:{})}});
+  return json({authenticated:true,...(request.headers.get('oai-saga-admin')==='true'?{permissions:{manageSeasons:true}}:{}),user:{displayName:(name||username||email).slice(0,120),email,...(username?{username}:{})}});
  }
 
  if(url.pathname==='/api/leaderboard'){
   if(request.method!=='GET')return json({error:'Chỉ hỗ trợ GET.'},405);
   if(!env.DB)return json({error:'Bảng xếp hạng chưa sẵn sàng.'},503);
   const page=Number(url.searchParams.get('page')||1);if(!Number.isSafeInteger(page)||page<1||page>100000)return json({error:'Trang không hợp lệ.'},400);
-  try{return json(await leaderboard(env.DB,accountId(request),page));}catch{return json({error:'Chưa tải được bảng xếp hạng. Vui lòng thử lại.'},503);}
+  try{const list=await seasons(env.DB),selected=url.searchParams.get('season');const season=selected===null?list.find(s=>s.ended_at===null):list.find(s=>String(s.id)===selected);if(!season)return json({error:'Không tìm thấy mùa giải.'},404);return json(await leaderboard(env.DB,accountId(request),page,season));}catch{return json({error:'Chưa tải được bảng xếp hạng. Vui lòng thử lại.'},503);}
+ }
+ if(url.pathname==='/api/seasons'){
+  if(request.method!=='GET')return json({error:'Chỉ hỗ trợ GET.'},405);
+  if(!env.DB)return json({error:'Mùa giải chưa sẵn sàng.'},503);
+  try{return json({seasons:(await seasons(env.DB)).map(seasonInfo)});}catch{return json({error:'Chưa tải được mùa giải.'},503);}
+ }
+ if(url.pathname==='/api/admin/seasons'){
+  const actor=accountId(request);if(!actor)return json({error:'Vui lòng đăng nhập.'},401);
+  if(request.headers.get('oai-saga-admin')!=='true')return json({error:'Chỉ admin được quản lý mùa giải.'},403);
+  if(!env.DB)return json({error:'Mùa giải chưa sẵn sàng.'},503);
+  if(request.method==='GET')return json({seasons:(await seasons(env.DB)).map(seasonInfo)});
+  if(request.method!=='POST')return json({error:'Chỉ hỗ trợ GET/POST.'},405);
+  if(request.headers.get('Origin')!==url.origin)return json({error:'Yêu cầu không hợp lệ.'},403);
+  const text=await request.text();if(text.length>2048)return json({error:'Dữ liệu quá lớn.'},413);
+  let data;try{data=JSON.parse(text);}catch{return json({error:'Dữ liệu không hợp lệ.'},400);}
+  const name=typeof data?.name==='string'?data.name.trim():'';
+  if(name.length<2||name.length>48||/[\x00-\x1f\x7f]/.test(name)||!Number.isSafeInteger(data?.expectedSeason)||data.expectedSeason<0||!/^[-a-f0-9]{36}$/i.test(data?.operation||'')||data.confirm!=='KET THUC MUA')return json({error:'Kiểm tra tên mùa và xác nhận kết thúc mùa.'},400);
+  const prior=await env.DB.prepare('SELECT id,name,started_at,ended_at FROM ranked_seasons WHERE opened_request=?').bind(data.operation).first();if(prior)return json({season:seasonInfo(prior),alreadyApplied:true});
+  const current=await activeSeason(env.DB);if(current.id!==data.expectedSeason)return json({error:'Mùa giải đã thay đổi. Hãy tải lại trước khi tiếp tục.'},409);
+  const at=Math.max(now,current.started_at+1);
+  try{
+   const close=current.id===0?env.DB.prepare("INSERT INTO ranked_seasons(id,name,started_at,ended_at,closed_by) SELECT 0,'Mùa 1',0,?,? WHERE NOT EXISTS(SELECT 1 FROM ranked_seasons)").bind(at,actor):env.DB.prepare('UPDATE ranked_seasons SET ended_at=?,closed_by=? WHERE id=? AND ended_at IS NULL').bind(at,actor,current.id);
+   const open=env.DB.prepare('INSERT INTO ranked_seasons(name,started_at,opened_request) SELECT ?,?,? WHERE EXISTS(SELECT 1 FROM ranked_seasons WHERE id=? AND ended_at=? AND closed_by=?) AND NOT EXISTS(SELECT 1 FROM ranked_seasons WHERE ended_at IS NULL)').bind(name,at,data.operation,current.id,at,actor);
+   const result=await env.DB.batch([close,open]);if(!result[1].meta?.changes)return json({error:'Mùa giải đã thay đổi. Hãy tải lại.'},409);
+   return json({season:seasonInfo(await activeSeason(env.DB))},201);
+  }catch{return json({error:'Chưa mở được mùa mới. Hãy tải lại để kiểm tra trước khi thử lại.'},409);}
  }
  if(url.pathname==='/api/account/stats'){
   if(request.method!=='GET')return json({error:'Chỉ hỗ trợ GET.'},405);const id=accountId(request);if(!id)return json({error:'Vui lòng đăng nhập để xem thống kê.'},401);if(!env.DB)return json({error:'Thống kê chưa sẵn sàng.'},503);try{return json({stats:await playerStats(env.DB,id)});}catch{return json({error:'Chưa tải được thống kê.'},503);}
