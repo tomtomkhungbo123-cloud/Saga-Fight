@@ -1,0 +1,8 @@
+const assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs'),M=require('../../web/thunder/model.js');
+const data={window:{}};vm.runInNewContext(fs.readFileSync(require.resolve('../../web/soul-design-data.js'),'utf8'),data);
+const points=data.window.SoulDesignData.points,soulScale=Number(fs.readFileSync(require.resolve('../../web/soul-design.js'),'utf8').match(/visualScale=([.\d]+)/)[1]);
+const expected=(Math.max(...points.map(p=>p[1]))-Math.min(...points.map(p=>p[1])))*soulScale;
+assert.ok(Math.abs((M.bodyBounds.bottom-M.bodyBounds.top)*M.visualScale-expected)<1e-9);
+function context(){let m=[1,0,0,1,0,0],stack=[];const arcs=[];return {arcs,save(){stack.push([...m])},restore(){m=stack.pop()},translate(x,y){m[4]+=m[0]*x+m[2]*y;m[5]+=m[1]*x+m[3]*y},scale(x,y){m[0]*=x;m[1]*=x;m[2]*=y;m[3]*=y},rotate(a){let c=Math.cos(a),s=Math.sin(a),[A,B,C,D]=m;m[0]=A*c+C*s;m[1]=B*c+D*s;m[2]=-A*s+C*c;m[3]=-B*s+D*c},beginPath(){},moveTo(){},lineTo(){},closePath(){},stroke(){},fill(){},fillRect(){},arc(x,y){arcs.push({x:m[0]*x+m[2]*y+m[4],y:m[1]*x+m[3]*y+m[5]})},createRadialGradient(){return {addColorStop(){}}}};}
+for(const dir of [-1,1])for(const vx of [-330,0,330])for(const k of ['q','w','r']){const f={x:500,y:940,dir,vx,vy:0,ground:true,action:{k,age:.65,duration:1.55}};for(let i=0;i<90;i++)M.update(f,1/120,i/120);const c=context();M.draw(c,f,.75,false);const rendered=c.arcs[0],muzzle=M.muzzle(f);assert.ok(Math.hypot(rendered.x-muzzle.x,rendered.y-muzzle.y)<1e-8,'scaled projectile origin must coincide with the rendered orb');}
+console.log('PASS Thunder body height matches Soulblade: '+expected+' units; uniform scaling and orb/muzzle alignment in all facings');

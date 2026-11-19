@@ -1,0 +1,92 @@
+[
+  {
+    "cue": "soulblade_normal_1",
+    "source": "ĐÁNH THƯỜNG VÀ SKILL 2.mp3",
+    "sourceSha256": "8fd852486cbae6018fd31c1a6bed54e70051cd9be24aeb37be9bdc4d00898b9d",
+    "offset": 7.015,
+    "inputDuration": 0.34,
+    "outputDuration": 0.33997916666666667,
+    "filters": "highpass=f=450,lowpass=f=8500",
+    "fadeIn": 0.028
+  },
+  {
+    "cue": "soulblade_normal_2",
+    "source": "ĐÁNH THƯỜNG VÀ SKILL 2.mp3",
+    "sourceSha256": "8fd852486cbae6018fd31c1a6bed54e70051cd9be24aeb37be9bdc4d00898b9d",
+    "offset": 4.045,
+    "inputDuration": 0.34,
+    "outputDuration": 0.33997916666666667,
+    "filters": "highpass=f=450,lowpass=f=8500",
+    "fadeIn": 0.028
+  },
+  {
+    "cue": "soulblade_normal_3",
+    "source": "ĐÁNH THƯỜNG VÀ SKILL 2.mp3",
+    "sourceSha256": "8fd852486cbae6018fd31c1a6bed54e70051cd9be24aeb37be9bdc4d00898b9d",
+    "offset": 7.04,
+    "inputDuration": 0.3,
+    "outputDuration": 0.3,
+    "filters": "highpass=f=450,lowpass=f=8500",
+    "fadeIn": 0.028
+  },
+  {
+    "cue": "soulblade_w_throw",
+    "source": "ĐÁNH THƯỜNG VÀ SKILL 2.mp3",
+    "sourceSha256": "8fd852486cbae6018fd31c1a6bed54e70051cd9be24aeb37be9bdc4d00898b9d",
+    "offset": 9.83,
+    "inputDuration": 0.65,
+    "outputDuration": 0.65,
+    "filters": "highpass=f=55,lowpass=f=15000",
+    "fadeIn": 0.004
+  },
+  {
+    "cue": "soulblade_w_blink",
+    "source": "ĐÁNH THƯỜNG VÀ SKILL 2.mp3",
+    "sourceSha256": "8fd852486cbae6018fd31c1a6bed54e70051cd9be24aeb37be9bdc4d00898b9d",
+    "offset": 12.83,
+    "inputDuration": 0.72,
+    "outputDuration": 0.72,
+    "filters": "highpass=f=55,lowpass=f=15000",
+    "fadeIn": 0.004
+  },
+  {
+    "cue": "soulblade_q_spin",
+    "source": "SKILL 1.mp3",
+    "sourceSha256": "3c82fd4fe12d636b588fc50dd85179704a9748766470198f752f64ba1ea9551b",
+    "offset": 1.55,
+    "inputDuration": 0.85,
+    "outputDuration": 0.85,
+    "filters": "highpass=f=55,lowpass=f=15000,atempo=1.3",
+    "fadeIn": 0.004
+  },
+  {
+    "cue": "soulblade_q_contact",
+    "source": "SKILL 1.mp3",
+    "sourceSha256": "3c82fd4fe12d636b588fc50dd85179704a9748766470198f752f64ba1ea9551b",
+    "offset": 0.58,
+    "inputDuration": 0.255,
+    "outputDuration": 0.14,
+    "filters": "highpass=f=55,lowpass=f=15000,atempo=1.7",
+    "fadeIn": 0.006
+  },
+  {
+    "cue": "soulblade_r_cast",
+    "source": "SKILL 4 khi nhảy lên.mp3",
+    "sourceSha256": "926477e17dbbd471ad711597d6b68743a600e5ffa96f1e73d730567002100df6",
+    "offset": 0,
+    "inputDuration": 0.78,
+    "outputDuration": 0.78,
+    "filters": "highpass=f=55,lowpass=f=15000",
+    "fadeIn": 0.004
+  },
+  {
+    "cue": "soulblade_r_impact",
+    "source": "SKILL 4.mp3",
+    "sourceSha256": "b2bb236b8677b8ebc0d70395058eaa5605664746a6a7c0f07686fb2ccd69a66c",
+    "offset": 0,
+    "inputDuration": 1.0,
+    "outputDuration": 1.0,
+    "filters": "highpass=f=55,lowpass=f=15000",
+    "fadeIn": 0.004
+  }
+]

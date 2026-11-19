@@ -1,0 +1,12 @@
+# Soulblade Lab 45 integration
+
+Source: Soulblade Lab 3.26 / Site version 45, commit 3267aedfbdf25884ca9d09a3674330dd2ae2ba7a. Compared against previously integrated Lab 41 / 3.22 (2f1a2aa693e7a42e5db827f4e64e3fc6695b3497). Main baseline efc36f7e198b566f4fd352eeca4857a539ad73ce, including Thunder Lab 32.
+
+Changes imported:
+- E preserves the same live action and timer through ordinary damage, hitstun, explicit stun and repeated interruptions, including preparation. Control locks and incoming damage still apply. Existing 80% mitigation begins after 0.5 seconds, natural expiry at 2.5 seconds starts the 8-second cooldown; KO still cancels.
+- W recast consumes its blade, teleports, attempts its original single 120-damage area hit, plays effects/audio and starts the 4-second cooldown, then completes immediately. Normal/Q/E/R can follow through the ordinary action gates without the old 0.4-second warp recovery. Throw behavior is unchanged.
+- Nine supplied-recording Soulblade cues, including separate N1/N2/N3, four short Q contacts, W throw/recast and R rise/landing. Normal cues occur at strike startup; Q contacts use the same four damage-attempt iterations at 0.12/0.27/0.42/0.57 seconds, not scheduled timers. R impact occurs once on actual landing, including a whiff. Removed the old Soulblade normal cue at input and the single long Q cast cue.
+
+Only changed Soulblade manifest entries/files were merged, preserving Thunder's six new sounds and every other character cue. Fairi's older shared slash IDs remain unchanged. E and bleed sounds, approved model/Q appearance, damage/range/cooldowns and combo budgets remain as integrated previously. Source trim/hash provenance is in SOULBLADE_SFX_SOURCES.json. Lab UI/playback/config hooks and its static hosting identity were not imported.
+
+Online simulation revision 6360-soul45 rejects older peers before Ready; both players must reload. Validation includes ten Soulblade suites (source mask/geometry/motion/transitions plus actual E interruption/damage/expiry, immediate W follow-ups and nine PCM/hash/onset/peak/audio-timing checks), main combat/status/chain tests, Thunder model/combat regressions, Mox and Soulblade DIRECT/WS convergence (including W recast, Q, E/R and pose snapshot restore), and release checks. Browser smoke covers selection, Sandbox and skill rendering. Listening on physical audio devices, iPhone/iPad hardware FPS and real Internet routing remain unmeasured.

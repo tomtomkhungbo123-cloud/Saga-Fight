@@ -212,38 +212,44 @@
     {
       "id": "soulblade_q_spin",
       "group": "Soulblade",
-      "label": "Q · Xoáy kiếm",
-      "event": "soulblade.q.cast",
+      "label": "Q · xoay kiếm",
+      "event": "soulblade.q_spin",
       "file": "wav/soulblade_q_spin.wav",
-      "duration": 0.72,
-      "gain": 0.67,
+      "duration": 0.85,
+      "gain": 0.72,
       "priority": 1,
       "replace_existing": true,
-      "sha256": "45ecd8b4fdc296b2f55c8d2c0282305958d9464b561b8a796dbdabcffaee871a"
+      "sha256": "5545c4df0d8e4ea48ea59e4ff7aabc20f60f543e2193c43656eeb618302133cf",
+      "max_instances": 2,
+      "min_interval_ms": 45
     },
     {
       "id": "soulblade_w_throw",
       "group": "Soulblade",
-      "label": "W · Phi kiếm",
-      "event": "soulblade.w.throw",
+      "label": "W · phi kiếm",
+      "event": "soulblade.w_throw",
       "file": "wav/soulblade_w_throw.wav",
-      "duration": 0.56,
-      "gain": 0.67,
+      "duration": 0.65,
+      "gain": 0.7,
       "priority": 1,
       "replace_existing": true,
-      "sha256": "28965efe19dbafa9dddf02e20a8f03873ca2b98be60d10a3e27eab7af5b00100"
+      "sha256": "5760a25d7518aecb7b80560374ed3e4072e0cb1e667c4dab2f9c58fdb6752073",
+      "max_instances": 2,
+      "min_interval_ms": 45
     },
     {
       "id": "soulblade_w_blink",
       "group": "Soulblade",
-      "label": "W · Dịch chuyển chém",
-      "event": "soulblade.w.blink",
+      "label": "W · dịch chuyển chém",
+      "event": "soulblade.w_blink",
       "file": "wav/soulblade_w_blink.wav",
-      "duration": 0.76,
-      "gain": 0.67,
+      "duration": 0.72,
+      "gain": 0.72,
       "priority": 1,
       "replace_existing": true,
-      "sha256": "324ccdd6f0a6d087ba7bfea41a283e9a90e18c9114d02f8bde33de68258d040b"
+      "sha256": "7877a59dcddac694f92c76037dc1faad33599ec156b6cc663e87164c69f56448",
+      "max_instances": 2,
+      "min_interval_ms": 45
     },
     {
       "id": "soulblade_e_mist",
@@ -258,14 +264,16 @@
     {
       "id": "soulblade_r_cast",
       "group": "Soulblade",
-      "label": "R · Khởi chiêu",
-      "event": "soulblade.r.cast",
+      "label": "R · bật lên",
+      "event": "soulblade.r_cast",
       "file": "wav/soulblade_r_cast.wav",
-      "duration": 1.03,
-      "gain": 0.76,
+      "duration": 0.78,
+      "gain": 0.7,
       "priority": 2,
       "replace_existing": true,
-      "sha256": "6aa0bc0c2e5a47aa80537b8c51aa55fc6da17619b62c3a27102fe13d044b6380"
+      "sha256": "6a5ca89e6ebb9f5533b78f41b6ad55897841329f0934113e4d37c7cb0dc029c0",
+      "max_instances": 2,
+      "min_interval_ms": 45
     },
     {
       "id": "soulblade_bleed_apply",
@@ -295,12 +303,14 @@
       "label": "Đánh thường · Sét",
       "event": "thunder.normal.cast",
       "file": "wav/thunder_normal.wav",
-      "duration": 0.48,
-      "gain": 0.62,
+      "duration": 0.3637,
+      "gain": 0.54,
       "priority": 1,
-      "sha256": "240846159e1e8cfa998bb128c78128c7d11dff1e494f6018a349dde2854b7b8a",
+      "sha256": "8106ba55d668929008231c73bb5e1718b7a7cbd6967715198a2aeda3fef77f76",
       "replace_existing": true,
-      "max_instances": 3
+      "max_instances": 2,
+      "min_interval_ms": 95,
+      "sampleRate": 22050
     },
     {
       "id": "thunder_q_bolt",
@@ -308,12 +318,14 @@
       "label": "Q · Phóng sét",
       "event": "thunder.q.release",
       "file": "wav/thunder_q_bolt.wav",
-      "duration": 0.77,
-      "gain": 0.7,
+      "duration": 0.5804,
+      "gain": 0.64,
       "priority": 1,
-      "sha256": "4da9f25ed98ae3035d6e83334ded33549a00e83a52a09de970c7af3211f5a7c7",
+      "sha256": "f7e79af7708002bd349188e393cd72b5beb1f79a0cd5c001abad71c06b689229",
       "replace_existing": true,
-      "max_instances": 3
+      "max_instances": 2,
+      "min_interval_ms": 90,
+      "sampleRate": 22050
     },
     {
       "id": "thunder_w_orb",
@@ -321,12 +333,14 @@
       "label": "W · Tung cầu sét",
       "event": "thunder.w.orb",
       "file": "wav/thunder_w_orb.wav",
-      "duration": 0.48,
-      "gain": 0.48,
+      "duration": 0.3462,
+      "gain": 0.4,
       "priority": 1,
-      "sha256": "a71baf4904edb0fe80f6de9be9a31d6f0dfeb6949b2e369a44a8b40d3cc8b862",
+      "sha256": "651231c54ffb832e689353bb6bcdc2644abbfc90c622a7f657d123bbe191f1dc",
       "replace_existing": true,
-      "max_instances": 3
+      "max_instances": 1,
+      "min_interval_ms": 100,
+      "sampleRate": 22050
     },
     {
       "id": "thunder_w_stomp",
@@ -334,12 +348,14 @@
       "label": "W · Giậm điện",
       "event": "thunder.w.stomp",
       "file": "wav/thunder_w_stomp.wav",
-      "duration": 1.02,
-      "gain": 0.76,
+      "duration": 1.3298,
+      "gain": 0.77,
       "priority": 2,
-      "sha256": "55273c18d1dd9723b334728d7d28d8cda3ecf52cc44abd0fe834ebf784f34fd4",
+      "sha256": "266bf55cb881bcfdb04e0b79cab19b6ac66795f57a65c88d5c0326cdf00a392f",
       "replace_existing": true,
-      "max_instances": 3
+      "max_instances": 2,
+      "min_interval_ms": 120,
+      "sampleRate": 22050
     },
     {
       "id": "thunder_e_teleport",
@@ -347,12 +363,14 @@
       "label": "E · Lướt sét",
       "event": "thunder.e.teleport",
       "file": "wav/thunder_e_teleport.wav",
-      "duration": 0.4,
-      "gain": 0.6,
+      "duration": 0.2722,
+      "gain": 0.5,
       "priority": 1,
-      "sha256": "65a88fd1ba76e904f30a0f09ca4cc605db2c79707f7a2fb689b30158d3871c06",
+      "sha256": "002ec607844b97bc6566bb45bdcc4805492e99c0ba989540f7c1799414a817a3",
       "replace_existing": true,
-      "max_instances": 3
+      "max_instances": 2,
+      "min_interval_ms": 90,
+      "sampleRate": 22050
     },
     {
       "id": "thunder_r_strike",
@@ -360,12 +378,14 @@
       "label": "R · Sét giáng (mỗi tia)",
       "event": "thunder.r.strike",
       "file": "wav/thunder_r_strike.wav",
-      "duration": 1.38,
-      "gain": 0.8,
+      "duration": 1.4949,
+      "gain": 0.78,
       "priority": 2,
-      "sha256": "a5928acff1fdfb1eae674005de363457c0f7ecf73453f07d8285a782f8bea783",
+      "sha256": "41665c0177072251041b2801f60f610bd5df07d2b07f6c05126b4b6ea80a14be",
       "replace_existing": true,
-      "max_instances": 2
+      "max_instances": 3,
+      "min_interval_ms": 180,
+      "sampleRate": 22050
     },
     {
       "id": "mox_melee",
@@ -677,7 +697,72 @@
       "max_instances": 3,
       "min_interval_ms": 35,
       "sha256": "77beea56d7ceb056b840e950ae19ff20450fe80b6e5c706ff7f84c8a3ef053b1"
+    },
+    {
+      "id": "soulblade_normal_1",
+      "group": "Soulblade",
+      "label": "N1 · chém xuống",
+      "event": "soulblade.normal_1",
+      "file": "wav/soulblade_normal_1.wav",
+      "duration": 0.339979,
+      "gain": 0.78,
+      "priority": 1,
+      "sha256": "cf1347fbf91e52f72546eae236b3b30f378c21ddfecbfcf239003c3b62cb73b1",
+      "max_instances": 2,
+      "min_interval_ms": 45
+    },
+    {
+      "id": "soulblade_normal_2",
+      "group": "Soulblade",
+      "label": "N2 · chém lên",
+      "event": "soulblade.normal_2",
+      "file": "wav/soulblade_normal_2.wav",
+      "duration": 0.339979,
+      "gain": 0.78,
+      "priority": 1,
+      "sha256": "e5f66f0a3e4b72b11454baef7eaa770b3a959bbef9660e21df968f8d20f9d845",
+      "max_instances": 2,
+      "min_interval_ms": 45
+    },
+    {
+      "id": "soulblade_normal_3",
+      "group": "Soulblade",
+      "label": "N3 · đâm",
+      "event": "soulblade.normal_3",
+      "file": "wav/soulblade_normal_3.wav",
+      "duration": 0.3,
+      "gain": 0.78,
+      "priority": 1,
+      "sha256": "a1ec33dd5040a80012c145ec2bdb7f5e34a0da666a9634c49bb2118bedc0dd06",
+      "max_instances": 2,
+      "min_interval_ms": 45
+    },
+    {
+      "id": "soulblade_r_impact",
+      "group": "Soulblade",
+      "label": "R · chạm đất",
+      "event": "soulblade.r_impact",
+      "file": "wav/soulblade_r_impact.wav",
+      "duration": 1.0,
+      "gain": 0.82,
+      "priority": 3,
+      "sha256": "13f0e8a6eb88715ab0efeed4061acd9f529bb2d34c5fc7c52c81316a55de4973",
+      "max_instances": 2,
+      "min_interval_ms": 45
+    },
+    {
+      "id": "soulblade_q_contact",
+      "group": "Soulblade",
+      "label": "Q · nhịp kiếm × 4",
+      "event": "soulblade.q_contact",
+      "file": "wav/soulblade_q_contact.wav",
+      "duration": 0.14,
+      "gain": 0.68,
+      "priority": 2,
+      "sha256": "f52b3c6b6f9a9f06f51b2a161b01cc5270f3f30fe9190689508c3c7b90175b19",
+      "max_instances": 4,
+      "min_interval_ms": 0
     }
   ],
-  "revision": "mox-punch10"
+  "revision": "soul45-thunder32"
 }

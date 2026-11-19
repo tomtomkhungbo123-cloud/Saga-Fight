@@ -37,10 +37,7 @@ const pool=g.createRadialGradient(181,237,1,181,237,91);pool.addColorStop(0,colo
 if(p.type==='aether')window.AetherVisual.character(g,f,null,clock,()=>258,'high');else if(p.type==='melanta')window.MelantaVisual.character(g,f,f,clock,258);else if(p.type==='fairi')window.FairiVisual.character(g,f,null,clock,{surface:()=>258,viewer:'enemy'});else if(p.type==='mox')window.MoxVisual.character(g,f,f,clock,258);
 else if(p.type==='soul')window.drawSoul(g,f,clock,true);
 else if(p.type==='cylast')window.CylastVisual.character(g,f,clock);
-else{const image=art.idle;if(!image.complete||!image.naturalWidth){g.restore();return;}if(image.complete&&image.naturalWidth){const height=220,width=height*image.naturalWidth/image.naturalHeight,bob=Math.sin(clock*2.8)*3,top=246+bob-height;
-// Use the same continuous silhouette as combat. Splitting the sprite at the waist
-// exposes subpixel seams as the two pieces shear, especially at larger lobby sizes.
-g.save();g.translate(181,0);drawThunderCloth(g,image,width,height,top,{dir:1},{bend:Math.sin(clock*2.5)*1.2,lift:0},'idle');g.restore();const x=238,y=61+bob,halo=g.createRadialGradient(x,y,1,x,y,25);halo.addColorStop(0,'#fffbc7dd');halo.addColorStop(.35,'#fff36c77');halo.addColorStop(1,'#fff36c00');g.fillStyle=halo;g.fillRect(x-25,y-25,50,50);}}
+else{window.ThunderModel.update(f,Math.min(.05,Math.max(0,clock-(p.lastThunderClock??clock))),clock);p.lastThunderClock=clock;window.ThunderModel.draw(g,f,clock,true);}
 g.restore();p.painted=true;}
 const renderPreviews=[...summaries,...previews];
 let last=0;function frame(now){requestAnimationFrame(frame);if(picker.open&&($('menu').hidden||!editable(activePlayer)))close();if(document.hidden||$('menu').hidden||now-last<1000/30)return;last=now;

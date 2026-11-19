@@ -4,7 +4,7 @@
  let enabled=false,volume=.6,musicVolume=.6,context,master,effectsBus,compressor,loading,ready=false,failed=false;
  const bank=new Map(),voices=new Set(),limits=new Map(),zones=new Map();
  try{const saved=JSON.parse(localStorage.getItem(storageKey));if(saved){enabled=!!saved.enabled;const legacy=Number.isFinite(saved.volume)?saved.volume:.6;volume=Math.max(0,Math.min(1,Number.isFinite(saved.sfxVolume)?saved.sfxVolume:legacy));musicVolume=Math.max(0,Math.min(1,Number.isFinite(saved.musicVolume)?saved.musicVolume:legacy));}}catch{}
- const manifest=fetch('/sfx/manifest.json?v=mox-punch10').then(r=>{if(!r.ok)throw Error('manifest');return r.json();}).then(m=>m.sounds);
+ const manifest=fetch('/sfx/manifest.json?v=soul45-thunder32').then(r=>{if(!r.ok)throw Error('manifest');return r.json();}).then(m=>m.sounds);
  manifest.catch(()=>{failed=true;refresh();});
  function refresh(){
   $('sound').textContent='ÂM THANH: '+(enabled?'BẬT':'TẮT');$('sound').setAttribute('aria-pressed',String(enabled));
@@ -39,7 +39,7 @@
    }
   }catch{failed=true;refresh();}
  }
- const important=new Set(['ko','victory','round_start','thunder_r_strike','mox_r_slam','soulblade_bleed_explode','cylast_r_storm','soulblade_r_cast']);
+ const important=new Set(['ko','victory','round_start','thunder_r_strike','mox_r_slam','soulblade_bleed_explode','cylast_r_storm','soulblade_r_cast','soulblade_r_impact']);
  const quiet=new Set(['cylast_w_rain_hit','cylast_lifesteal']);
  function play(id,options={}){
   // Never queue a stale combat hit while locked/loading or after app backgrounding.
