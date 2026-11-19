@@ -122,7 +122,7 @@ function drawQCrystal(c,pose,quality,scale=1,speed=1050,flight=false){
 }
 function drawAetherBody(c,p,g,quality){const t=g.t,a=g.action;
  const bob=Math.sin(t*2.8)*4,lean=clamp(p.vx/CONFIG.speed,-1,1)*.07;const airborne=p.y>1;
- c.save();c.translate(p.x,-p.y);
+ c.save();c.translate(p.x,-p.y);if(!g.finisherPose){const size=window.FighterSize?.scale('aether')||1;c.scale(size,size);}
  c.translate(0,-16-bob);c.scale(p.dir,1);c.rotate(lean*p.dir);// Body outline is independent of the casting arm and the arm tucked behind the back.
  const col=g.renderColor||'#94887c',pose=g.finisherPose?{front:{shoulder:{x:21,y:-143},elbow:{x:8,y:-119},wrist:{x:-14,y:-127}},rear:{shoulder:{x:-15,y:-143},elbow:{x:-13,y:-118},wrist:{x:10,y:-125}}}:aetherPose(a,airborne);
  const sway=Math.sin(t*2.8)*1.4-p.vx*.022;const liftCloth=clamp(p.vy/540,-1,1);

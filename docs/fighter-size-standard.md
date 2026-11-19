@@ -1,0 +1,9 @@
+# Fighter display size standard
+
+Thunder Stance remains unchanged at its 164-unit source body height. Uniformly calibrate Cylast, Aether, Melanta and Fairi to that body height, excluding weapons, glow and cast extensions. Preserve each silhouette's proportions and its existing grounded/hovering placement. Native opaque-body raster measurement at the same scale: Thunder 163 px; Cylast 164 px; Aether 164 px; Melanta 164 px; Fairi 163 px. The one-pixel difference is antialiasing/rounding.
+
+Cylast and Aether scale the actor around its world root; their staff/crystal projectile muzzle offsets receive the same factor. Melanta scales body/cap and rig-local hair/rope anchors together, leaving world-space rope targets, fields and camera-sized frames intact. Its cinematic uses the original scene scale. Fairi's source reference scale changes from 0.4368932038834951 to 0.4, keeping both daggers, rig, clones and associated pose-derived trails consistent.
+
+No damage, cooldown, attack range, collision or movement configuration changed. Changing projectile release positions requires both Online clients to use simulation revision 6360-size1; mixed revisions are rejected before Ready. Portraits use the same model renderers as combat. Cinematic aspect handling is retained.
+
+Validation: opaque body raster height in both facings, world-root invariants and exact scaled muzzle offsets; gameplay movement/attack/Q/W/E/R convergence over DIRECT and WS for all four fighters; existing Cylast renderer provenance and combat, Aether/Fairi gameplay, Melanta ground/air/afterimage rendering, Aether/Fairi cinematic aspect suites. Two older Online tests stop at obsolete createRoom.onclick fixture hooks before entering simulation; the dedicated current hybrid tests cover their transport paths. The legacy Melanta aspect fixture lacks ThunderModel; direct cinematic rendering is verified with the fully loaded fixture instead. Physical phone/tablet performance was not measured.

@@ -6,8 +6,8 @@ const smooth01=v=>{v=Math.max(0,Math.min(1,v));return v*v*v*(v*(v*6-15)+10);};
 function frostStaffTip(p,pose,time){
  const a=pose.angle,rx=(60+pose.reach-78-6*Math.cos(a)+16*Math.sin(a))*1.45;
  const ry=(90-pose.lift-154-6*Math.sin(a)-16*Math.cos(a))*1.45;
- const tilt=p.vx*.000054+pose.tilt;
- return {x:p.x+p.dir*(rx*Math.cos(tilt)-ry*Math.sin(tilt)),y:p.y+20+Math.sin(time*2.9)*5+pose.rise-rx*Math.sin(tilt)-ry*Math.cos(tilt)};
+ const tilt=p.vx*.000054+pose.tilt,size=window.FighterSize?.scale('cylast')||1;
+ return {x:p.x+size*p.dir*(rx*Math.cos(tilt)-ry*Math.sin(tilt)),y:p.y+size*(20+Math.sin(time*2.9)*5+pose.rise-rx*Math.sin(tilt)-ry*Math.cos(tilt))};
 }
 class FrostGame{
  constructor(){this.reset();}

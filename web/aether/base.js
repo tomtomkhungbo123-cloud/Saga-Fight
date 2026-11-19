@@ -37,7 +37,7 @@ if(typeof module!=='undefined')module.exports={AETHER_ARM,AETHER_REAR_ARM,aether
 const NORMAL_POSE_NODE=typeof module!=='undefined'?require('./aether-pose.js').aetherPose:null;
 const NORMALS=(()=>{
  const ease=u=>{u=Math.max(0,Math.min(1,u));return u*u*(3-2*u)};
- function muzzle(p,a,time){const pose=(NORMAL_POSE_NODE||aetherPose)(a,p.y>1),orb=pose.crystal,lean=Math.max(-1,Math.min(1,p.vx/330))*.07*a.dir,c=Math.cos(lean),s=Math.sin(lean);return {x:p.x+a.dir*(orb.x*c-orb.y*s),y:p.y+16+Math.sin(time*2.8)*4-orb.x*s-orb.y*c}}
+ function muzzle(p,a,time){const pose=(NORMAL_POSE_NODE||aetherPose)(a,p.y>1),orb=pose.crystal,lean=Math.max(-1,Math.min(1,p.vx/330))*.07*a.dir,c=Math.cos(lean),s=Math.sin(lean);const size=window.FighterSize?.scale('aether')||1;return {x:p.x+size*a.dir*(orb.x*c-orb.y*s),y:p.y+size*(16+Math.sin(time*2.8)*4-orb.x*s-orb.y*c)}}
  function create(p,a,time,c){const air=p.y>1||p.vy>0,m=muzzle(p,a,time),x=air?m.x:p.x+a.dir*65;return {kind:air?'bolt':'wave',x,y:air?m.y:0,startX:x,rangeRoot:p.x,dir:a.dir,n:a.n,t:0,travel:0,life:1.6,speed0:(air?c.airInitialSpeed:c.initialSpeed)+Math.max(0,p.vx*a.dir)*.25,tau:air?c.airAccelerationTime:c.accelerationTime,maxSpeed:c.speed,height:air?c.boltHeight:c.waveHeight,length:air?c.boltLength:c.waveLength,muzzle:m}}
  function distance(b,t){return b.speed0*t+(b.maxSpeed-b.speed0)*(t-b.tau*(1-Math.exp(-t/b.tau)))}
  function advance(b,c){const limit=Math.max(0,c.range-b.dir*(b.startX-b.rangeRoot));b.travel=Math.min(limit,distance(b,b.t));b.x=b.startX+b.dir*b.travel;b.speed=b.maxSpeed-(b.maxSpeed-b.speed0)*Math.exp(-b.t/b.tau);if(b.travel>=limit)b.life=0}
