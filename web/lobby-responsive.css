@@ -349,3 +349,8 @@ html.touch-layout #menu h1 em{margin-left:.15em}
  html.touch-layout #menu h1{font-size:clamp(26px,3.3vw,38px)}
  html.touch-layout #menu .fighter-summary canvas{width:140%}
 }
+
+/* Center graphical icons independently of the buttons' retained accessible text. */
+body>header :is(#settingsButton,#sound,#full,#mailboxOpen){position:relative;line-height:0}
+body>header :is(#settingsButton,#sound,#full)::before,
+body>header #mailboxOpen>svg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);margin:0;width:23px;height:23px;display:block}

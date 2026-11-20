@@ -1,0 +1,11 @@
+# Mailbox and administrator gifts
+
+The header envelope sits between Account and Settings. Signed-in users receive private administrator announcements and claim attached released shop items into their inventory. Reading marks a message read; claiming is an explicit, idempotent action. Duplicate items do not produce duplicate ownership or refunds. Inbox results are paginated and the badge refreshes on focus and every minute while in the menu.
+
+Existing verified Supabase `app_metadata.saga_role = admin` controls unlimited Scoin purchases and the mailbox composer. No role is inferred from a username or client-submitted flag. Forged `oai-*` request headers are stripped by the public auth wrapper. Admin balances serialize as `balance: null, unlimited: true` and display ∞ Scoin; purchases add inventory without charging the ledger. Ordinary users retain normal balance checks.
+
+Administrators open Mailbox → Gửi thư & quà · Admin, choose one canonical username or all current player profiles, enter a title/body, optionally attach a released shop item, review and confirm. Broadcast recipients are snapshotted at send time. Accounts must have signed into this game at least once to have a player profile. No automatic broadcast is sent by deployment. Hidden lab-only items cannot be gifted. History records sender, recipient count and claims. Retrying the same operation never duplicates delivery.
+
+Migration 0005_mailbox adds cosmetic_inventory, admin_messages and mailbox_receipts. Data is server-persistent (Site D1; the Render server uses its existing SQLite adapter). Do not remove old migrations. Gift ownership and purchased ownership both authorize equip and feed the existing Online cosmetic snapshot.
+
+Validation: 17 targeted mailbox/shop/auth tests pass, including authorization, same-origin POST, forged headers, free admin purchases, private targeted delivery, broadcast snapshot/replay, claim concurrency, duplicate gifts, equip and pagination. Browser UI fixtures exercised compose → review → send → inbox → claim with local fake data only. Measured header bounds fit 844×390, 1024×768 and 390×844; the landscape composer scrolls internally without horizontal overflow. Full regression: 197 passing and the same three pre-existing Thunder fixture failures. Temporary UI fixtures were removed before packaging; physical Safari was not tested.

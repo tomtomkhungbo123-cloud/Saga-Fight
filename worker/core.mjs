@@ -1,3 +1,5 @@
+import {roomPlayers} from './room-players.mjs';
+import {readMailbox,adminMailbox,sendAdminMail,updateMailbox} from './mailbox.mjs';
 import {shopOffer,shopAccount,mutateShop,savePveScoin,saveOnlineScoin,matchScoin,shopLoadouts} from './shop.mjs';
 const json=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 const fail=(message,status=400)=>{throw Object.assign(new Error(message),{status});};
@@ -35,7 +37,23 @@ export async function api(request,env){
   const id=request.headers.get('oai-authenticated-user-id'),email=request.headers.get('oai-authenticated-user-email');if(!id||!email)return json({authenticated:false,user:null});
   let name=null;const full=request.headers.get('oai-authenticated-user-full-name');if(full&&request.headers.get('oai-authenticated-user-full-name-encoding')==='percent-encoded-utf-8'){try{name=decodeURIComponent(full);}catch{}}
   const username=/^[a-z0-9_]{3,24}@players\.sagafight\.invalid$/.test(email)?email.split('@')[0]:null;
-  return json({authenticated:true,...(request.headers.get('oai-saga-admin')==='true'?{permissions:{manageSeasons:true}}:{}),user:{displayName:(name||username||email).slice(0,120),email,...(username?{username}:{})}});
+  return json({authenticated:true,...(request.headers.get('oai-saga-admin')==='true'?{permissions:{manageSeasons:true,manageMailbox:true,unlimitedScoin:true}}:{}),user:{displayName:(name||username||email).slice(0,120),email,...(username?{username}:{})}});
+ }
+
+ if(url.pathname==='/api/account/mailbox'||url.pathname==='/api/admin/mailbox'){
+  const id=accountId(request);if(!id)return json({error:'Vui lòng đăng nhập để mở hộp thư.'},401);
+  const admin=request.headers.get('oai-saga-admin')==='true',management=url.pathname.startsWith('/api/admin/');
+  if(management&&!admin)return json({error:'Chỉ admin được gửi thông báo và quà.'},403);
+  if(!env.DB)return json({error:'Hộp thư chưa sẵn sàng.'},503);
+  try{
+   if(request.method==='GET')return json(management?await adminMailbox(env.DB,id):await readMailbox(env.DB,id,Math.max(1,parseInt(url.searchParams.get('page'),10)||1)));
+   if(request.method!=='POST')return json({error:'Phương thức không hỗ trợ.'},405);
+   if(request.headers.get('Origin')!==url.origin)return json({error:'Yêu cầu không hợp lệ.'},403);
+   const text=await request.text();if(text.length>15000)return json({error:'Nội dung quá dài.'},413);
+   let data;try{data=JSON.parse(text);}catch{return json({error:'Dữ liệu không hợp lệ.'},400);}
+   if(!data||typeof data!=='object'||Array.isArray(data))return json({error:'Dữ liệu không hợp lệ.'},400);
+   return json(management?await sendAdminMail(env.DB,id,data,now):await updateMailbox(env.DB,id,data,now));
+  }catch(e){return json({error:e.status?e.message:'Chưa tải được hộp thư. Vui lòng thử lại.'},e.status||503);}
  }
 
  if(url.pathname==='/api/leaderboard'){
@@ -74,7 +92,7 @@ export async function api(request,env){
   const id=accountId(request);
   if(!id)return json({...shopOffer(),account:null});
   if(!env.DB)return json({error:'Cửa hàng chưa sẵn sàng.'},503);
-  try{return json({...shopOffer(),account:await shopAccount(env.DB,id)});}
+  try{return json({...shopOffer(),account:await shopAccount(env.DB,id,request.headers.get('oai-saga-admin')==='true')});}
   catch{return json({error:'Chưa tải được cửa hàng. Vui lòng thử lại.'},503);}
  }
  if(url.pathname==='/api/account/stats'){
@@ -91,7 +109,7 @@ export async function api(request,env){
   if(url.pathname==='/api/account/shop'){
    const id=accountId(request);if(!id)fail('Đăng nhập để dùng Scoin.',401);
    if(origin!==url.origin)fail('Yêu cầu không hợp lệ.',403);
-   const result=await mutateShop(env.DB,id,data,now);
+   const result=await mutateShop(env.DB,id,data,now,request.headers.get('oai-saga-admin')==='true');
    if(result.status)return json({error:result.error},result.status);
    return json(result);
   }
@@ -106,7 +124,7 @@ export async function api(request,env){
   if(url.pathname==='/api/rooms/create'){
    // Expired rooms are disposable; bounded cleanup keeps the live table small.
    await env.DB.prepare('DELETE FROM duel_rooms WHERE code IN (SELECT code FROM duel_rooms WHERE expires_at < ? LIMIT 100)').bind(now).run();
-   const secret=token(),key=await hash(secret),config={p1:fighter(data.p1),p2:fighter(data.p2),map:data.map==='forest'?'forest':'cavern',connection:data.connection==='direct'?'direct':'auto',lobby:{stage:'lobby',revision:0,generation:0,ready:[false,false]}},alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+   const secret=token(),key=await hash(secret),config={players:await roomPlayers(env.DB,[accountId(request),null]),p1:fighter(data.p1),p2:fighter(data.p2),map:data.map==='forest'?'forest':'cavern',connection:data.connection==='direct'?'direct':'auto',lobby:{stage:'lobby',revision:0,generation:0,ready:[false,false]}},alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
    for(let attempt=0;attempt<4;attempt++){
     const bytes=crypto.getRandomValues(new Uint8Array(6)),code=Array.from(bytes,b=>alphabet[b%alphabet.length]).join('');
     try{await env.DB.prepare('INSERT INTO duel_rooms(code,host_key,config,status,host_seen,expires_at,host_user_id) VALUES(?,?,?,?,?,?,?)').bind(code,key,JSON.stringify(config),'waiting',now,now+7200000,accountId(request)).run();return json({code,token:secret,role:'host',config},201);}catch(e){if(!String(e).includes('UNIQUE'))throw e;}
@@ -118,7 +136,7 @@ export async function api(request,env){
   if(url.pathname==='/api/rooms/join'){
    if(room.host_seen<now-30000)fail('Chủ phòng không còn kết nối. Hãy tạo phòng mới.',409);
    if(room.guest_key)fail('Phòng đã đủ hai người.',409);
-   const secret=token(),config={...JSON.parse(room.config),p2:fighter(data.fighter)};config.lobby={...(config.lobby||{generation:0}),stage:'lobby',revision:(config.lobby?.revision||0)+1,ready:[false,false]};
+   const secret=token(),config={...JSON.parse(room.config),players:await roomPlayers(env.DB,[room.host_user_id,accountId(request)],true),p2:fighter(data.fighter)};config.lobby={...(config.lobby||{generation:0}),stage:'lobby',revision:(config.lobby?.revision||0)+1,ready:[false,false]};
    const result=await env.DB.prepare("UPDATE duel_rooms SET guest_key=?,config=?,guest_seen=?,guest_user_id=?,status='joined' WHERE code=? AND guest_key IS NULL AND status='waiting' AND config=?").bind(await hash(secret),JSON.stringify(config),now,accountId(request),code,room.config).run();
    if(!result.meta?.changes)fail('Phòng đã đủ hai người.',409);
    return json({code,token:secret,role:'guest',config});
@@ -143,7 +161,7 @@ export async function api(request,env){
    await env.DB.prepare("UPDATE duel_rooms SET status='closed' WHERE code=?").bind(code).run();return json({closed:true});
   }
   if(url.pathname==='/api/rooms/lobby'){
-   const config=JSON.parse(room.config),l=config.lobby||{stage:'lobby',revision:0,generation:0,ready:[false,false]},id=role==='host'?0:1;
+   const config={...JSON.parse(room.config),players:await roomPlayers(env.DB,[room.host_user_id,room.guest_user_id],!!room.guest_key)},l=config.lobby||{stage:'lobby',revision:0,generation:0,ready:[false,false]},id=role==='host'?0:1;
    if(!Number.isInteger(data.revision)||data.revision!==l.revision)return json({error:'Lựa chọn đã thay đổi. Vui lòng kiểm tra và bấm lại.',config},409);
    if(data.action==='return'){
     if(l.stage==='playing'){l.stage='lobby';l.ready=[false,false];}
@@ -182,7 +200,7 @@ export async function api(request,env){
    await env.DB.prepare('UPDATE duel_rooms SET guest_seen=?,guest_input=?,answer=? WHERE code=?').bind(now,data.input===undefined?room.guest_input:JSON.stringify(data.input),sig,code).run();
   }
   room=await env.DB.prepare('SELECT * FROM duel_rooms WHERE code=?').bind(code).first();
-  return json({status:room.status,config:JSON.parse(room.config),peerSeen:role==='host'?room.guest_seen:room.host_seen,now,
+  return json({status:room.status,config:{...JSON.parse(room.config),players:await roomPlayers(env.DB,[room.host_user_id,room.guest_user_id],!!room.guest_key)},peerSeen:role==='host'?room.guest_seen:room.host_seen,now,
    ...(role==='host'?{input:room.guest_input?JSON.parse(room.guest_input):null,answer:room.answer?JSON.parse(room.answer):null}:{snapshot:room.snapshot?JSON.parse(room.snapshot):null,offer:room.offer?JSON.parse(room.offer):null})});
  }catch(e){return json({error:e.status?e.message:'Không kết nối được phòng. Vui lòng thử lại.'},e.status||500);}
 }

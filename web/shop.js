@@ -14,7 +14,7 @@ function accountBadge(){
  const visible=!!user&&!!account;
  for(const id of ['shopBalance','lobbyScoin','accountScoin']){
   el(id).hidden=!visible;
-  if(visible)el(id).textContent=money(account.balance);
+  if(visible)el(id).textContent=account.unlimited?'∞ Scoin':money(account.balance);
  }
  el('shopLogin').hidden=!!user;
 }
@@ -152,7 +152,7 @@ function render(){
 
 async function act(item,action){
  if(!account||busyItem)return;
- if(action==='buy'&&account.balance<item.price){
+ if(action==='buy'&&!account.unlimited&&account.balance<item.price){
   status('Bạn cần thêm '+money(item.price-account.balance)+' để mua '+item.name+'.');
   return;
  }
@@ -247,7 +247,7 @@ function decor(g,fighter,time){
  if(pet)window.SagaShopArt.draw(g,pet,fighter.x-side*87,fighter.y-112+bob*6,side,55);
  if(accessory)window.SagaShopArt.draw(g,accessory,fighter.x+side*31,fighter.y-165+bob*2,side,30);
 }
-window.SagaShop={signedIn,start,matchState,matchReward,skin,decor};
+window.SagaShop={refresh,signedIn,start,matchState,matchReward,skin,decor};
 accountBadge();
 void refresh();
 })();

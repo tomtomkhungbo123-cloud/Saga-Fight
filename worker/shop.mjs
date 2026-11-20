@@ -34,39 +34,45 @@ export async function shopLoadouts(DB,ids) {
  return ids.map(id=>cosmeticsFor(rows,id));
 }
 
-export async function shopAccount(DB,id) {
+export async function shopAccount(DB,id,admin=false) {
  const state = await DB.prepare(`SELECT (${balanceSQL}) AS balance,
-  (SELECT json_group_array(source_id) FROM scoin_ledger WHERE user_id=? AND kind='purchase') AS owned,
-  (SELECT json_group_object(slot,item_id) FROM cosmetic_loadouts WHERE user_id=?) AS equipped`).bind(id,id,id).first();
- return {balance:state.balance,owned:JSON.parse(state.owned),equipped:JSON.parse(state.equipped)};
+  (SELECT json_group_array(item_id) FROM (SELECT source_id item_id FROM scoin_ledger WHERE user_id=? AND kind='purchase' UNION SELECT item_id FROM cosmetic_inventory WHERE user_id=?)) AS owned,
+  (SELECT json_group_object(slot,item_id) FROM cosmetic_loadouts WHERE user_id=?) AS equipped`).bind(id,id,id,id).first();
+ return {balance:admin?null:state.balance,unlimited:admin,owned:JSON.parse(state.owned),equipped:JSON.parse(state.equipped)};
 }
 
-export async function mutateShop(DB,id,data,now) {
+export async function mutateShop(DB,id,data,now,admin=false) {
  const item = shopById.get(data.itemId);
  if(!item)return {status:404,error:'Không tìm thấy vật phẩm.'};
  const slot = shopSlot(item);
  if(data.action==='buy') {
   if(item.forSale===false)return {status:409,error:'Vật phẩm này đang tạm ngừng bán.'};
+  const owned=await DB.prepare("SELECT 1 owned FROM scoin_ledger WHERE user_id=? AND kind='purchase' AND source_id=? UNION ALL SELECT 1 FROM cosmetic_inventory WHERE user_id=? AND item_id=? LIMIT 1").bind(id,item.id,id,item.id).first();
+  if(owned)return {account:await shopAccount(DB,id,admin)};
+  if(admin){
+   await DB.prepare("INSERT OR IGNORE INTO cosmetic_inventory(user_id,item_id,source,created_at) VALUES(?,?,'admin',?)").bind(id,item.id,now).run();
+  }else{
   // One write checks the current balance and records ownership and cost together.
   const purchase = await DB.prepare(`INSERT OR IGNORE INTO scoin_ledger(user_id,kind,source_id,amount,created_at)
-   SELECT ?,'purchase',?, ?,? WHERE (${balanceSQL})>=?`)
-   .bind(id,item.id,-item.price,now,id,item.price).run();
+   SELECT ?,'purchase',?, ?,? WHERE (${balanceSQL})>=? AND NOT EXISTS(SELECT 1 FROM cosmetic_inventory WHERE user_id=? AND item_id=?)`)
+   .bind(id,item.id,-item.price,now,id,item.price,id,item.id).run();
   if(!purchase.meta.changes) {
-   const prior = await DB.prepare("SELECT 1 AS owned FROM scoin_ledger WHERE user_id=? AND kind='purchase' AND source_id=?").bind(id,item.id).first();
+   const prior = await DB.prepare("SELECT 1 AS owned FROM scoin_ledger WHERE user_id=? AND kind='purchase' AND source_id=? UNION ALL SELECT 1 owned FROM cosmetic_inventory WHERE user_id=? AND item_id=?").bind(id,item.id,id,item.id).first();
    if(!prior)return {status:409,error:'Bạn chưa đủ Scoin.'};
+  }
   }
  } else if(data.action==='equip') {
   const equipped = await DB.prepare(`INSERT INTO cosmetic_loadouts(user_id,slot,item_id)
-   SELECT ?,?,? WHERE EXISTS(SELECT 1 FROM scoin_ledger WHERE user_id=? AND kind='purchase' AND source_id=?)
+   SELECT ?,?,? WHERE EXISTS(SELECT 1 FROM scoin_ledger WHERE user_id=? AND kind='purchase' AND source_id=? UNION ALL SELECT 1 FROM cosmetic_inventory WHERE user_id=? AND item_id=?)
    ON CONFLICT(user_id,slot) DO UPDATE SET item_id=excluded.item_id`)
-   .bind(id,slot,item.id,id,item.id).run();
+   .bind(id,slot,item.id,id,item.id,id,item.id).run();
   if(!equipped.meta.changes)return {status:403,error:'Bạn chưa sở hữu vật phẩm này.'};
  } else if(data.action==='unequip') {
   await DB.prepare('DELETE FROM cosmetic_loadouts WHERE user_id=? AND slot=? AND item_id=?').bind(id,slot,item.id).run();
  } else {
   return {status:400,error:'Thao tác không hợp lệ.'};
  }
- return {account:await shopAccount(DB,id)};
+ return {account:await shopAccount(DB,id,admin)};
 }
 
 export async function savePveScoin(DB,id,winner,now) {

@@ -161,3 +161,15 @@ body:has(#netCurtain:not([hidden])) #touch,body:has(#netCurtain:not([hidden])) .
 #menu #onlinePanel.room-session :is(.online-actions,.online-hint,.connection-choice){display:none}
 #menu .room-session #lobbyCard>#lobbyReady{flex:0 0 44px;height:44px}
 @media(orientation:landscape) and (max-height:600px){#menu #onlinePanel.room-session #lobbyCard{padding:8px;gap:4px}}
+/* Server-verified account names remain visible in room and combat on every screen. */
+#menu .room-session #lobbyCard>#lobbyPlayers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%;min-width:0;margin:2px 0 6px}
+#lobbyPlayers .room-player{min-width:0;padding:8px 10px;border:1px solid #edcf8933;border-radius:6px;background:#12101566;display:flex;flex-direction:column;gap:3px}
+#lobbyPlayers .room-player.red{border-color:#ff617d44}
+#lobbyPlayers .room-player>span{font-size:9px;letter-spacing:.08em;color:#b4a9a6}
+#lobbyPlayers .room-player strong{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:600 clamp(14px,1.5vw,18px)/1.25 Inter,Arial,sans-serif;letter-spacing:0;color:#f2d891}
+#lobbyPlayers .room-player.red strong{color:#ff8ba0}
+#menu .room-session #lobbyPlayers small{font-size:10px;line-height:1.4;letter-spacing:0;color:#c9bfbd;overflow-wrap:anywhere}
+body.online-match .fighterhud>div:first-child{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0}
+body.online-match .fighterhud.red>div:first-child{align-items:flex-end}
+body.online-match .fighterhud small{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:600 clamp(10px,1.2vw,13px)/1.25 Inter,Arial,sans-serif;letter-spacing:.02em;color:#fff1d2;text-shadow:0 1px 4px #000,0 0 8px #000}
+@media(orientation:landscape) and (max-height:600px){#lobbyPlayers .room-player{padding:5px 8px;gap:2px}#lobbyPlayers .room-player>span{font-size:8px}#menu .room-session #lobbyPlayers small{font-size:9px}#lobbyPlayers .room-player strong{font-size:14px}}

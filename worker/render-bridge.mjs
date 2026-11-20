@@ -1,3 +1,4 @@
+import {roomPlayers} from './room-players.mjs';
 import {api} from './core.mjs';
 import {authenticatedApi} from './account-auth.mjs';
 const RENDER_ORIGIN='https://saga-fight.onrender.com';
@@ -22,7 +23,7 @@ async function bridgeAuthenticatedApi(request,env){
  try{
   if(action==='create'){
    const remote=await upstreamRoom('create',data),result=await remote.json();if(!remote.ok)return bridgeJson(result,remote.status);
-   const now=Date.now(),config={...result.config,lobby:{stage:'lobby',revision:0,generation:0,ready:[false,false]}};
+   const now=Date.now(),config={...result.config,players:await roomPlayers(env.DB,[request.headers.get('oai-authenticated-user-id'),null]),lobby:{stage:'lobby',revision:0,generation:0,ready:[false,false]}};
    try{await env.DB.prepare('DELETE FROM duel_rooms WHERE expires_at < ?').bind(now).run();await env.DB.prepare('INSERT INTO duel_rooms(code,host_key,config,status,host_seen,expires_at,host_user_id) VALUES(?,?,?,?,?,?,?)').bind(result.code,await bridgeHash(result.token),JSON.stringify(config),'waiting',now,now+7200000,request.headers.get('oai-authenticated-user-id')).run();}
    catch(error){await upstreamRoom('leave',{code:result.code},'Bearer '+result.token).catch(()=>{});throw error;}
    return bridgeJson({...result,config},remote.status);
@@ -33,7 +34,7 @@ async function bridgeAuthenticatedApi(request,env){
    if(!room||room.status==='closed')return bridgeJson({error:'Phòng không tồn tại. Hai máy cần dùng cùng link test này.'},404);
    if(room.guest_key)return bridgeJson({error:'Phòng đã đủ hai người.'},409);
    const remote=await upstreamRoom('join',{...data,code}),result=await remote.json();if(!remote.ok)return bridgeJson(result,remote.status);
-   const config={...JSON.parse(room.config),p2:bridgeFighter(data.fighter)};config.lobby={...config.lobby,stage:'lobby',revision:config.lobby.revision+1,ready:[false,false]};
+   const config={...JSON.parse(room.config),players:await roomPlayers(env.DB,[room.host_user_id,request.headers.get('oai-authenticated-user-id')],true),p2:bridgeFighter(data.fighter)};config.lobby={...config.lobby,stage:'lobby',revision:config.lobby.revision+1,ready:[false,false]};
    const changed=await env.DB.prepare("UPDATE duel_rooms SET guest_key=?,config=?,guest_seen=?,guest_user_id=?,status='joined' WHERE code=? AND guest_key IS NULL").bind(await bridgeHash(result.token),JSON.stringify(config),Date.now(),request.headers.get('oai-authenticated-user-id'),code).run();
    if(!changed.meta?.changes){await upstreamRoom('leave',{code},'Bearer '+result.token).catch(()=>{});return bridgeJson({error:'Phòng đã thay đổi. Hãy tạo phòng mới.'},409);}
    return bridgeJson({...result,config},remote.status);

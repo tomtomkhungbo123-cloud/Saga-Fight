@@ -1,0 +1,7 @@
+# Online account names
+
+Room responses include a public `players` pair in host/guest order, derived exclusively from server-owned player_profiles. Client request names and upstream Render names are ignored by the Site bridge. Canonical usernames are displayed; legacy accounts without a valid username use Chiến binh 1/2, guests use Khách 1/2, and an empty guest seat is null. Emails and account IDs are never exposed as display names. Old rooms are hydrated on lobby/sync requests.
+
+Lobby cards show the account, selected fighter, readiness and local/host roles. In combat the existing fighter heading is retained and the former player-slot label becomes the account name. The label remains visible on iPhone/iPad, with ellipsis for oversized text. Names are presentation-only and never enter rollback state or hashes. Names survive rematches and network checkpoint restores. Peer packets cannot override names received through the authenticated room API.
+
+Validation: account/profile privacy and spoofed-name tests, Site Render bridge name derivation, both players' lobby/HUD names and same-room return over DIRECT and WS pass. Existing room/hybrid-lobby/shop tests pass (12); combined new name/auth tests pass (7). Browser checked lobby cards and guest fallback; local HUD fixtures measured visible labels at 844×390 and 1024×768. Temporary fixtures were removed before packaging. Physical Safari was not tested.
