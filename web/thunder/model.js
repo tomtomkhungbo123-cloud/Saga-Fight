@@ -66,7 +66,7 @@ function updateRibbons(f,s,dt){
 function make(){return {wx:40,wy:-153,lean:0,cloth:0,lift:0,hair:0,rear:0,hemX:38,hemY:-99,clock:0,arm:solveArm(40,-153),points:new Float64Array(outline.length*2),hairPoints:new Float64Array(hairOutline.length*2),handPoints:new Float64Array(palmOutline.length*2),sleevePoints:[]};}
 function targetPose(f){const a=f.action,k=a?.k,age=a?.age||0;let x=40,y=-153;
  if(k==='attack'){const start=a.startup||.1;if(age<start){const u=smooth(age/start);x-=13*u;y+=6*u;}else{const u=smooth((age-start)/.065),relax=smooth((age-start-.10)/.18);x+=7*u*(1-relax);y-=12*u*(1-relax);}}
- if(k==='q'){const cast=root.ThunderTuning?.qCast??0;if(age<cast){const u=smooth(age/Math.max(.06,cast*.6));x=40-5*u;y=-153+3*u;}else{const fire=smooth((age-cast)/.06),recover=smooth((age-cast-.10)/Math.max(.06,(a.duration??.72)-cast-.10));x=35+20*fire;y=-150-4*fire;x+=(40-x)*recover;y+=(-153-y)*recover;}}
+ if(k==='q'){const cast=root.ThunderTuning?.qCast??.5;if(age<cast){const u=smooth(age/Math.max(.06,cast*.6));x=40-5*u;y=-153+3*u;}else{const fire=smooth((age-cast)/.06),recover=smooth((age-cast-.10)/Math.max(.06,(a.duration??.72)-cast-.10));x=35+20*fire;y=-150-4*fire;x+=(40-x)*recover;y+=(-153-y)*recover;}}
  if(k==='w'){x=a.diving?36:46;y=a.diving?-143:-177;}
  if(k==='e'){x=33;y=-151;}
  if(k==='r'){x=age<.5?36:40;y=age<.5?-164:-197;}

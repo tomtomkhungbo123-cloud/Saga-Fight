@@ -48,6 +48,21 @@ body:has(#lobbyCard:not([hidden]))>header #shopOpen{display:none}
 #shopDialog .shop-filters button[aria-pressed=true]{border-color:#a38255;color:#ffdd9b;background:#392e2b}
 #shopStatus{color:#ffe2a9;font-size:14px;min-height:1.4em;margin:7px 0}
 .shop-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.shop-refine{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:16px}
+.shop-dropdown{position:relative;min-width:0;color:#f8ede6}
+.shop-dropdown summary{position:relative;list-style:none;cursor:pointer;min-height:56px;padding:9px 35px 9px 12px;border:1px solid #6b5747;border-radius:6px;background:#221d24;line-height:1.4;touch-action:manipulation}
+.shop-dropdown summary::-webkit-details-marker{display:none}
+.shop-dropdown summary small{display:block;font-size:12px;color:#bfb0a2;letter-spacing:0}
+.shop-dropdown summary span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:600;color:#f0d18b}
+.shop-dropdown summary::after{content:'';position:absolute;right:14px;top:23px;width:8px;height:8px;border-right:2px solid #e3c07f;border-bottom:2px solid #e3c07f;transform:rotate(45deg)}
+.shop-dropdown[open] summary{border-color:#e3c07f}.shop-dropdown[open] summary::after{top:27px;transform:rotate(225deg)}
+.shop-dropdown summary:focus-visible{outline:2px solid #ffe3a8;outline-offset:3px}
+.shop-dropdown-options{position:absolute;top:calc(100% + 5px);left:0;right:0;z-index:30;max-height:min(260px,48dvh);overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;padding:5px;border:1px solid #ae8f56;border-radius:6px;background:#211b24;box-shadow:0 12px 30px #0009}
+#shopDialog .shop-dropdown-options button{float:none;display:block;width:100%;min-height:44px;margin:0;padding:10px;border:1px solid transparent;border-radius:4px;text-align:left;background:transparent;line-height:1.35}
+#shopDialog .shop-dropdown-options button[aria-pressed=true]{color:#ffe0a0;background:#edcf891c;border-color:#edcf8955}
+#shopDialog .shop-dropdown-options button:hover{background:#ffffff0a}
+.shop-result-count{margin:9px 0 0;font-size:12px;color:#b7a99b;line-height:1.4}
+@media(max-width:420px){.shop-refine{gap:8px}.shop-dropdown summary{padding-left:9px;padding-right:27px}.shop-dropdown summary small{font-size:11px}.shop-dropdown summary::after{right:11px}}
 .shop-card{overflow:hidden;display:flex;flex-direction:column;border:1px solid #54434b;border-radius:7px;background:#211b22}
 .shop-art{
  display:grid;place-items:center;position:relative;height:144px;overflow:hidden;

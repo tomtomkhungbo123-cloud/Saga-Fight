@@ -265,10 +265,41 @@ function emitThunderNormal(f,a,cfg,connected){
  const muzzle=window.ThunderModel?.muzzle(f)||{x:f.x+a.dir*55,y:f.y-110},target=fighters[1-f.id];
  emit('thunderNormal',muzzle.x,muzzle.y,colors.thunder,cfg.range,{owner:f.id,dir:a.dir,attackId:a.use.id,toX:connected?target.x:clamp(f.x+a.dir*cfg.range,0,W),toY:connected?target.y-96:muzzle.y,connected,life:.23,behindFighters:true});
 }
+// Compact precompiled paths: no contour replay or full R atlas tint on an attack frame.
+function compileThunderContours(frames){return (frames||[]).map(paths=>{
+ if(typeof Path2D!=='function')return null;
+ const shape=new Path2D();for(const path of paths){shape.moveTo(...path[0]);for(let i=1;i<path.length;i++)shape.lineTo(...path[i]);shape.closePath();}return shape;
+});}
+const thunderNormalShapes=compileThunderContours(window.ThunderNormalFrames);
+const thunderNormalHalo=new Image(),thunderNormalColors=new Map();
+function thunderNormalTintedHalo(color,drawContext){
+ if(!thunderNormalHalo.complete||!thunderNormalHalo.naturalWidth)return null;
+ if(drawContext&&window.FighterPalette?.tint)return window.FighterPalette.tint(thunderNormalHalo,color,drawContext);
+ let atlas=thunderNormalColors.get(color);if(atlas)return atlas;
+ atlas=document.createElement('canvas');atlas.width=thunderNormalHalo.naturalWidth;atlas.height=thunderNormalHalo.naturalHeight;
+ const g=atlas.getContext('2d');g.drawImage(thunderNormalHalo,0,0);g.globalCompositeOperation='source-in';g.fillStyle=color;g.fillRect(0,0,atlas.width,atlas.height);
+ if(thunderNormalColors.size>=2)thunderNormalColors.delete(thunderNormalColors.keys().next().value);thunderNormalColors.set(color,atlas);return atlas;
+}
+thunderNormalHalo.onload=()=>thunderNormalTintedHalo(window.ThunderModel.palette.core);
+thunderNormalHalo.src='thunder/vfx/normal-reference-halo.png?v=52';
+// Use the very same hand-animated silhouettes as R, aligned between orb and contact.
+function thunderNormalPlacement(e,muzzle){
+ const grow=clamp((e.age+1/120)/.025,0,1),dx=(e.toX-muzzle.x)*grow,dy=(e.toY-muzzle.y)*grow,length=Math.hypot(dx,dy);
+ return {length,angle:Math.atan2(dy,dx)-Math.PI/2,sx:(e.connected||e.type==='thunderTeleport' ? .105 : .085)*Math.min(1,length/180),sy:length/970,frame:Math.min(29,Math.floor(clamp(e.age/e.life,0,1)*30))};
+}
 function drawThunderNormal(e,ctx){
  const f=fighters[e.owner],live=f&&f.dir===e.dir&&f.normal?.use.id===e.attackId,muzzle=live?window.ThunderModel.muzzle(f):e;
- const fade=1-clamp((e.age-.06)/.17,0,1),grow=clamp((e.age+1/120)/.025,0,1),tx=muzzle.x+(e.toX-muzzle.x)*grow,ty=muzzle.y+(e.toY-muzzle.y)*grow;
- ctx.save();ctx.globalAlpha=fade;drawThunderDischarge(muzzle.x,muzzle.y,tx,ty,e.connected?5:4,e.age*19,.55,ctx);ctx.restore();
+ drawThunderCachedStrip(e,muzzle,1-clamp((e.age-.06)/.17,0,1),ctx);
+}
+function drawThunderTeleport(e,ctx){drawThunderCachedStrip(e,e,1-clamp((e.age-.04)/.46,0,1),ctx);}
+// Normals and E use the same compact, precompiled contour and small halo.
+function drawThunderCachedStrip(e,muzzle,fade,ctx){
+ const place=thunderNormalPlacement(e,muzzle);if(place.length<.1)return;
+ const color=window.ThunderModel.palette.core,shape=thunderNormalShapes[place.frame];
+ ctx.save();ctx.translate(muzzle.x,muzzle.y);ctx.rotate(place.angle+Math.PI/2);ctx.scale(place.length/600,place.sx/.105);ctx.shadowBlur=0;
+ if(window.ThunderLabVisual?.bloom!==false){const atlas=thunderNormalTintedHalo(color,ctx);if(atlas){ctx.globalAlpha=fade*.65;ctx.drawImage(atlas,place.frame%6*320,Math.floor(place.frame/6)*80,320,80,-20,-80,640,160);}}
+ if(shape){ctx.globalAlpha=fade;ctx.fillStyle=color;ctx.fill(shape,'evenodd');}
+ ctx.restore();
 }
 function dummyDefense(){const f=fighters[1];if(mode!=='sandbox'||!sandboxOptions.defend||isStunned(f))return;const c=fighters[0].combo;if(!c.active&&f.lastHurt>f.combat.defendedHit){f.combat.defendedHit=f.lastHurt;f.combat.gapAt=time;if(c.reason!=='Kết thúc combo')sandboxStats.gaps=(sandboxStats.gaps||0)+1;f.invulnUntil=time+.18;request(f,'jump');}}
 
@@ -359,7 +390,7 @@ if(k==='r'){f.cd.r=12;f.vy=-760;f.ground=false;a.duration=10;a.cancel=10;a.divin
 const data={attack:[.42,.34,.17],q:[ThunderTuning.qCooldown,.72,.53],w:[ThunderTuning.wCooldown,3,.53],e:[ThunderTuning.eCooldown,.38,.11],r:[ThunderTuning.rCooldown,1.55,1.24]}[k];[f.cd[k],a.duration,a.cancel]=data;
 if(k==='q'){a.duration=ThunderTuning.qCast+.22;a.cancel=ThunderTuning.qCast+.03;}
 if(k==='w'){f.vy=-500;f.ground=false;a.cancel=3;a.diving=false;}
-if(k==='e'){const ox=f.x;a.origin=ox;f.x=clamp(f.x+f.dir*specFor(f,'e').travel,50,W-50);f.y=Math.min(f.y,floor(f.x));emit('bolt',ox,f.y-95,colors.thunder,310,{owner:f.id,toX:f.x,toY:f.y-95,life:.5});const e=fighters[1-f.id];if(e.x>=Math.min(ox,f.x)-30&&e.x<=Math.max(ox,f.x)+30&&Math.abs(e.y-f.y)<190)damage(f,e,ThunderTuning.eDamage,0,false,false,{use:f.combat.launching,utility:true});a.fired=true;}
+if(k==='e'){const ox=f.x,oy=f.y;a.origin=ox;f.x=clamp(f.x+f.dir*specFor(f,'e').travel,50,W-50);f.y=Math.min(f.y,floor(f.x));emit('thunderTeleport',ox,oy-95,colors.thunder,Math.abs(f.x-ox),{owner:f.id,dir:f.dir,toX:f.x,toY:f.y-95,connected:true,behindFighters:true,life:.5});const e=fighters[1-f.id];if(e.x>=Math.min(ox,f.x)-30&&e.x<=Math.max(ox,f.x)+30&&Math.abs(e.y-f.y)<190)damage(f,e,ThunderTuning.eDamage,0,false,false,{use:f.combat.launching,utility:true});a.fired=true;}
 }
 f.action=a;return true;}
 function fireThunderOrb(f,a){if(a.fired)return;combatSound('thunder_q_bolt',f.x);const muzzle=window.ThunderModel?.muzzle(f)||{x:f.x+f.dir*55,y:f.y-110};shots.push({kind:'thunderOrb',owner:f.id,x:muzzle.x,y:muzzle.y,dir:f.dir,vx:f.dir*210,damage:ThunderTuning.qDamage,age:0,use:a.use,hitId:a.use.id+':orb'});a.fired=true;}
@@ -381,7 +412,7 @@ if(a.k==='r'){if(!a.fired&&a.age>=.5){if(!canTarget(fighters[1-f.id])){a.fired=a
 }if(a.age>=a.duration){if(a.k==='e'&&f.type==='soul')f.cd.e=8;f.action=null;}}
 
 moveFighter(f,dt);
-a=f.action;if(a?.diving&&!a.fired&&f.ground){if(f.type==='soul'){combatSound('soulblade_r_impact',f.x);hit(f,specFor(f,'r').range,240,false,true,205,{use:a.use,last:true,hitId:a.use.id+':slam'});emit('soulSlam',f.x,f.y,colors.soul,specFor(f,'r').range,{owner:f.id,life:.8});ultimateShake('soul');}else{combatSound('thunder_w_stomp',f.x);thunderSlam(f,a.use);const radius=specFor(f,'w').range;emitThunderImpact(f.id,f.x,f.y,0,radius,true);emit('thunderWField',f.x,f.y,colors.thunder,radius,{owner:f.id,life:.85,height:205,behindFighters:true,surface:thunderImpactSurface(f.x,f.y)});}shake=Math.max(shake,13);a.fired=true;a.impactAge=a.age;a.cancel=a.age+.14;a.duration=a.age+.42;}
+a=f.action;if(a?.diving&&!a.fired&&f.ground){if(f.type==='soul'){combatSound('soulblade_r_impact',f.x);hit(f,specFor(f,'r').range,240,false,true,205,{use:a.use,last:true,hitId:a.use.id+':slam'});emit('soulSlam',f.x,f.y,colors.soul,specFor(f,'r').range,{owner:f.id,life:.8});ultimateShake('soul');}else{combatSound('thunder_w_stomp',f.x);thunderSlam(f,a.use);const radius=specFor(f,'w').range;emitThunderImpact(f.id,f.x,f.y,0,radius,true);emit('thunderWField',f.x,f.y,colors.thunder,radius,{owner:f.id,life:1,height:205,behindFighters:true,surface:thunderImpactSurface(f.x,f.y)});}shake=Math.max(shake,13);a.fired=true;a.impactAge=a.age;a.cancel=a.age+.14;a.duration=a.age+.42;}
 if(f.melanta&&f.normal&&f.normal.age<window.MelantaLab.ATTACK_END)f.dir=f.normal.dir;motionPose(f,dt);}
 function motionPose(f,dt){if(f.type==='thunder'&&window.ThunderModel){window.ThunderModel.update(f,dt,time);return;}if(f.type==='soul'&&window.SoulMotion){window.SoulMotion.update(f,dt);return;}const a=f.action;const pace=Math.abs(f.vx)/430;f.gait+=dt*(2+pace*12);f.runWeight+=((f.ground?pace:0)-f.runWeight)*(1-Math.exp(-dt*9));f.airWeight+=((f.ground?0:1)-f.airWeight)*(1-Math.exp(-dt*12));f.lean+=(f.vx*f.dir/430*.13-f.lean)*(1-Math.exp(-dt*10));f.hair+=(-f.lean*.75-f.hair)*(1-Math.exp(-dt*7));f.cloth+=(-f.vx*.075-f.cloth)*(1-Math.exp(-dt*7));f.spinBlend+=((a?.k==='q'?1:0)-f.spinBlend)*(1-Math.exp(-dt*22));if(a?.k==='q')f.spinPhase+=dt*Math.PI*2/.6;f.bladeAngle=f.spinPhase*f.spinBlend;f.crossBlend+=((a?.k==='q'&&a.age>.16?1:0)-f.crossBlend)*(1-Math.exp(-dt*18));}
 function moveFighter(f,dt){if(isStunned(f)||f.rootUntil>time||f.hp<=0){f.move=0;f.vx=0;}if(f.move&&(f.type!=='thunder'||!f.action||['q','w','e','r'].includes(f.action.k)))f.dir=f.move;const slow=f.action?.k==='e'&&f.type==='soul'?.55:f.action?.k==='r'&&!f.aether?.5:1;const castLocked=f.type==='cylast'&&f.action&&f.action.k!=='attack';const target=(castLocked?0:f.move)*(f.aether?(window.AetherBase.CONFIG.speed/430)*(f.aether.liquid?window.AetherBase.CONFIG.e.speed:1):1)*(f.fairi?330*(f.fairi.stealth>0?1.4:1):1)*(f.fairi?1:f.type==='thunder'?330:f.type==='mox'?(f.action?.k==='r'?0:f.action?.k==='w'?120:370):['cylast','melanta'].includes(f.type)?350:430)*(f.type==='thunder'?1:f.type==='mox'?1:slow)*(f.melanta?.speedUntil>time?1.35:1);f.vx+=(target-f.vx)*(1-Math.exp(-dt*(f.type==='thunder'?14:f.stun?4:13)));if(f.ground&&!f.move&&!f.fairi&&!['soul','thunder'].includes(f.type))f.vx=0;if(f.type==='thunder'&&!f.move&&Math.abs(f.vx)<.02)f.vx=0;if(f.type==='soul'&&!f.move&&Math.abs(f.vx)<.5)f.vx=0;f.x=clamp(f.x+(f.vx+(f.knockVx||0))*dt,45,W-45);f.knockVx=(f.knockVx||0)*Math.exp(-dt*8);
@@ -394,8 +425,8 @@ function hardStun(enemy,duration,use=null,source=null){if(enemy.hp<=0||!canContr
 function thunderSlam(f,use=f.action?.use){cylastEnv(f).decoyArea(f.x,f.y,specFor(f,'w').range,205,ThunderTuning.wDamage,(use||f.combat.activeUse)?.id+':stomp');const enemy=fighters[1-f.id];if(enemy.hp<=0||!canHit(enemy)||Math.abs(enemy.x-f.x)>specFor(f,'w').range||Math.abs(enemy.y-f.y)>205)return;const direction=Math.sign(enemy.x-f.x)||f.dir;use??=newUse(f,'w');damage(f,enemy,ThunderTuning.wDamage,0,false,false,{use,hitId:use.id+':stomp'});if(canControl(enemy))enemy.x=clamp(enemy.x+direction*ThunderTuning.wPush,45,W-45);hardStun(enemy,specFor(f,'w').stun,use,f);}
 function thunderImpactSurface(x,y){return platforms.some(p=>x>=p.x-8&&x<=p.r+8&&Math.abs(p.y-y)<8)?'platform':'terrain';}
 function thunderImpactGround(e,x){return e.surface==='platform'?e.y:floor(x)+e.y-floor(e.x);}
-function emitThunderImpact(owner,x,y,index=0,radius=155,behindFighters=false){emit('thunderImpact',x,y,colors.thunder,radius,{owner,life:1.05,strike:index,spreadScale:radius/155,behindFighters,surface:thunderImpactSurface(x,y)});emit('spark',x,y-10,colors.thunder,130,{owner,behindFighters});}
-function thunderStrike(f,x,y,amount,use=f.combat.activeUse,index=0){ultimateShake('thunder',index);combatSound('thunder_r_strike',x);const groundY=floor(x);emit('thunderGroundBolt',x-65,80,colors.thunder,groundY,{owner:f.id,toX:x,toY:groundY,life:.42,strike:index});emitThunderImpact(f.id,x,groundY,index);const enemy=fighters[1-f.id];if(enemy.hp>0&&Math.abs(enemy.x-x)<110&&Math.abs(enemy.y-y)<220){const token=use||newUse(f,'r');damage(f,enemy,amount,70,false,false,{use:token,hitId:token.id+':shock'+index,last:index===2});hardStun(enemy,specFor(f,'r').stun,token,f);}}
+function emitThunderImpact(owner,x,y,index=0,radius=155,behindFighters=false,rStyle=false){emit('thunderImpact',x,y,colors.thunder,radius,{owner,life:1.05,strike:index,spreadScale:radius/155,behindFighters,rStyle,surface:thunderImpactSurface(x,y)});emit('spark',x,y-10,colors.thunder,130,{owner,behindFighters});}
+function thunderStrike(f,x,y,amount,use=f.combat.activeUse,index=0){ultimateShake('thunder',index);combatSound('thunder_r_strike',x);const groundY=floor(x);emit('thunderGroundBolt',x-65,80,colors.thunder,groundY,{owner:f.id,toX:x,toY:groundY,life:45/30,strike:index});emitThunderImpact(f.id,x,groundY,index,155,false,true);const enemy=fighters[1-f.id];if(enemy.hp>0&&Math.abs(enemy.x-x)<110&&Math.abs(enemy.y-y)<220){const token=use||newUse(f,'r');damage(f,enemy,amount,70,false,false,{use:token,hitId:token.id+':shock'+index,last:index===2});hardStun(enemy,specFor(f,'r').stun,token,f);}}
 // PvE controller: observations are delayed; only own confirmed hits bypass perception latency.
 // This controller sends ordinary requests, never mutates combat outcomes or opponent state.
 // 5x response/decision tempo relative to6.8; combat animation and physics stay unchanged.
@@ -741,21 +772,37 @@ function drawStatusEffect(e,ctx){const u=clamp(e.age/e.life,0,1),fade=(1-u)*(1-u
 
 function effectBehindFighters(e){return e.type==='thunderWField'||!!e.behindFighters;}
 function drawArenaEffect(e){const g=fighterEffectContext(fighters[e.owner]);if(e.type.startsWith('frost')&&e.type!=='frostLink')window.CylastVisual.effect(g,e);else drawEffect(e,g);}
-// Elongated luminous Q head with several trailing, branching lightning filaments.
+// Q shares the compact R-derived lightning paths with normal attacks.
 let thunderProjectileGlow;
+function thunderProjectileStyle(s){
+ const fast=clamp((Math.abs(s.vx)-210)/1240,0,1);
+ return {dir:s.dir||Math.sign(s.vx)||1,fast,length:75+fast*80};
+}
 function drawThunderProjectile(s,ctx){
- const p=window.ThunderModel.palette,dir=s.dir||Math.sign(s.vx)||1,fast=clamp((Math.abs(s.vx)-210)/1240,0,1),length=85+fast*55,phase=s.age*24;
- if(!thunderProjectileGlow){const image=document.createElement('canvas');image.width=144;image.height=88;const g=image.getContext('2d');g.translate(72,44);g.scale(1,.61);const grad=g.createRadialGradient(0,0,0,0,0,68);grad.addColorStop(0,'#ffffe7ee');grad.addColorStop(.22,'#ffff91b0');grad.addColorStop(.5,'#ffed4750');grad.addColorStop(1,'#ffed4700');g.fillStyle=grad;g.fillRect(-72,-72,144,144);thunderProjectileGlow=image;}
- ctx.save();ctx.translate(s.x,s.y);ctx.scale(dir,1);ctx.lineJoin='round';ctx.lineCap='round';
- for(let j=0;j<5;j++){
-  const tail=length*(.65+j*.075),offset=(j-2)*4;ctx.beginPath();ctx.moveTo(-12,offset*.4);
-  for(let k=1;k<=12;k++){const u=k/12;ctx.lineTo(-12-tail*u,offset+Math.sin(k*2.1+phase+j)*6*Math.sin(Math.PI*u)+Math.sin(k*.8-phase)*4*u);}
-  ctx.strokeStyle=p.edge;ctx.globalAlpha=.85-j*.09;ctx.lineWidth=j===2?1.8:1;ctx.stroke();
-  const x=-tail*.55,y=offset+Math.sin(phase+j)*3;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-9,y+(j%2?10:-10));ctx.lineTo(x-23,y+(j%2?8:-8));ctx.stroke();
+ const p=window.ThunderModel.palette,style=thunderProjectileStyle(s),bloom=window.ThunderLabVisual?.bloom!==false,L=style.length;
+ // Continuous waves move through one filled silhouette, rather than spliced bolt frames.
+ const wave=Math.sin(s.age*18)*2.2,ripple=Math.sin(s.age*13+1.2)*1.5;
+ if(bloom&&!thunderProjectileGlow){
+  const image=document.createElement('canvas');image.width=image.height=96;const g=image.getContext('2d'),grad=g.createRadialGradient(48,48,0,48,48,46);
+  grad.addColorStop(0,p.haloCore);grad.addColorStop(.38,p.haloMid);grad.addColorStop(1,p.haloEdge);g.fillStyle=grad;g.fillRect(0,0,96,96);thunderProjectileGlow=image;
  }
- ctx.globalAlpha=1;if(true)ctx.drawImage(thunderProjectileGlow,-58,-35,116,70);
- ctx.globalAlpha=.25;ctx.fillStyle=p.glow;ctx.beginPath();ctx.ellipse(-3,0,27+fast*3,13,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.fillStyle='#ffffde';ctx.beginPath();ctx.moveTo(-30,0);ctx.bezierCurveTo(-15,-13,19,-12,24,0);ctx.bezierCurveTo(19,12,-15,13,-30,0);ctx.fill();ctx.fillStyle='#fffffb';ctx.beginPath();ctx.ellipse(1,0,20,8,0,0,Math.PI*2);ctx.fill();
- ctx.restore();
+ ctx.save();ctx.translate(s.x,s.y);ctx.scale(style.dir,1);ctx.shadowBlur=0;
+ if(bloom){ctx.globalAlpha=.6;ctx.drawImage(thunderProjectileGlow,-L*.60,-32,L*.80,64);ctx.globalAlpha=1;ctx.drawImage(thunderProjectileGlow,-48,-48,96,96);}
+ // The round leading mass flows directly into swept, pointed ribbons.
+ ctx.fillStyle=p.edge;ctx.beginPath();ctx.moveTo(16,0);
+ ctx.bezierCurveTo(16,-11,3,-16,-14,-12);
+ ctx.bezierCurveTo(-L*.25,-18,-L*.37,-10,-L*.49,-7+wave);
+ ctx.bezierCurveTo(-L*.68,-13+wave,-L*.82,-5+wave,-L,-3+wave);
+ ctx.bezierCurveTo(-L*.80,-1+wave,-L*.73,3+wave,-L*.61,2+wave);
+ ctx.bezierCurveTo(-L*.77,6+ripple,-L*.86,9+ripple,-L,6+ripple);
+ ctx.bezierCurveTo(-L*.79,15+ripple,-L*.65,8+ripple,-L*.52,8+ripple);
+ ctx.bezierCurveTo(-L*.35,12,-L*.25,17,-14,11);
+ ctx.bezierCurveTo(3,16,16,11,16,0);ctx.closePath();
+ // Enclosed flow gaps separate the ribbons while keeping the body connected.
+ ctx.moveTo(-L*.34,-4+wave*.4);ctx.bezierCurveTo(-L*.48,-10+wave,-L*.65,-7+wave,-L*.80,-4+wave);ctx.bezierCurveTo(-L*.61,-4+wave,-L*.48,0,-L*.34,-4+wave*.4);ctx.closePath();
+ ctx.moveTo(-L*.20,6);ctx.bezierCurveTo(-L*.30,12,-L*.41,8+ripple,-L*.54,6+ripple);ctx.bezierCurveTo(-L*.39,4,-L*.28,3,-L*.20,6);ctx.closePath();ctx.fill('evenodd');
+ // One connected luminous core follows the same direction, without a separate circular cap.
+ ctx.fillStyle=p.core;ctx.beginPath();ctx.moveTo(12,0);ctx.bezierCurveTo(12,-8,2,-11,-13,-8);ctx.bezierCurveTo(-L*.30,-5,-L*.56,-1+wave*.3,-L*.91,-2+wave);ctx.bezierCurveTo(-L*.65,3+wave*.3,-L*.37,2,-14,8);ctx.bezierCurveTo(2,12,12,8,12,0);ctx.closePath();ctx.fill();ctx.restore();
 }
 // Shared Thunder discharge: continuous motion, fixed endpoints, taper toward the tip.
 function drawThunderDischarge(x,y,tx,ty,width,phase,strength,ctx){
@@ -768,7 +815,7 @@ function drawThunderDischarge(x,y,tx,ty,width,phase,strength,ctx){
  ctx.save();ctx.lineCap='round';ctx.lineJoin='round';
  const group=Math.ceil(n/4);
  for(let pass=0;pass<3;pass++){
-  ctx.strokeStyle=pass===0?p.edge:pass===1?p.mid:p.core;ctx.shadowColor=p.glow;ctx.shadowBlur=pass===0&&true?Math.min(12,width*1.8):0;
+  ctx.strokeStyle=pass===0?p.edge:pass===1?p.mid:p.core;ctx.shadowColor=p.glow;ctx.shadowBlur=pass===0&&window.ThunderLabVisual?.bloom!==false?Math.min(12,width*1.8):0;
   for(let start=0;start<n;start+=group){const end=Math.min(n,start+group),u=(start+end)/2/n,taper=1-.68*Math.pow(u,5);ctx.lineWidth=width*(pass===0?1:pass===1?.46:.18)*taper;ctx.beginPath();ctx.moveTo(...points[start]);for(let i=start+1;i<=end;i++)ctx.lineTo(...points[i]);ctx.stroke();}
  }
  ctx.restore();
@@ -784,55 +831,64 @@ function drawThunderGroundRoots(x,y,t,phase,reach,groundAt,ctx){
  }
  ctx.fillStyle=p.core;ctx.beginPath();ctx.ellipse(x,y,10,3.5,0,0,Math.PI*2);ctx.fill();ctx.restore();
 }
-function drawThunderGroundBolt(e,ctx){
- const t=e.age,fade=1-clamp((t-.10)/.32,0,1),phase=t*23+(e.strike||0)*2.7;
- ctx.save();ctx.globalAlpha=fade;drawThunderDischarge(e.x,e.y,e.toX,e.toY,10,phase,1,ctx);drawThunderGroundRoots(e.toX,e.toY,t,phase,65+(e.strike||0)*9,floor,ctx);ctx.restore();
+// Exact hand-animated reference frames; only their hue changes to match the held orb.
+const thunderRShapes=compileThunderContours(window.ThunderRFrames);
+const thunderRAtlas=new Image();thunderRAtlas.src='thunder/vfx/r-reference-atlas.png?v=50';
+const thunderRColors=new Map();
+function thunderRTintedAtlas(color,drawContext){
+ if(!thunderRAtlas.complete||!thunderRAtlas.naturalWidth)return null;
+ if(drawContext&&window.FighterPalette?.tint)return window.FighterPalette.tint(thunderRAtlas,color,drawContext);
+ let atlas=thunderRColors.get(color);if(atlas)return atlas;
+ atlas=document.createElement('canvas');atlas.width=thunderRAtlas.naturalWidth;atlas.height=thunderRAtlas.naturalHeight;const g=atlas.getContext('2d');g.drawImage(thunderRAtlas,0,0);g.globalCompositeOperation='source-in';g.fillStyle=color;g.fillRect(0,0,atlas.width,atlas.height);
+ if(thunderRColors.size>=3)thunderRColors.delete(thunderRColors.keys().next().value);thunderRColors.set(color,atlas);return atlas;
 }
-// W pressure fronts use the live damage radius captured at impact, never a fixed VFX size.
-let thunderPressureTexture;
+// Separate width from height: extending the sky leader must never inflate the impact.
+function thunderRPlacement(e,viewTop){
+ const top=Math.min(e.y,viewTop-120),sy=(e.toY-top)/970,sx=.40;
+ return {x:e.toX-960*sx,y:top,sx,sy,width:1920*sx,height:990*sy};
+}
+function drawThunderGroundBolt(e,ctx){
+ const color=window.ThunderModel.palette.core,atlas=thunderRTintedAtlas(color,ctx);if(!atlas)return;
+ const frame=Math.min(44,Math.floor(Math.max(0,e.age)*30)),tileW=384,tileH=198;
+ const transform=ctx.getTransform(),viewTop=-transform.f/transform.d;
+ const place=thunderRPlacement(e,viewTop),shape=thunderRShapes[frame];
+ const fade=1-clamp((e.age-1.25)/.25,0,1);
+ ctx.save();ctx.shadowBlur=0;ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.globalAlpha=fade*.45;
+ ctx.drawImage(atlas,(frame%6)*tileW,Math.floor(frame/6)*tileH,tileW,tileH,place.x,place.y,place.width,place.height);
+ if(shape){ctx.globalAlpha=fade;ctx.translate(place.x,place.y);ctx.scale(place.sx,place.sy);ctx.fillStyle=color;ctx.fill(shape,'evenodd');}
+ ctx.restore();
+}
+// W follows the supplied 30fps animation; native contours stay sharp at every zoom.
+const thunderWShapes=compileThunderContours(window.ThunderWFrames);
+const thunderWAtlas=new Image();thunderWAtlas.src='thunder/vfx/w-reference-atlas.png?v=49';
+const thunderWColors=new Map();
+function thunderWTintedAtlas(color,drawContext){
+ if(!thunderWAtlas.complete||!thunderWAtlas.naturalWidth)return null;
+ if(drawContext&&window.FighterPalette?.tint)return window.FighterPalette.tint(thunderWAtlas,color,drawContext);
+ let atlas=thunderWColors.get(color);if(atlas)return atlas;
+ atlas=document.createElement('canvas');atlas.width=thunderWAtlas.naturalWidth;atlas.height=thunderWAtlas.naturalHeight;
+ const g=atlas.getContext('2d');g.drawImage(thunderWAtlas,0,0);g.globalCompositeOperation='source-in';g.fillStyle=color;g.fillRect(0,0,atlas.width,atlas.height);
+ if(thunderWColors.size>=3)thunderWColors.delete(thunderWColors.keys().next().value);thunderWColors.set(color,atlas);return atlas;
+}
 function drawThunderWField(e,ctx){
- const t=e.age,u=clamp(t/e.life,0,1),radius=e.size,p=window.ThunderModel.palette;
- if(!thunderPressureTexture){
-  const image=document.createElement('canvas');image.width=image.height=256;const g=image.getContext('2d'),grad=g.createRadialGradient(128,128,0,128,128,128);
-  grad.addColorStop(0,'#ffff9100');grad.addColorStop(.65,'#ffff9100');grad.addColorStop(.82,'#ffef4710');grad.addColorStop(.93,'#ffff9158');grad.addColorStop(1,'#ffff9100');g.fillStyle=grad;g.fillRect(0,0,256,256);thunderPressureTexture=image;
- }
- ctx.save();ctx.globalCompositeOperation='lighter';ctx.shadowBlur=0;
- // Three broad, translucent sonic fronts decelerate at the actual reach.
- for(let j=0;j<3;j++){
-  const age=t-j*.085;if(age<0)continue;const q=clamp(age/.55,0,1),r=radius*(1-Math.pow(1-q,3)),alpha=Math.pow(1-q,1.15);if(r<1)continue;
-  ctx.globalAlpha=alpha*(j?.42:.7);ctx.drawImage(thunderPressureTexture,e.x-r,e.y-r*.23,r*2,r*.46);
-  ctx.globalAlpha=alpha*.15;ctx.strokeStyle=p.edge;ctx.lineWidth=10*(1-q)+2;ctx.beginPath();ctx.ellipse(e.x,e.y,r,e.height*(r/radius)*.75,0,Math.PI,Math.PI*2);ctx.stroke();
- }
- // Tangential lightning travels around projected circles, matching the concept's ground halo.
- const reach=radius*(1-Math.exp(-t*21)),fade=Math.pow(1-u,1.35),rings=graphicsQuality==='low'?2:3,sectors=graphicsQuality==='low'?4:6;
- ctx.lineJoin='round';ctx.lineCap='round';
- for(let ring=0;ring<rings;ring++){
-  const r=reach*(.38+ring*(rings===2?.6:.30)),spin=t*(ring%2?-1.8:1.6)+ring*.83;
-  for(let sector=0;sector<sectors;sector++){
-   const begin=sector/sectors*Math.PI*2+spin,span=Math.PI*2/sectors*.86,points=[];
-   for(let k=0;k<=18;k++){
-    const a=begin+span*k/18,jitter=(Math.sin(k*2.3+t*27+sector*3+ring)*6+Math.sin(k*4.1-t*17)*3)*Math.sin(Math.PI*k/18),rr=Math.min(radius,r+jitter),x=e.x+Math.cos(a)*rr,y=thunderImpactGround(e,x)+Math.sin(a)*rr*.18-5+Math.sin(k*2.8+t*19)*3;
-    points.push([x,y]);
-   }
-   ctx.beginPath();let connected=false;for(const point of points){if(Math.abs(point[0]-e.x)<42&&point[1]<e.y+15){connected=false;continue;}if(connected)ctx.lineTo(...point);else ctx.moveTo(...point);connected=true;}
-   ctx.globalAlpha=fade*.23;ctx.strokeStyle=p.glow;ctx.lineWidth=7;ctx.stroke();ctx.globalAlpha=fade*.8;ctx.strokeStyle=p.edge;ctx.lineWidth=2;ctx.stroke();ctx.globalAlpha=fade;ctx.strokeStyle=p.core;ctx.lineWidth=.75;ctx.stroke();
-   // Short forks grow from each orbit instead of straight spokes through the body.
-   const root=points[10],a=begin+span*.55,side=(sector+ring)%2?1:-1;
-   ctx.beginPath();ctx.moveTo(...root);for(let k=1;k<=4;k++)ctx.lineTo(root[0]+Math.cos(a+side*.8)*k*5,root[1]+Math.sin(a+side*.8)*k*2-(k%2)*5);
-   ctx.globalAlpha=fade*.7;ctx.strokeStyle=p.edge;ctx.lineWidth=1.2;ctx.stroke();
-  }
- }
+ const color=window.ThunderModel.palette.core,atlas=thunderWTintedAtlas(color,ctx);if(!atlas)return;
+ const frame=Math.min(29,Math.floor(Math.max(0,e.age)*30)),scale=e.size/1000;
+ // Frame foot (920,944) is pinned to the actual stomp, including elevated platforms.
+ const x=e.x-920*scale,y=e.y-944*scale,shape=thunderWShapes[frame];
+ ctx.save();ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.globalAlpha=shape ? .6 : 1;
+ ctx.drawImage(atlas,(frame%6)*384,Math.floor(frame/6)*198,384,198,x,y,1920*scale,990*scale);
+ if(shape){ctx.globalAlpha=1;ctx.translate(x,y);ctx.scale(scale,scale);ctx.fillStyle=color;ctx.fill(shape,'evenodd');}
  ctx.restore();
 }
 // Analytic debris trajectories: bounded work, no per-frame particle allocation.
-function drawThunderImpact(e,fx){
+function drawThunderImpact(e,ctx){
  const t=e.age,u=clamp(t/e.life,0,1),c=e.color,seed=e.strike||0;
  ctx.save();ctx.translate(e.x,e.y);ctx.scale(e.spreadScale||1,1);ctx.shadowBlur=0;
  // A dark impact scar and an expanding, flattened golden shock front.
- ctx.globalAlpha=(1-u)*.6;ctx.fillStyle='#211c25';ctx.beginPath();ctx.ellipse(0,1,62+u*22,10,0,0,Math.PI*2);ctx.fill();
+ ctx.globalAlpha=e.rStyle?0:(1-u)*.6;ctx.fillStyle='#211c25';ctx.beginPath();ctx.ellipse(0,1,62+u*22,10,0,0,Math.PI*2);ctx.fill();
  const flash=Math.max(0,1-t/.22),spread=1-Math.exp(-t*18);
- ctx.globalAlpha=flash;fx.fillStyle=c;ctx.beginPath();ctx.ellipse(0,-3,75*spread,20*spread,0,0,Math.PI*2);ctx.fill();
- ctx.globalAlpha=Math.max(0,1-t/.45)*.85;fx.strokeStyle=c;ctx.lineWidth=5*(1-u);ctx.beginPath();ctx.ellipse(0,0,(e.spreadScale>1?155:180)*spread,25*spread,0,0,Math.PI*2);ctx.stroke();
+ ctx.globalAlpha=e.rStyle?0:flash;ctx.fillStyle=c;ctx.beginPath();ctx.ellipse(0,-3,75*spread,20*spread,0,0,Math.PI*2);ctx.fill();
+ ctx.globalAlpha=e.rStyle?0:Math.max(0,1-t/.45)*.85;ctx.strokeStyle=c;ctx.lineWidth=5*(1-u);ctx.beginPath();ctx.ellipse(0,0,(e.spreadScale>1?155:180)*spread,25*spread,0,0,Math.PI*2);ctx.stroke();
  // Dust rolls away from the contact point, then settles and fades.
  const dustFade=Math.min(1,t*15)*Math.pow(1-u,1.5);
  for(let i=0;i<10;i++){const side=i%2?1:-1,q=Math.floor(i/2),x=side*(16+q*13+(65+q*18)*t),y=-9-Math.sin(u*Math.PI)*(12+q*3),r=12+q*2+t*22;ctx.globalAlpha=dustFade*.22;ctx.fillStyle=i%3?'#a49379':'#d1bc8e';ctx.beginPath();ctx.ellipse(x,y,r,r*.5,0,0,Math.PI*2);ctx.fill();}
@@ -846,7 +902,7 @@ function drawThunderImpact(e,fx){
  }
  ctx.restore();
 }
-function drawEffect(e,ctx){if(e.type==='thunderNormal'){drawThunderNormal(e,ctx);return;}if(e.type==='thunderWField'){drawThunderWField(e,ctx);return;}if(e.type==='thunderGroundRoots'){ctx.save();ctx.globalAlpha=1-clamp((e.age-.1)/.32,0,1);drawThunderGroundRoots(e.x,e.y,e.age,e.age*23,65,floor,ctx);ctx.restore();return;}if(e.type==='thunderGroundBolt'){drawThunderGroundBolt(e,ctx);return;}if(e.type==='thunderImpact'){drawThunderImpact(e,ctx);return;}if(e.type==='frostLink'){const fade=1-clamp((e.age/e.life-.4)/.6,0,1);ctx.save();ctx.lineCap='round';ctx.strokeStyle='#75d9ff';ctx.globalAlpha=fade*.3;ctx.lineWidth=32;ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo(e.toX,e.toY);ctx.stroke();ctx.globalAlpha=fade*.9;ctx.lineWidth=16;ctx.stroke();ctx.strokeStyle='#ecfbff';ctx.globalAlpha=fade;ctx.lineWidth=6;ctx.stroke();ctx.restore();return;}if(e.type==='bleedBurst'||e.type==='iceBreak'){drawStatusEffect(e,ctx);return;}const z=e.age/e.life;ctx.save();ctx.globalAlpha=1-z;const c=e.color;if(e.type==='soulSlam'){window.drawSoulSlam(ctx,e,graphicsQuality);}if(e.type==='bolt'){bolt(e.x,e.y,e.toX,e.toY,c,e.width||3,e.age*18,ctx);}if(e.type==='damage'){ctx.fillStyle=c;ctx.font='bold 25px Arial';ctx.textAlign='center';ctx.fillText(e.text,e.x,e.y-z*65);}if(e.type==='spark'||e.type==='dust'){for(let i=0;i<12;i++){const angle=i*2.4,dist=e.size*z*(.4+(i%3)*.22);ctx.fillStyle=c;ctx.fillRect(e.x+Math.cos(angle)*dist,e.y+Math.sin(angle)*dist-z*20,3+(i%3),3+(i%3));}}if(e.type==='ring'){ctx.strokeStyle=c;ctx.shadowColor=c;ctx.shadowBlur=14;ctx.lineWidth=9*(1-z);ctx.beginPath();ctx.ellipse(e.x,e.y,e.size*(.3+.7*z),e.size*.24*(.3+.7*z),-.2,0,7);ctx.stroke();}if(e.type==='slam'){ctx.translate(e.x,e.y);const expand=1-Math.pow(1-clamp(z*4,0,1),3);ctx.fillStyle=c;ctx.shadowColor=c;ctx.shadowBlur=false?0:18;ctx.beginPath();ctx.moveTo(-e.size*expand,0);for(let i=0;i<17;i++){const x=(-1+i/8)*e.size*expand,y=-(i%2?40:80+(Math.sin(i*9)+1)*65)*Math.sin(Math.PI*(i+1)/18)*expand;ctx.lineTo(x,y);}ctx.lineTo(e.size*expand,0);ctx.closePath();ctx.fill();ctx.shadowBlur=0;ctx.strokeStyle=c;ctx.lineWidth=5*(1-z);ctx.beginPath();ctx.ellipse(0,0,e.size*expand,25*expand,0,0,7);ctx.stroke();if(c===colors.thunder){drawThunderGroundRoots(0,0,e.age,e.age*23,e.size*.7,x=>floor(e.x+x)-e.y,ctx);}}ctx.restore();}
+function drawEffect(e,ctx){if(e.type==='thunderTeleport'){drawThunderTeleport(e,ctx);return;}if(e.type==='thunderNormal'){drawThunderNormal(e,ctx);return;}if(e.type==='thunderWField'){drawThunderWField(e,ctx);return;}if(e.type==='thunderGroundRoots'){ctx.save();ctx.globalAlpha=1-clamp((e.age-.1)/.32,0,1);drawThunderGroundRoots(e.x,e.y,e.age,e.age*23,65,floor,ctx);ctx.restore();return;}if(e.type==='thunderGroundBolt'){drawThunderGroundBolt(e,ctx);return;}if(e.type==='thunderImpact'){drawThunderImpact(e,ctx);return;}if(e.type==='frostLink'){const fade=1-clamp((e.age/e.life-.4)/.6,0,1);ctx.save();ctx.lineCap='round';ctx.strokeStyle='#75d9ff';ctx.globalAlpha=fade*.3;ctx.lineWidth=32;ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo(e.toX,e.toY);ctx.stroke();ctx.globalAlpha=fade*.9;ctx.lineWidth=16;ctx.stroke();ctx.strokeStyle='#ecfbff';ctx.globalAlpha=fade;ctx.lineWidth=6;ctx.stroke();ctx.restore();return;}if(e.type==='bleedBurst'||e.type==='iceBreak'){drawStatusEffect(e,ctx);return;}const z=e.age/e.life;ctx.save();ctx.globalAlpha=1-z;const c=e.color;if(e.type==='soulSlam'){window.drawSoulSlam(ctx,e,graphicsQuality);}if(e.type==='bolt'){bolt(e.x,e.y,e.toX,e.toY,c,e.width||3,e.age*18,ctx);}if(e.type==='damage'){ctx.fillStyle=c;ctx.font='bold 25px Arial';ctx.textAlign='center';ctx.fillText(e.text,e.x,e.y-z*65);}if(e.type==='spark'||e.type==='dust'){for(let i=0;i<12;i++){const angle=i*2.4,dist=e.size*z*(.4+(i%3)*.22);ctx.fillStyle=c;ctx.fillRect(e.x+Math.cos(angle)*dist,e.y+Math.sin(angle)*dist-z*20,3+(i%3),3+(i%3));}}if(e.type==='ring'){ctx.strokeStyle=c;ctx.shadowColor=c;ctx.shadowBlur=14;ctx.lineWidth=9*(1-z);ctx.beginPath();ctx.ellipse(e.x,e.y,e.size*(.3+.7*z),e.size*.24*(.3+.7*z),-.2,0,7);ctx.stroke();}if(e.type==='slam'){ctx.translate(e.x,e.y);const expand=1-Math.pow(1-clamp(z*4,0,1),3);ctx.fillStyle=c;ctx.shadowColor=c;ctx.shadowBlur=false?0:18;ctx.beginPath();ctx.moveTo(-e.size*expand,0);for(let i=0;i<17;i++){const x=(-1+i/8)*e.size*expand,y=-(i%2?40:80+(Math.sin(i*9)+1)*65)*Math.sin(Math.PI*(i+1)/18)*expand;ctx.lineTo(x,y);}ctx.lineTo(e.size*expand,0);ctx.closePath();ctx.fill();ctx.shadowBlur=0;ctx.strokeStyle=c;ctx.lineWidth=5*(1-z);ctx.beginPath();ctx.ellipse(0,0,e.size*expand,25*expand,0,0,7);ctx.stroke();if(c===colors.thunder){drawThunderGroundRoots(0,0,e.age,e.age*23,e.size*.7,x=>floor(e.x+x)-e.y,ctx);}}ctx.restore();}
 // The artwork is cached with scenery around its edges. Pan the world-space view,
 // never the screen-sized background canvas, so high jumps cannot expose a blank strip.
 const CAVERN_FRAME={zoom:.75,side:512,top:768,bottom:128,safety:32};

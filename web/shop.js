@@ -5,9 +5,11 @@ const el=id=>document.getElementById(id);
 const dialog=el('shopDialog');
 const money=n=>n.toLocaleString('vi-VN')+' Scoin';
 const kinds={skin:'Skin',pet:'Linh thú',accessory:'Phụ kiện'};
+const shopFighters={all:'Tất cả chiến binh',thunder:'Thunder Stance',soul:'Soulblade',cylast:'Cylast',mox:'Mox',melanta:'Melanta',aether:'Aether',fairi:'Fairi'};
+const shopSorts={default:'Mặc định',asc:'Giá: thấp đến cao',desc:'Giá: cao đến thấp'};
 const catalog=new Map();
 let rules, user=null, account=null, accountGeneration=0, refreshId=0, busyItem='', needsLoad=true;
-let view='shop', filter='all', opener, displayedMatch;
+let view='shop', filter='all', fighterFilter='all', priceSort='default', opener, displayedMatch;
 let fighterLoadouts=[{},{}];
 
 function accountBadge(){
@@ -135,7 +137,13 @@ function render(){
  const available=[...catalog.values()].filter(item=>view==='shop'?item.forSale!==false:account?.owned.includes(item.id));
  const categories=new Set(available.map(item=>item.kind));
  if(view==='shop'&&filter!=='all'&&!categories.has(filter))filter='all';
- const visible=available.filter(item=>filter==='all'||item.kind===filter);
+ const visible=available.filter(item=>(filter==='all'||item.kind===filter)&&(fighterFilter==='all'||item.kind==='skin'&&item.fighter===fighterFilter));
+ if(priceSort!=='default')visible.sort((a,b)=>priceSort==='asc'?a.price-b.price:b.price-a.price);
+ el('shopFighterValue').textContent=shopFighters[fighterFilter];
+ el('shopSortValue').textContent=shopSorts[priceSort];
+ el('shopResultCount').textContent=visible.length+' vật phẩm';
+ for(const option of dialog.querySelectorAll('[data-shop-fighter]'))option.setAttribute('aria-pressed',String(option.dataset.shopFighter===fighterFilter));
+ for(const option of dialog.querySelectorAll('[data-shop-sort]'))option.setAttribute('aria-pressed',String(option.dataset.shopSort===priceSort));
  grid.replaceChildren(...visible.map(card));
  for(const button of dialog.querySelectorAll('[data-shop-view],[data-shop-filter]')){
   const category=button.dataset.shopFilter;
@@ -146,6 +154,7 @@ function render(){
  if(!visible.length){
   el('shopEmpty').textContent=needsLoad?'Đang tải vật phẩm…':view==='shop'?'Chưa có vật phẩm trong danh mục này.':
    !user?'Đăng nhập để xem túi đồ.':'Túi đồ chưa có vật phẩm trong danh mục này.';
+  if(!needsLoad&&fighterFilter!=='all'&&(view==='shop'||user))el('shopEmpty').textContent=(view==='shop'?'Chưa có skin của ':'Túi đồ chưa có skin của ')+shopFighters[fighterFilter]+'. Thử chọn chiến binh khác hoặc Tất cả chiến binh.';
  }
  if(active)grid.querySelector('button[data-item="'+active+'"]:not(:disabled)')?.focus({preventScroll:true});
 }
@@ -185,7 +194,8 @@ function open(tab='shop'){
  opener=document.activeElement;
  window.SagaAccount?.close();
  view=tab;
- filter='all';
+ filter=fighterFilter==='all'?'all':'skin';
+ closeShopFilters();
  status('');
  accountBadge();
  render();
@@ -194,6 +204,11 @@ function open(tab='shop'){
  void refresh();
 }
 
+function closeShopFilters(){for(const dropdown of dialog.querySelectorAll('.shop-dropdown'))dropdown.open=false;}
+for(const dropdown of dialog.querySelectorAll('.shop-dropdown')){
+ dropdown.addEventListener('toggle',()=>{if(dropdown.open)for(const other of dialog.querySelectorAll('.shop-dropdown'))if(other!==dropdown)other.open=false;});
+ dropdown.addEventListener('keydown',event=>{if(event.key==='Escape'&&dropdown.open){event.preventDefault();event.stopPropagation();dropdown.open=false;dropdown.querySelector('summary').focus();}});
+}
 el('shopOpen').addEventListener('click',()=>open());
 el('openAccountInventory').addEventListener('click',()=>open('inventory'));
 el('shopLogin').addEventListener('click',()=>{
@@ -202,6 +217,7 @@ el('shopLogin').addEventListener('click',()=>{
 });
 el('closeShop').addEventListener('click',()=>dialog.close());
 dialog.addEventListener('close',()=>{
+ closeShopFilters();
  if(!el('accountDialog').open&&window.riftGame.getPhase()==='menu'){
   (opener?.getClientRects().length?opener:el('shopOpen')).focus({preventScroll:true});
  }
@@ -212,9 +228,16 @@ dialog.addEventListener('click',event=>{
   if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)dialog.close();
   return;
  }
- const button=event.target.closest('[data-shop-view],[data-shop-filter]');
+ if(!event.target.closest('.shop-dropdown'))closeShopFilters();
+ const button=event.target.closest('[data-shop-view],[data-shop-filter],[data-shop-fighter],[data-shop-sort]');
  if(!button)return;
- if(button.dataset.shopView){view=button.dataset.shopView;filter='all';}else filter=button.dataset.shopFilter;
+ if(button.dataset.shopView){view=button.dataset.shopView;filter=fighterFilter==='all'?'all':'skin';}
+ else if(button.dataset.shopFighter){fighterFilter=button.dataset.shopFighter;if(fighterFilter!=='all')filter='skin';}
+ else if(button.dataset.shopSort)priceSort=button.dataset.shopSort;
+ else {filter=button.dataset.shopFilter;if(filter!=='skin')fighterFilter='all';}
+ const dropdown=button.closest('.shop-dropdown');
+ closeShopFilters();
+ if(dropdown)dropdown.querySelector('summary').focus({preventScroll:true});
  status('');
  render();
 });

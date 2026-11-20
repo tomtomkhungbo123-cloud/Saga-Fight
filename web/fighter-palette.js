@@ -1,7 +1,7 @@
 // Fighter skins and mirror palettes. Recolor sprites once; no per-frame filters.
 (()=>{
  const angles={thunder:155,soul:205,cylast:100,mox:165,melanta:130,fairi:145,aether:145},contexts=new WeakMap(),images=new WeakMap(),caches={};
- const effects=new Map();
+ const effects=new Map(),contextTypes=new WeakMap(),tints=new WeakMap();
  const matrices={
   // Turn Thunder Stance's gold into dark reds while keeping the garment's shading.
   'thunder-crimson':[.67,.24,-.13, -.09,.24,.04, 0,.25,-.02]
@@ -32,7 +32,18 @@
   }
   g.putImageData(pixels,0,0);return cache[type]=c;
  }
- function context(ctx,type){let cache=contexts.get(ctx);if(!cache)contexts.set(ctx,cache={});if(cache[type])return cache[type];const methods=new Map();return cache[type]=new Proxy(ctx,{set(target,key,value){target[key]=['fillStyle','strokeStyle','shadowColor'].includes(key)?color(value,type):value;return true;},get(target,key){const value=target[key];if(typeof value!=='function')return value;if(methods.has(key))return methods.get(key);let fn;if(key==='drawImage')fn=(source,...args)=>target.drawImage(image(source,type),...args);else if(key==='createLinearGradient'||key==='createRadialGradient')fn=(...args)=>{const gradient=value.apply(target,args),add=gradient.addColorStop.bind(gradient);gradient.addColorStop=(offset,c)=>add(offset,color(c,type));return gradient;};else fn=value.bind(target);methods.set(key,fn);return fn;}});}
+ // These atlases carry alpha silhouettes; native source-in tint avoids scanning millions of pixels.
+ function tint(source,value,drawContext){
+  const type=contextTypes.get(drawContext),target=type?color(value,type):value;
+  let cache=tints.get(source);if(!cache)tints.set(source,cache=new Map());
+  const key=(type||'base')+':'+target;if(cache.has(key))return cache.get(key);
+  const output=document.createElement('canvas');output.width=source.naturalWidth||source.width;output.height=source.naturalHeight||source.height;
+  const g=output.getContext('2d');g.drawImage(source,0,0);g.globalCompositeOperation='source-in';g.fillStyle=target;g.fillRect(0,0,output.width,output.height);
+  // The matching context must not recolor this already-tinted image a second time.
+  if(type)images.set(output,{[type]:output});
+  if(cache.size>=8)cache.delete(cache.keys().next().value);cache.set(key,output);return output;
+ }
+ function context(ctx,type){let cache=contexts.get(ctx);if(!cache)contexts.set(ctx,cache={});if(cache[type])return cache[type];const methods=new Map();const proxy=new Proxy(ctx,{set(target,key,value){target[key]=['fillStyle','strokeStyle','shadowColor'].includes(key)?color(value,type):value;return true;},get(target,key){const value=target[key];if(typeof value!=='function')return value;if(methods.has(key))return methods.get(key);let fn;if(key==='drawImage')fn=(source,...args)=>target.drawImage(image(source,type),...args);else if(key==='createLinearGradient'||key==='createRadialGradient')fn=(...args)=>{const gradient=value.apply(target,args),add=gradient.addColorStop.bind(gradient);gradient.addColorStop=(offset,c)=>add(offset,color(c,type));return gradient;};else fn=value.bind(target);methods.set(key,fn);return fn;}});contextTypes.set(proxy,type);return cache[type]=proxy;}
  function register(type,angle){
   if(Object.hasOwn(angles,type))return;
   angles[type]=angle;
@@ -52,5 +63,5 @@
   });
   effects.set(type,{boost,channels});
  }
- window.FighterPalette={context,color,image,register,registerEffect};
+ window.FighterPalette={context,color,image,tint,register,registerEffect};
 })();
