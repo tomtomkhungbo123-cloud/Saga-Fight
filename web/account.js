@@ -3,16 +3,45 @@
 const byId=id=>document.getElementById(id),dialog=byId('accountDialog'),entry=byId('accountEntry');if(!dialog||!entry)return;
 const opens=[...document.querySelectorAll('[data-account-open]')],tabs=[...document.querySelectorAll('[data-account-tab]')];let user=null,lastFocus=null,pending=false,client=null,session=null,authBusy=false,authConfig=null;
 function tab(kind,focus=false){for(const b of tabs){const selected=b.dataset.accountTab===kind;b.setAttribute('aria-selected',String(selected));b.tabIndex=selected?0:-1;if(selected&&focus)b.focus();}byId('accountLoginPanel').hidden=kind!=='login';byId('accountRegisterPanel').hidden=kind!=='register';byId('accountTitle').textContent=kind==='register'?'Bắt đầu hành trình':'Chào mừng trở lại';}
-function render(){window.SagaSeasons?.sync(user?.canManageSeasons===true);byId('accountGuest').hidden=!!user;byId('accountMember').hidden=!user;opens.forEach(b=>b.hidden=!!user);entry.querySelector('span').hidden=!!user;byId('accountProfile').hidden=!user;
+function render(){window.SagaShop?.signedIn(user?.email);window.SagaSeasons?.sync(user?.canManageSeasons===true);byId('accountGuest').hidden=!!user;byId('accountMember').hidden=!user;opens.forEach(b=>b.hidden=!!user);entry.querySelector('span').hidden=!!user;byId('accountProfile').hidden=!user;
 if(user){byId('accountProfile').textContent='TÀI KHOẢN · '+user.displayName;byId('accountProfile').setAttribute('aria-label','Tài khoản của '+user.displayName);byId('accountName').textContent=user.displayName;byId('accountEmail').textContent=user.username?'Tên đăng nhập: '+user.username:user.email;dialog.setAttribute('aria-labelledby','accountName');}else dialog.setAttribute('aria-labelledby','accountTitle');}
 let statsPending=false,match=null;
 const fighterNames={thunder:'Thunder Stance',soul:'Soulblade',cylast:'Cylast',mox:'Mox',melanta:'Melanta',aether:'Aether',fairi:'Fairi'};
 function clearStats(){for(const key of ['Rank','Favorite','Played','WinRate','Wins','Losses'])byId('account'+key).textContent='—';byId('accountFavoriteGames').textContent='';byId('accountPortrait').hidden=true;}
 async function stats(){if(!user||statsPending)return;statsPending=true;byId('accountStatsStatus').textContent='Đang tải thống kê…';try{const r=await fetch('/api/account/stats',{cache:'no-store',credentials:'same-origin',headers:await authHeaders()});if(!r.ok)throw Error();const {stats:s}=await r.json();byId('accountRank').textContent=s.rank?'#'+s.rank:'Chưa xếp hạng';for(const key of ['played','wins','losses'])byId('account'+key[0].toUpperCase()+key.slice(1)).textContent=String(s[key]);byId('accountWinRate').textContent=s.winRate.toLocaleString('vi-VN')+'%';byId('accountFavorite').textContent=s.favorite?fighterNames[s.favorite.type]:'Chưa có chiến binh';byId('accountFavoriteGames').textContent=s.favorite?s.favorite.games+' trận':'';const canvas=byId('accountPortrait');canvas.hidden=!s.favorite;if(s.favorite){canvas.setAttribute('aria-label',fighterNames[s.favorite.type]);window.SagaRoster?.portrait(canvas,s.favorite.type);}byId('accountStatsStatus').textContent='';}catch{clearStats();byId('accountStatsStatus').textContent='Chưa tải được thống kê. Mở lại tài khoản để thử lại.';}finally{statsPending=false;}}
-async function post(path,body){const r=await fetch('/api/account/'+path,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json',...await authHeaders()},body:JSON.stringify(body)});if(!r.ok)throw Error('Chưa lưu được kết quả');return r.json();}
-async function save(operation){for(let attempt=0;attempt<3;attempt++){try{await operation();if(dialog.open)stats();return;}catch{if(attempt<2)await new Promise(resolve=>setTimeout(resolve,1000*(attempt+1)));}}byId('accountStatsStatus').textContent='Một kết quả chưa lưu được do mất kết nối.';}
-function beginMatch(mode,fighter){match=null;if(mode!=='pve'||!user||!window.crypto?.randomUUID)return;const m=match={id:crypto.randomUUID(),fighter};m.ready=post('pve-start',{id:m.id,fighter}).then(()=>true,()=>false);}
-function finishMatch(winner){const m=match;match=null;if(m)save(async()=>{if(!await m.ready)await post('pve-start',{id:m.id,fighter:m.fighter});await post('pve-finish',{id:m.id,winner});});}
+async function post(path,body,owner){
+ const headers=await authHeaders();
+ if(!owner||user?.email!==owner||session?.user?.email!==owner)throw Error('Phiên tài khoản đã thay đổi.');
+ const r=await fetch('/api/account/'+path,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json',...headers},body:JSON.stringify(body),signal:AbortSignal.timeout(7000)});
+ if(!r.ok)throw Error('Chưa lưu được kết quả');
+ return r.json();
+}
+async function save(operation){
+ for(let attempt=0;attempt<3;attempt++){
+  try{const result=await operation();if(dialog.open)stats();return result;}
+  catch{if(attempt<2)await new Promise(resolve=>setTimeout(resolve,1000*(attempt+1)));}
+ }
+ byId('accountStatsStatus').textContent='Một kết quả chưa lưu được do mất kết nối.';
+ return null;
+}
+function beginMatch(mode,fighter){
+ match=null;
+ if(mode!=='pve'||!user||!window.crypto?.randomUUID)return;
+ const m=match={id:crypto.randomUUID(),fighter,owner:user.email};
+ window.SagaShop?.matchState(m.id);
+ m.ready=post('pve-start',{id:m.id,fighter},m.owner).then(()=>true,()=>false);
+}
+function finishMatch(winner){
+ const m=match;
+ match=null;
+ if(!m)return;
+ window.SagaShop?.matchReward(m.id,0,'Đang ghi nhận Scoin…');
+ void save(async()=>{
+  if(!await m.ready)await post('pve-start',{id:m.id,fighter:m.fighter},m.owner);
+  return post('pve-finish',{id:m.id,winner},m.owner);
+ }).then(result=>window.SagaShop?.matchReward(m.id,result?.scoin,
+  result?'Trận này không đủ điều kiện nhận Scoin.':'Chưa xác nhận được Scoin. Kiểm tra số dư trong cửa hàng.'));
+}
 function close(){if(dialog.open)dialog.close();}
 function open(kind){if(byId('menu').hidden||window.riftNet?.room)return;lastFocus=document.activeElement;tab(kind);render();if(user)stats();if(!dialog.open)dialog.showModal();(user?byId('closeAccount'):byId(kind==='register'?'accountRegisterTab':'accountLoginTab')).focus();}
 async function authHeaders(){if(!client)return {};const {data,error}=await client.auth.getSession();if(error)throw error;session=data.session;return session?{'X-Saga-Auth':session.access_token}:{};}
@@ -27,5 +56,5 @@ byId('accountLogout').addEventListener('click',async()=>{if(!client||authBusy)re
 async function initialize(){try{const response=await fetch('/api/auth/config',{cache:'no-store'});if(!response.ok)throw Error();const config=await response.json();if(!config.configured){message('Dịch vụ tài khoản đang được kết nối. Bạn vẫn có thể chơi ngay.');return;}authConfig=config;client=window.supabase.createClient(config.url,config.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});client.auth.onAuthStateChange(()=>{setTimeout(()=>refresh(),0);});await refresh();}catch{message('Chưa kết nối được dịch vụ tài khoản. Vui lòng tải lại trang để thử lại.',true);}}
 opens.forEach(b=>b.addEventListener('click',()=>open(b.dataset.accountOpen)));tabs.forEach(b=>{b.addEventListener('click',()=>tab(b.dataset.accountTab));b.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();tab(e.key==='Home'?'login':e.key==='End'?'register':b.dataset.accountTab==='login'?'register':'login',true);});});
 byId('accountProfile').addEventListener('click',()=>open('login'));byId('closeAccount').addEventListener('click',close);dialog.addEventListener('click',e=>{if(e.target!==dialog)return;const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)close();});dialog.addEventListener('close',()=>{if(lastFocus?.isConnected&&!lastFocus.hidden&&!byId('menu').hidden)lastFocus.focus();});
-window.SagaAccount={close,beginMatch,finishMatch,saveOnline:save,headers:authHeaders};window.addEventListener('pageshow',()=>{if(client)refresh();});render();initialize();
+window.SagaAccount={close,beginMatch,finishMatch,headers:authHeaders,open};window.addEventListener('pageshow',()=>{if(client)refresh();});render();initialize();
 })();

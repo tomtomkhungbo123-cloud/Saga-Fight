@@ -1,0 +1,79 @@
+.shop-button-copy{display:grid;min-width:0;text-align:left;line-height:1.15}
+#lobbyScoin{color:#ffe1a0;font-size:10px;letter-spacing:0;overflow:hidden;text-overflow:ellipsis}
+body.playing>header #shopOpen,
+body:has(#lobbyCard:not([hidden]))>header #shopOpen{display:none}
+
+.shop-kicker .scoin-mark{width:24px;height:24px;color:#edcf89}
+@media(max-width:1100px){
+ #shopOpen .shop-button-copy{display:none}
+}
+@media(max-width:420px) and (orientation:portrait){
+ body>header #accountProfile{max-width:72px}
+}
+@media(max-width:360px) and (orientation:portrait){
+ body>header .brand-wordmark{display:none}
+}
+.account-shop{display:flex;align-items:center;gap:12px;margin:8px 0 12px;color:#f7d38b}
+#matchScoin{margin:8px 0;color:#ffd87e;font-weight:700}
+#shopDialog{
+ width:min(880px,calc(100vw - 30px));max-height:calc(100dvh - 28px);
+ padding:clamp(14px,3vw,26px);border:1px solid #856845;border-radius:12px;
+ color:#f8ede6;background:linear-gradient(145deg,#231d25,#141217 58%);
+ box-shadow:0 20px 80px #070509b0;overscroll-behavior:contain;
+}
+#shopDialog::backdrop{background:#08070cbb}
+.shop-head,.shop-head-actions,.shop-rewards,.shop-toolbar,.shop-views,.shop-filters{
+ display:flex;align-items:center;gap:10px;
+}
+.shop-head,.shop-toolbar,.shop-rewards{justify-content:space-between;flex-wrap:wrap}
+.shop-head h2{font-size:clamp(28px,5vw,44px);line-height:1.03;margin:5px 0 10px;color:#fff0cf}
+.shop-kicker{display:flex;align-items:center;gap:8px;margin:0;color:#d2ab75;font-size:13px;letter-spacing:.13em;font-weight:800}
+#shopBalance{color:#ffe1a0;font-size:16px;font-variant-numeric:tabular-nums}
+#shopDialog button,.account-shop button{
+ min-height:36px;padding:6px 10px;border:1px solid #55464b;border-radius:5px;
+ background:#2b252c;color:#f7ebdf;line-height:1.15;font-size:14px;letter-spacing:0;cursor:pointer;
+}
+#shopDialog button:focus-visible,.account-shop button:focus-visible{
+ outline:2px solid #ffe3a8;outline-offset:3px;
+}
+#shopDialog button:hover:not(:disabled){border-color:#debb84}
+#shopDialog button:disabled{opacity:.48;cursor:default}
+.shop-rewards{
+ padding:10px 12px;margin:0 0 13px;border:1px solid #58442f;border-radius:6px;background:#1e191b;
+}
+.shop-rewards strong{font-size:14px;color:#f4d091}
+.shop-rewards p{margin:3px 0 0;font-size:13px;color:#c4b5ae;line-height:1.45}
+.shop-views,.shop-filters{gap:5px;flex-wrap:wrap}
+#shopDialog .shop-views button[aria-pressed=true]{background:#edc681;border-color:#edc681;color:#221815;font-weight:800}
+#shopDialog .shop-filters button[aria-pressed=true]{border-color:#a38255;color:#ffdd9b;background:#392e2b}
+#shopStatus{color:#ffe2a9;font-size:14px;min-height:1.4em;margin:7px 0}
+.shop-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.shop-card{overflow:hidden;display:flex;flex-direction:column;border:1px solid #54434b;border-radius:7px;background:#211b22}
+.shop-art{
+ display:grid;place-items:center;position:relative;height:144px;overflow:hidden;
+ background:radial-gradient(ellipse at 50% 71%,color-mix(in srgb,var(--item-color) 26%,transparent),transparent 67%),#17141d;
+ border-bottom:1px solid #423541;
+}
+.shop-art canvas{position:absolute;inset:0;margin:auto;width:auto;height:100%;max-height:100%;max-width:100%;object-fit:contain}
+.shop-art canvas[width="100"]{height:88%}
+.shop-kind,.shop-equipped{
+ position:absolute;top:9px;left:9px;background:#17121ee6;color:var(--item-color);font-size:13px;
+ border:1px solid #685260;border-radius:4px;padding:3px 6px;
+}
+.shop-equipped{left:auto;right:9px;color:#d3f1bf}
+.shop-card-copy{display:flex;flex-direction:column;flex:1;padding:10px}
+.shop-card h3{font-size:17px;line-height:1.15;margin:0}
+.shop-card p{font-size:14px;line-height:1.35;color:#d4c1be;margin:5px 0 12px;flex:1}
+#shopDialog .shop-item-action{width:100%;color:#ffe0a7;background:#33272a;border-color:#745941}
+#shopEmpty{color:#d8c7c0;margin:12px 0 8px;font-size:15px}
+@media(max-width:620px){
+ .shop-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ .shop-art{height:115px}
+ .shop-art canvas[width="100"]{max-height:84px}
+ .shop-kind,.shop-equipped{font-size:11px;top:6px;padding:2px 4px}
+ .shop-equipped{top:auto;bottom:5px}
+}
+@media(max-height:475px) and (orientation:landscape){
+ #shopDialog{max-height:calc(100dvh - 16px)}
+ .shop-art{height:100px}
+}

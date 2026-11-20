@@ -1,3 +1,4 @@
+import {shopOffer,shopAccount,mutateShop,savePveScoin,saveOnlineScoin,matchScoin,shopLoadouts} from './shop.mjs';
 const json=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 const fail=(message,status=400)=>{throw Object.assign(new Error(message),{status});};
 const token=()=>crypto.randomUUID()+crypto.randomUUID();
@@ -69,6 +70,13 @@ export async function api(request,env){
    return json({season:seasonInfo(await activeSeason(env.DB))},201);
   }catch{return json({error:'Chưa mở được mùa mới. Hãy tải lại để kiểm tra trước khi thử lại.'},409);}
  }
+ if(url.pathname==='/api/account/shop'&&request.method==='GET'){
+  const id=accountId(request);
+  if(!id)return json({...shopOffer(),account:null});
+  if(!env.DB)return json({error:'Cửa hàng chưa sẵn sàng.'},503);
+  try{return json({...shopOffer(),account:await shopAccount(env.DB,id)});}
+  catch{return json({error:'Chưa tải được cửa hàng. Vui lòng thử lại.'},503);}
+ }
  if(url.pathname==='/api/account/stats'){
   if(request.method!=='GET')return json({error:'Chỉ hỗ trợ GET.'},405);const id=accountId(request);if(!id)return json({error:'Vui lòng đăng nhập để xem thống kê.'},401);if(!env.DB)return json({error:'Thống kê chưa sẵn sàng.'},503);try{return json({stats:await playerStats(env.DB,id)});}catch{return json({error:'Chưa tải được thống kê.'},503);}
  }
@@ -80,10 +88,20 @@ export async function api(request,env){
  if(!data||typeof data!=='object'||Array.isArray(data))return json({error:'Dữ liệu không hợp lệ.'},400);
  try{
   if(!env.DB)fail('Online chưa sẵn sàng. Vui lòng thử lại.',503);
+  if(url.pathname==='/api/account/shop'){
+   const id=accountId(request);if(!id)fail('Đăng nhập để dùng Scoin.',401);
+   if(origin!==url.origin)fail('Yêu cầu không hợp lệ.',403);
+   const result=await mutateShop(env.DB,id,data,now);
+   if(result.status)return json({error:result.error},result.status);
+   return json(result);
+  }
   if(url.pathname==='/api/account/pve-start'||url.pathname==='/api/account/pve-finish'){
    const id=accountId(request);if(!id)fail('Vui lòng đăng nhập để lưu thống kê.',401);if(typeof data.id!=='string'||!/^[-a-f0-9]{36}$/i.test(data.id))fail('Mã trận không hợp lệ.');
    if(url.pathname.endsWith('pve-start')){if(fighter(data.fighter)!==data.fighter)fail('Chiến binh không hợp lệ.');await env.DB.prepare("INSERT OR IGNORE INTO game_matches(id,mode,p1,host_user_id,created_at) VALUES(?,'pve',?,?,?)").bind(data.id,data.fighter,id,now).run();const match=await env.DB.prepare('SELECT * FROM game_matches WHERE id=?').bind(data.id).first();if(match.host_user_id!==id||match.mode!=='pve'||match.p1!==data.fighter)fail('Trận đấu không thuộc tài khoản này.',403);return json({id:match.id});}
-   const match=await env.DB.prepare('SELECT * FROM game_matches WHERE id=?').bind(data.id).first();if(!match||match.host_user_id!==id||match.mode!=='pve')fail('Trận đấu không thuộc tài khoản này.',403);if(![0,1].includes(data.winner))fail('Kết quả không hợp lệ.');if(match.winner!=null&&match.winner!==data.winner)fail('Trận đấu đã được ghi nhận.',409);await env.DB.prepare('UPDATE game_matches SET winner=?,finished_at=? WHERE id=? AND winner IS NULL').bind(data.winner,now,data.id).run();return json({saved:true});
+   const match=await env.DB.prepare('SELECT * FROM game_matches WHERE id=?').bind(data.id).first();if(!match||match.host_user_id!==id||match.mode!=='pve')fail('Trận đấu không thuộc tài khoản này.',403);if(![0,1].includes(data.winner))fail('Kết quả không hợp lệ.');if(match.winner!=null&&match.winner!==data.winner)fail('Trận đấu đã được ghi nhận.',409);if(match.winner==null)await savePveScoin(env.DB,data.id,data.winner,now);
+   const settled=await env.DB.prepare('SELECT winner FROM game_matches WHERE id=?').bind(data.id).first();
+   if(settled.winner!==data.winner)fail('Trận đấu đã được ghi nhận.',409);
+   return json({saved:true,scoin:await matchScoin(env.DB,data.id,id,'pve')});
   }
   if(url.pathname==='/api/rooms/create'){
    // Expired rooms are disposable; bounded cleanup keeps the live table small.
@@ -108,7 +126,18 @@ export async function api(request,env){
   const secret=(request.headers.get('Authorization')||'').replace(/^Bearer /,'');if(!secret||secret.length>200)fail('Phiên chơi không hợp lệ.',401);
   const key=await hash(secret),role=key===room.host_key?'host':key===room.guest_key?'guest':null;if(!role)fail('Phiên chơi không hợp lệ.',401);
   if(url.pathname==='/api/rooms/result'){
-   if(role!=='host')fail('Chỉ chủ phòng được xác nhận kết quả.',403);if(![0,1].includes(data.winner)||typeof data.id!=='string')fail('Kết quả không hợp lệ.');const match=await env.DB.prepare("SELECT * FROM game_matches WHERE id=? AND room_code=? AND mode='online'").bind(data.id,code).first();if(!match)fail('Không tìm thấy trận đấu.',404);if(match.winner!=null&&match.winner!==data.winner)fail('Trận đấu đã được ghi nhận.',409);await env.DB.prepare('UPDATE game_matches SET winner=?,finished_at=? WHERE id=? AND winner IS NULL').bind(data.winner,now,data.id).run();return json({saved:true});
+   if(role!=='host'&&data.confirm!==true)fail('Chỉ chủ phòng được xác nhận kết quả.',403);if(![0,1].includes(data.winner)||typeof data.id!=='string')fail('Kết quả không hợp lệ.');const match=await env.DB.prepare("SELECT * FROM game_matches WHERE id=? AND room_code=? AND mode='online'").bind(data.id,code).first();if(!match)fail('Không tìm thấy trận đấu.',404);if(match.winner!=null&&match.winner!==data.winner)fail('Trận đấu đã được ghi nhận.',409);if(data.confirm===true){
+    const participant=role==='host'?match.host_user_id:match.guest_user_id;
+    // Guest reports support the existing host result. A guest-only room still records stats as before.
+    if(!match.host_user_id||!match.guest_user_id||match.host_user_id===match.guest_user_id){
+     if(role==='host')await env.DB.prepare('UPDATE game_matches SET winner=?,finished_at=? WHERE id=? AND winner IS NULL').bind(data.winner,now,data.id).run();
+     return json({saved:true,scoin:0,pending:false});
+    }
+    const {pending,conflict}=await saveOnlineScoin(env.DB,match,role==='host'?0:1,data.winner,now);
+    if(conflict)fail('Kết quả từ hai máy không khớp.',409);
+    return json({saved:!pending,scoin:await matchScoin(env.DB,data.id,participant,'online'),pending});
+   }
+   await env.DB.prepare('UPDATE game_matches SET winner=?,finished_at=? WHERE id=? AND winner IS NULL').bind(data.winner,now,data.id).run();return json({saved:true});
   }
   if(url.pathname==='/api/rooms/leave'){
    await env.DB.prepare("UPDATE duel_rooms SET status='closed' WHERE code=?").bind(code).run();return json({closed:true});
@@ -129,7 +158,7 @@ export async function api(request,env){
     }else if(data.action==='ready'){
      if(typeof data.value!=='boolean')fail('Trạng thái sẵn sàng không hợp lệ.');
      if(data.value&&!room.guest_key)fail('Đang chờ người chơi thứ hai.',409);
-     l.ready[id]=data.value;if(l.ready.every(Boolean)){l.stage='playing';l.generation++;l.matchId=crypto.randomUUID();}
+     l.ready[id]=data.value;if(l.ready.every(Boolean)){l.stage='playing';l.generation++;l.matchId=crypto.randomUUID();config.cosmetics=await shopLoadouts(env.DB,[room.host_user_id,room.guest_user_id]);}
     }else fail('Thao tác phòng không hợp lệ.');
    }
    l.revision++;config.lobby=l;

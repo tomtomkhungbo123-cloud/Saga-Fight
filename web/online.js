@@ -41,7 +41,7 @@
 
  function paintPing(n){const node=el('netBadge'),value=Number.isFinite(n?.peerPing)?Math.max(0,Math.round(n.peerPing)):null;node.textContent=(value??'—')+' ms';const jitter=n?.jitter||0;node.dataset.quality=n?.suspended?'bad':value===null?'pending':value>150||jitter>80?'bad':value>80||jitter>40?'fair':'good';node.hidden=!n;node.setAttribute?.('aria-label','Ping '+(value===null?'đang đo':value+' mili giây')+' · '+{good:'tốt',fair:'trung bình',bad:'yếu hoặc gián đoạn',pending:'đang đo'}[node.dataset.quality]);}
  const status=text=>{el('netBadge').title=text;paintPing(session);};const error=text=>el('netError').textContent=text;
- async function api(path,body={},token){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),5000);try{const r=await fetch('/api/rooms/'+path,{method:'POST',headers:{'Content-Type':'application/json',...(await window.SagaAccount?.headers?.()||{}),...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify(body),signal:controller.signal,cache:'no-store'}),data=await r.json();if(!r.ok)throw Object.assign(Error(data.error||'Không kết nối được phòng.'),{config:data.config});return data;}finally{clearTimeout(timer);}}
+ async function api(path,body={},token){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),5000);try{const r=await fetch('/api/rooms/'+path,{method:'POST',headers:{'Content-Type':'application/json',...(['create','join'].includes(path)?await window.SagaAccount?.headers?.()||{}:{}),...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify(body),signal:controller.signal,cache:'no-store'}),data=await r.json();if(!r.ok)throw Object.assign(Error(data.error||'Không kết nối được phòng.'),{config:data.config,status:r.status});return data;}finally{clearTimeout(timer);}}
  function wire(n,message){if(directRequired(n)&&n.activeRoute!=='direct'&&['rb-input','rb-hash','ping','pong'].includes(message?.type))return null;if(message?.type?.startsWith('rb-')&&message.type!=='rb-input'&&message.type!=='rb-hash')return n.channel;return n.activeRoute==='direct'&&message?.type!=='server-ping'?n.directChannel:n.channel;}
  function signal(n,kind,data={}){if(session!==n||n.channel?.readyState!=='open')return false;try{n.channel.send(JSON.stringify({type:'direct',kind,...(['offer','answer','candidate','ready','fallback'].includes(kind)?{attempt:n.directGeneration||0}:{}),...data}));return true;}catch{return false;}}
  function closeDirect(n){
@@ -152,6 +152,34 @@
  function resetInputs(){G.remote(0);G.resetPrediction?.();}
  function beforeStep(){}
  function confirm(){if(!session)return;if(G.getPhase()==='matchover')return roomAction('return');action(G.getPhase()==='paused'?'pause':'ready');}
+ function reportResult(winner){
+  const n=session, id=n?.config?.lobby?.matchId;
+  if(!id||n.result===id)return;
+  n.result=id;
+  window.SagaShop?.matchState(id);
+  void settleResult(n,id,winner);
+ }
+ async function settleResult(n,id,winner){
+  let pending=false;
+  for(const delay of [0,800,1500,2800,5000]){
+   if(delay)await new Promise(resolve=>setTimeout(resolve,delay));
+   try{
+    const result=await api('result',{code:n.room,id,winner,confirm:true},n.token);
+    pending=result.pending;
+    if(!pending){
+     window.SagaShop?.matchReward(id,result.scoin);
+     return;
+    }
+    window.SagaShop?.matchReward(id,0,'Đang chờ xác nhận Scoin từ trận Online…');
+   }catch(error){
+    if(error.status===409){
+     window.SagaShop?.matchReward(id,0,error.message);
+     return;
+    }
+   }
+  }
+  window.SagaShop?.matchReward(id,0,pending?'Trận Online chưa đủ xác nhận để nhận Scoin.':'Chưa xác nhận được Scoin. Kiểm tra số dư trong cửa hàng.');
+ }
  function action(k){const n=session;if(n?.rb&&n.synced&&!n.suspended)n.rb.queue(k);}
  function networkFrame(dt){const n=session;if(!n?.rb||n.inLobby||!n.synced||n.suspended||performance.now()<n.startAt)return;n.rbAcc=Math.min((n.rbAcc||0)+dt,.08);let steps=0,stalled=false;if(n.clockSkew>2&&n.rbAcc>=STEP){n.rbAcc-=STEP;n.clockSkew--;n.metrics.clockHolds=(n.metrics.clockHolds||0)+1;}while(n.rbAcc>=STEP&&steps++<10){if(!n.rb.advance(document.hidden?0:G.getMove())){n.rbAcc=0;stalled=true;break;}n.rbAcc-=STEP;}G.rollback.present(dt,stalled?1:n.rbAcc/STEP);n.metrics.frameMs=dt*1000;n.metrics.render=G.renderMetrics?.();n.metrics.rollback={...n.rb.stats,tick:n.rb.tick,confirmed:n.rb.confirmed,predicted:n.rb.tick-n.rb.confirmed};n.metrics.rttMs=n.peerPing;n.metrics.jitterMs=n.jitter;n.metrics.transport=n.activeRoute==='direct'?'webrtc-direct':'websocket';}
  function suspend(n){if(n.suspended)return;n.suspended=true;n.synced=false;n.lostAt=performance.now();n.rbAcc=0;window.sagaAudio?.stopCombat();window.sagaAudio?.syncMusic?.('pause');el('netCurtain').hidden=false;status('ONLINE · MẤT ĐỒNG BỘ · ĐANG KHÔI PHỤC');}
@@ -277,6 +305,6 @@
  el('roomCode').addEventListener('input',()=>{el('roomCode').value=el('roomCode').value.toUpperCase().replace(/[^A-Z2-9]/g,'').slice(0,6);});el('roomCode').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();join();}});
  el('copyRoom').onclick=async()=>{if(!session)return;const url=new URL(location.href);url.search='';url.hash='';url.searchParams.set('room',session.room);try{await navigator.clipboard.writeText(url.toString());el('copyRoom').textContent='ĐÃ SAO CHÉP ✓';}catch{error('Mã phòng: '+session.room+' · Gửi mã này cho bạn bè.');}};
  el('lobbyReady').onclick=()=>{if(session)roomAction('ready',{value:!session.config.lobby.ready[session.role==='host'?0:1]});};el('select0').addEventListener('change',()=>{if(canEdit(0)&&session)roomAction('select',{fighter:el('select0').value});});
- window.riftNet={retry:retryConnection,canEdit,selectMap:map=>roomAction('select',{map}),roomAction,get inLobby(){return !!session?.inLobby;},reportResult(){},diagnostics:diagnosticReport,get fullRollback(){return !!session;},get room(){return session?.room||null;},get role(){return session?.role||null;},get blocked(){return !!session&&(!session.synced||session.suspended);},action,confirm,leave,frame:networkFrame,beforeStep,metrics:()=>session?.metrics||null};
+ window.riftNet={retry:retryConnection,canEdit,selectMap:map=>roomAction('select',{map}),roomAction,get inLobby(){return !!session?.inLobby;},reportResult,diagnostics:diagnosticReport,get fullRollback(){return !!session;},get room(){return session?.room||null;},get role(){return session?.role||null;},get blocked(){return !!session&&(!session.synced||session.suspended);},action,confirm,leave,frame:networkFrame,beforeStep,metrics:()=>session?.metrics||null};
  const code=new URL(location.href).searchParams.get('room');if(code&&/^[A-Z2-9]{6}$/.test(code.toUpperCase())){document.querySelector('[data-mode="online"]').click();el('roomCode').value=code.toUpperCase();}
 })();

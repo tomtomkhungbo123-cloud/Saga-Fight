@@ -7,7 +7,7 @@ function line(x,y,x2,y2,color,w=2){ctx.strokeStyle=color;ctx.lineWidth=w;ctx.beg
 function ellipse(x,y,rx,ry,color,stroke){ctx.beginPath();ctx.ellipse(x,y,Math.max(.1,rx),Math.max(.1,ry),0,0,TAU);if(color){ctx.fillStyle=color;ctx.fill();}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=2;ctx.stroke();}}
 function glow(color='#48e7f4',blur=18){ctx.shadowColor=color;ctx.shadowBlur=blur;}
 function snowflake(x,y,r,rot=0){if(!snowflake.texture){let c=document.createElement('canvas');c.width=c.height=76;let g=c.getContext('2d');g.translate(38,38);g.beginPath();for(let i=0;i<6;i++){g.rotate(TAU/6);g.moveTo(0,0);g.lineTo(0,-20);g.moveTo(0,-12);g.lineTo(-4.6,-16);g.moveTo(0,-12);g.lineTo(4.6,-16);}g.strokeStyle='#72eafa';g.lineWidth=2.3;g.lineCap='round';g.shadowColor='#32d5ff';g.shadowBlur=12;g.stroke();snowflake.texture=c;}ctx.save();ctx.translate(x,y);ctx.rotate(rot);ctx.shadowBlur=0;ctx.drawImage(snowflake.texture,-r*1.9,-r*1.9,r*3.8,r*3.8);ctx.restore();}
-function character(x,y,dir,enemy=false){let g=game,p=g.player;ctx.save();ctx.translate(x,-y);ctx.scale(dir,1);let bob=enemy?0:Math.sin(game.time*2.9)*5,lean=enemy?0:p.vx*.018;ctx.translate(0,-bob);ellipse(0,14+bob,44,8,'#00000044');ctx.translate(0,-20);ctx.rotate(lean*.003+(enemy?0:g.pose.tilt));if(!enemy)ctx.translate(0,-g.pose.rise);if(enemy){ctx.fillStyle='#b999a4';ellipse(0,-113,17,21,'#b999a4');path('M-18 -89 Q0 -100 18 -87 L25 -35 L14 -30 L10 5 L0 5 L-5 -30 L-11 4 L-22 3 L-18 -39 Z','#a28491');line(-17,-83,-30,-45,'#a28491',12);line(16,-83,29,-45,'#a28491',12);line(25,-43,33,-85,'#dab4b9',4);ctx.restore();return;}
+function character(x,y,dir,enemy=false,effectContext=ctx){let g=game,p=g.player;ctx.save();ctx.translate(x,-y);ctx.scale(dir,1);let bob=enemy?0:Math.sin(game.time*2.9)*5,lean=enemy?0:p.vx*.018;ctx.translate(0,-bob);ctx.translate(0,-20);ctx.rotate(lean*.003+(enemy?0:g.pose.tilt));if(!enemy)ctx.translate(0,-g.pose.rise);if(enemy){ctx.fillStyle='#b999a4';ellipse(0,-113,17,21,'#b999a4');path('M-18 -89 Q0 -100 18 -87 L25 -35 L14 -30 L10 5 L0 5 L-5 -30 L-11 4 L-22 3 L-18 -39 Z','#a28491');line(-17,-83,-30,-45,'#a28491',12);line(16,-83,29,-45,'#a28491',12);line(25,-43,33,-85,'#dab4b9',4);ctx.restore();return;}
  // Reference-space silhouette: (78,154) is the lowest toe in the supplied drawing.
  // Keep all body parts the same flat blue and overlap joins to avoid neck seams.
  const pose=g.pose;
@@ -27,10 +27,13 @@ function character(x,y,dir,enemy=false){let g=game,p=g.player;ctx.save();ctx.tra
  path(`M65 83 Q${62+pose.reach*.3} ${94-pose.lift*.3} ${hx-3} ${hy+4} Q${hx-8} ${hy+8} ${hx-7} ${hy+2} Q${63+pose.reach*.4} ${85-pose.lift*.5} 67 79 Z`,blue);
  ctx.save();ctx.translate(hx,hy);ctx.rotate(gesture);
  path('M3 -4 Q0 0 -5 4 Q-8 9 -5 10 Q0 8 5 2 Z',blue);
+ const costumeContext=ctx;ctx=effectContext;
+ try {
  glow('#32d5ff',12);line(-6,-12,-2,35,'#3bcfff',2.3);
  snowflake(-6,-16,7.5+pose.flare*1.7,Math.sin(t*.8)*.06);
  if(pose.flare>.04){ctx.globalAlpha=pose.flare*.45;ellipse(-6,-16,13+pose.flare*4,13+pose.flare*4,null,'#8ceeff');ctx.globalAlpha=1;}
  ellipse(-13,-13,1.3,1.3,'#56ddff');ellipse(1,-18,1,1,'#56ddff');
+ } finally {ctx=costumeContext;}
  ctx.restore();ctx.restore();}
 
 // Small reusable glow textures. No live blur/filter passes on the arena canvas.
@@ -62,7 +65,14 @@ function bakeQFrame(index){
  for(let i=0;i<cuts.length-1;i++){let lo=cuts[i],hi=cuts[i+1];if((Math.sin(phase+(lo+hi)*.5*turns)>0)===front)ribbon(sample,lo,hi);}
  return c;});qAtlas[index]=frames;return frames;
 }
-let qWarm=0;function warmQ(){if(qWarm<48){bakeQFrame(qWarm++);requestAnimationFrame(warmQ);}}requestAnimationFrame(warmQ);
+let qWarm=0, warmSkin;
+function warmQ(){
+ if(qWarm>=qAtlas.length)return;
+ const frames=bakeQFrame(qWarm++);
+ if(warmSkin)for(const frame of frames)window.FighterPalette.image(frame,warmSkin);
+ requestAnimationFrame(warmQ);
+}
+requestAnimationFrame(warmQ);
 function iceAura(e,amount,height,front){
  ctx.save();ctx.translate(e.x,-e.y);ctx.shadowBlur=0;ctx.globalCompositeOperation='lighter';let strength=amount*(.94+.06*Math.sin(t*2.2));
  if(!front){ctx.globalAlpha=strength;ctx.drawImage(fxTextures.pool,-110,-36,220,70);}
@@ -172,7 +182,8 @@ function shield(front=false){
 
 function bind(context,f,enemy,clock,ground=0){ctx=context;t=clock;game={time:clock,player:{x:f.x,y:ground-f.y,vx:f.vx,dir:f.dir,hp:f.hp},enemy:{x:enemy.x,y:ground-enemy.y,hp:enemy.hp,root:Math.max(0,(enemy.rootUntil||0)-clock)},pose:f.frost.pose,ward:f.frost.ward};}
 window.CylastVisual={
- character(context,f,clock){bind(context,f,f,clock);const size=window.FighterSize?.scale('cylast')||1;ctx.save();ctx.translate(f.x,f.y);ctx.scale(size,size);ctx.translate(-f.x,-f.y);character(f.x,-f.y,f.dir);ctx.restore();},
+ warmEffectPalette(palette){warmSkin=palette;},
+ character(context,f,clock,surface=f.y,shadowOptions={},effectContext=context){window.FighterShadow?.draw(context,f,surface,shadowOptions);bind(context,f,f,clock);const size=window.FighterSize?.scale('cylast')||1;ctx.save();ctx.translate(f.x,f.y);ctx.scale(size,size);ctx.translate(-f.x,-f.y);character(f.x,-f.y,f.dir,false,effectContext);ctx.restore();},
  back(context,f,enemy,clock){bind(context,f,enemy,clock);for(const z of f.frost.zones){ctx.save();ctx.translate(0,z.y);bind(context,f,enemy,clock,z.y);zone(z,false);ctx.restore();}bind(context,f,enemy,clock);const q=f.frost.qLight,ice=f.frost.ice,aura=q||ice;if(aura){const light=q?smooth01(q.age/q.duration):smooth01((ice.duration-ice.age)/.22);iceAura({...aura,y:-aura.y},light,q?smooth01(q.age/q.duration):1,false);}shield(false);},
  front(context,f,enemy,clock){bind(context,f,enemy,clock);const q=f.frost.qLight,ice=f.frost.ice,aura=q||ice;if(ice)drawCrystal({...ice,y:-ice.y});if(aura){const light=q?smooth01(q.age/q.duration):smooth01((ice.duration-ice.age)/.22);iceAura({...aura,y:-aura.y},light,q?smooth01(q.age/q.duration):1,true);}shield(true);for(const z of f.frost.zones){ctx.save();ctx.translate(0,z.y);bind(context,f,enemy,clock,z.y);zone(z,true);ctx.restore();}},
  projectile(context,b){ctx=context;ctx.save();glow('#48e9ff',20);const dir=Math.sign(b.vx)||1;ctx.translate(b.x,b.y);ctx.scale(dir,1);ctx.rotate(Math.atan2(b.vy,Math.abs(b.vx)));path('M25 0 Q7 -14 -16 -5 L-60 -2 L-30 2 Q7 13 25 0 Z','#8cf4ff');line(-48,-2,15,0,'#d0ffff',2);ctx.restore();},

@@ -32,12 +32,12 @@ picker.addEventListener('cancel',e=>{e.preventDefault();close();});
 picker.addEventListener('close',()=>{if(!picker.open)restoreFocus();});
 picker.addEventListener('click',e=>{if(e.target!==picker)return;const r=picker.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)close();});
 picker.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(e.key))return;const list=previews.filter(p=>p.player===activePlayer),index=list.findIndex(p=>p.card===document.activeElement);if(index<0)return;e.preventDefault();const columns=getComputedStyle(panels[activePlayer]).gridTemplateColumns.split(' ').length,delta=e.key==='ArrowLeft'?-1:e.key==='ArrowRight'?1:e.key==='ArrowUp'?-columns:columns,next=e.key==='Home'?0:e.key==='End'?list.length-1:(index+delta+list.length)%list.length;list[next].card.focus();});
-function draw(p,clock){const g=p.canvas.getContext('2d'),f=p.fighter;g.clearRect(0,0,210,160);g.save();g.scale(.58,.58);f.x=181;f.y=258;f.dir=1;
+function draw(p,clock){const raw=p.canvas.getContext('2d'),g=p.palette?window.FighterPalette.context(raw,p.palette):raw,f=p.fighter;g.clearRect(0,0,210,160);g.save();g.scale(.58,.58);f.x=181;f.y=258;f.dir=1;
 const pool=g.createRadialGradient(181,237,1,181,237,91);pool.addColorStop(0,colors[p.type]+'30');pool.addColorStop(1,colors[p.type]+'00');g.fillStyle=pool;g.fillRect(85,145,192,125);
-if(p.type==='aether')window.AetherVisual.character(g,f,null,clock,()=>258,'high');else if(p.type==='melanta')window.MelantaVisual.character(g,f,f,clock,258);else if(p.type==='fairi')window.FairiVisual.character(g,f,null,clock,{surface:()=>258,viewer:'enemy'});else if(p.type==='mox')window.MoxVisual.character(g,f,f,clock,258);
+if(p.type==='aether')window.AetherVisual.character(g,f,null,clock,()=>258,'high',{preview:true});else if(p.type==='melanta')window.MelantaVisual.character(g,f,f,clock,258);else if(p.type==='fairi')window.FairiVisual.character(g,f,null,clock,{surface:()=>258,viewer:'enemy'});else if(p.type==='mox')window.MoxVisual.character(g,f,f,clock,258);
 else if(p.type==='soul')window.drawSoul(g,f,clock,true);
-else if(p.type==='cylast')window.CylastVisual.character(g,f,clock);
-else{window.ThunderModel.update(f,Math.min(.05,Math.max(0,clock-(p.lastThunderClock??clock))),clock);p.lastThunderClock=clock;window.ThunderModel.draw(g,f,clock,true);}
+else if(p.type==='cylast')window.CylastVisual.character(g,f,clock,258,{preview:true});
+else{window.FighterShadow?.draw(g,f,258,{preview:true});window.ThunderModel.update(f,Math.min(.05,Math.max(0,clock-(p.lastThunderClock??clock))),clock);p.lastThunderClock=clock;window.ThunderModel.draw(g,f,clock,true);}
 g.restore();p.painted=true;}
 const renderPreviews=[...summaries,...previews];
 let last=0;function frame(now){requestAnimationFrame(frame);if(picker.open&&($('menu').hidden||!editable(activePlayer)))close();if(document.hidden||$('menu').hidden||now-last<1000/30)return;last=now;
@@ -45,5 +45,5 @@ let last=0;function frame(now){requestAnimationFrame(frame);if(picker.open&&($('
  for(const p of renderPreviews){if(p.summary?picker.open||(p.player===1&&$('opponentLabel').hidden):!picker.open||p.player!==activePlayer)continue;
  const active=!reducedMotion?.matches&&(p.summary||$('select'+p.player).value===p.type||p.card===document.activeElement||p.card.matches(':hover'));if(active||!p.painted)draw(p,active?now/1000:0);}
 }
-window.SagaRoster={refresh:sync,portrait(canvas,type){if(!names[type])return;const p={canvas,type,player:0,fighter:makeFighter(type,0)};draw(p,0);if(!p.painted)art.idle.addEventListener('load',()=>draw(p,0),{once:true});}};sync();requestAnimationFrame(frame);
+window.SagaRoster={refresh:sync,portrait(canvas,type,palette){if(!names[type])return;const p={canvas,type,palette,player:0,fighter:makeFighter(type,0)};draw(p,0);if(!p.painted)art.idle.addEventListener('load',()=>draw(p,0),{once:true});}};sync();requestAnimationFrame(frame);
 })();

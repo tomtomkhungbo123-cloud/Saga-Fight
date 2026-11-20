@@ -111,7 +111,7 @@ function skin(f,s){const a=s.arm,angle=foreAngle(a),fc=Math.cos(angle),fs=Math.s
 }
 function transform(f,x,y){const s=f.thunderModel||make(),bob=Math.sin(s.clock*2.8)*MOTION.bob,c=Math.cos(s.lean*f.dir),si=Math.sin(s.lean*f.dir);return {x:f.x+visualScale*f.dir*(x*c-y*si),y:f.y+visualScale*(-16-bob+x*si+y*c)};}
 function muzzle(f){const s=f.thunderModel||make();const orb=orbLocal(s.arm);return transform(f,orb.x,orb.y);}
-function draw(c,f,time,bloom=true){const s=f.thunderModel||update(f,0,time),pts=skin(f,s),n=pts.length/2,bob=Math.sin(s.clock*2.8)*MOTION.bob;
+function draw(c,f,time,bloom=true,effectContext=c){const s=f.thunderModel||update(f,0,time),pts=skin(f,s),n=pts.length/2,bob=Math.sin(s.clock*2.8)*MOTION.bob;
  c.save();c.translate(f.x,f.y);c.scale(visualScale,visualScale);c.translate(0,-16-bob);c.scale(f.dir,1);c.rotate(s.lean*f.dir);
  c.fillStyle='#e1d490';if(hairOutline.length){c.beginPath();c.moveTo(s.hairPoints[0],s.hairPoints[1]);for(let i=1;i<hairOutline.length;i++)c.lineTo(s.hairPoints[i*2],s.hairPoints[i*2+1]);c.closePath();c.fill();}
  // Sleeve and upper arm stay behind the fixed shoulder/collar.
@@ -123,7 +123,7 @@ function draw(c,f,time,bloom=true){const s=f.thunderModel||update(f,0,time),pts=
  c.beginPath();c.moveTo(s.handPoints[0],s.handPoints[1]);for(let i=1;i<palmOutline.length;i++)c.lineTo(s.handPoints[i*2],s.handPoints[i*2+1]);c.closePath();c.fill();
  // Fixed costume pads cover the armhole; they never rotate with either arm bone.
  for(const pad of shoulderPads){c.beginPath();c.moveTo(...pad[0]);for(let i=1;i<pad.length;i++)c.lineTo(...pad[i]);c.closePath();c.fill();}
- const orb=orbLocal(s.arm);drawOrb(c,orb.x,orb.y,11.5+Math.sin(time*5)*.25,time,bloom);
+ const orb=orbLocal(s.arm);drawOrb(effectContext,orb.x,orb.y,11.5+Math.sin(time*5)*.25,time,bloom);
  c.restore();
 }
 function drawOrb(c,ox,oy,r,time,bloom=true){c.save();

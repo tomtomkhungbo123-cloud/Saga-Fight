@@ -261,9 +261,9 @@ if(f.type==='warning'){c.strokeStyle=`rgba(202,226,185,${.25+.45*u})`;c.lineWidt
 
 let trailCache=new Map();
 function level(q){return q==='low'?'low':q==='balanced'?'medium':'high'}
-function character(c,f,e,time,surface,q){quality=level(q);const g=f.aether,base=surface(f.x,f.y),p={x:f.x,y:base-f.y,vx:f.vx,vy:-f.vy,dir:f.dir},a=f.action,action=a?{...a,t:a.age,n:a.n||1}:null,travel=g.liquid?{...g.liquid,spikes:[]}:null;
+function character(c,f,e,time,surface,q,shadowOptions={}){quality=level(q);const g=f.aether,base=surface(f.x,f.y),p={x:f.x,y:base-f.y,vx:f.vx,vy:-f.vy,dir:f.dir},a=f.action,action=a?{...a,t:a.age,n:a.n||1}:null,travel=g.liquid?{...g.liquid,spikes:[]}:null;
 let simTravel=travel;if(travel){let local=trailCache.get(f.id);if(!local||g.liquid.t<local.t){local={lastX:f.x,distance:0,serial:0,spikes:[],t:0,startY:g.liquid.startY};trailCache.set(f.id,local)}const elapsed=Math.max(0,Math.min(.05,travel.t-local.t));local.t=travel.t;LIQUID_TRAVEL.advance(local,f.x,elapsed,CONFIG.e);Object.assign(travel,local);simTravel=local;}else trailCache.delete(f.id);
-c.save();c.fillStyle='#07121555';c.beginPath();c.ellipse(f.x,base+5,42/(1+Math.max(0,base-f.y)/200),8/(1+Math.max(0,base-f.y)/200),0,0,Math.PI*2);c.fill();c.restore();const sim={t:time,action,travel:simTravel,q:g.q,enemy:e?{x:e.x,y:base-e.y}:{x:f.x+300,y:0}};c.save();c.translate(0,base);drawAether(c,p,sim,quality);c.restore();}
+window.FighterShadow?.draw(c,f,base,shadowOptions);const sim={t:time,action,travel:simTravel,q:g.q,enemy:e?{x:e.x,y:base-e.y}:{x:f.x+300,y:0}};c.save();c.translate(0,base);drawAether(c,p,sim,quality);c.restore();}
 function front(c,f,e,time,q){quality=level(q);const g=f.aether;if(g.cage){const cage=g.cage;c.save();c.translate(0,cage.base);CAGE_VFX.draw(c,cage,time,quality,'back');CAGE_VFX.draw(c,cage,time,quality,'front');c.restore()}
 for(const b of g.shots){c.save();c.translate(0,b.base);projectile(c,b);c.restore()}
 for(const v of g.events){const age=time-v.born,life=v.life||.6;if(age<0||age>=life)continue;c.save();c.translate(0,v.y);effect(c,{...v,type:v.kind,t:age,life,y:0});c.restore();}}
