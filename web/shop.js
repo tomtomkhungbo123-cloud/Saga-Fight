@@ -54,6 +54,7 @@ async function refresh(){
  try{
   const data=await request();
   if(version!==accountGeneration||id!==refreshId)return;
+  if(user&&!data.account)throw Error('Chưa xác nhận được hòm đồ. Vui lòng thử lại hoặc đăng nhập lại.');
   catalog.clear();
   registerCatalog([...data.catalog,...(data.retired??[])]);
   rules=data.rules;

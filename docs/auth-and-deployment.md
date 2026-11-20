@@ -28,3 +28,15 @@ Before opening registration, in the SagaFight Supabase project go to Authenticat
 New accounts have no email recovery channel. Account recovery needs a separate verified admin process. The application does not grant privileges based on editable username metadata. The profile username is derived from the verified internal Auth address. Existing UUIDs/statistics and game networking stay intact.
 
 Validation: username normalization/collisions, invalid names, no signup while confirmation is enabled, real-session-required result handling, old email login compatibility, verified profile username, existing auth/bridge checks. Actual registration is pending the project's Confirm email switch; no real account was created in this update.
+
+## Durable shared account store (inventory-durable1)
+
+Production Node/Render now forwards all public `/api/*` requests to the existing public Saga Fight Site's D1 authority. `ACCOUNT_BACKEND_ORIGIN` defaults to `https://sagafight.neat-bowl-4907.chatgpt.site` when `RENDER=true` or `NODE_ENV=production`; local development retains local SQLite. Only HTTPS origins are accepted, apart from explicit test loopback. Authentication tokens are verified by the authority; cookies and client identity/admin headers are not forwarded. Never point this setting back at Render.
+
+The ephemeral SQLite file only owns transport rooms in production. The Site bridge calls `/relay-api/rooms/{create,join,sync,leave}` on Render so public room requests can pass through D1 without a forwarding loop. The bridge temporarily falls back on 404 to the old Render room endpoint for rolling upgrades. Deploy the Site bridge before the updated Render server. Both frontends then share account inventories, Scoin, gifts, equipment, stats and seasons by the same verified Supabase user UUID.
+
+An unavailable authority returns 503; it never falls back to a new empty inventory. `/healthz` must report `accountStorage: durable-shared`. The shop preserves prior state on errors and does not interpret a missing authenticated response as an empty bag. No account migration, inventory wipe or seed operation runs during builds. Keep the existing Site project ID and `d1: DB` binding when publishing.
+
+This protects future data. It does not recover SQLite files already removed by past Render deploys. Existing Render-only records require an independently retained database backup and a reviewed import; do not claim they have been migrated or recreate ownership from untrusted browser storage. Existing D1 records remain untouched. Do not delete a surviving old `.data/rooms.sqlite` backup.
+
+Validation: restart/replace the Node server with an entirely empty application data directory and confirm the same account keeps its purchased skin, equipment and 820 Scoin; duplicate purchases remain idempotent; guests cannot see another bag; outages do not switch to SQLite; relay-only requests never recurse. Production network access to the public D1 authority was checked using the server's application User-Agent. No real user account was changed by these tests.

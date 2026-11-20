@@ -9,6 +9,8 @@ import {api} from './worker/index.mjs';
 import {authenticatedApi} from './worker/account-auth.mjs';
 import {localDB} from './scripts/local-db.mjs';
 import {attachRelay} from './scripts/relay.mjs';
+import {accountBackend,forwardAccountRequest} from './scripts/account-backend.mjs';
+const backend=accountBackend();
 
 const root=path.dirname(fileURLToPath(import.meta.url));
 const web=path.join(root,'web');
@@ -27,16 +29,20 @@ const server=http.createServer(async(req,res)=>{
   res.setHeader('Referrer-Policy','same-origin');
   if(url.pathname==='/healthz'){
    res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});
-   res.end(JSON.stringify({ok:true,...release,build:'6.36.0-online-retry1',authBuild:'6.36.0-auth2',clientBuild:'6.36.0',sourceVersion:102,baseBuild:'6.25.10',protocol:94,transport:'hybrid',turnRequired:false}));return;
+   res.end(JSON.stringify({ok:true,...release,build:'6.36.0-inventory-durable1',authBuild:'6.36.0-auth2',clientBuild:'6.36.0',sourceVersion:127,baseBuild:'6.25.10',protocol:94,transport:'hybrid',turnRequired:false,accountStorage:backend?'durable-shared':'local-development'}));return;
   }
-  if(url.pathname.startsWith('/api/')){
+  if((url.pathname.startsWith('/api/')||url.pathname.startsWith('/relay-api/'))) {
    if(!['GET','POST'].includes(req.method)){res.writeHead(405);res.end();return;}
    const chunks=[];let size=0;
    for await(const chunk of req){size+=chunk.length;if(size>85000){res.writeHead(413,{'Connection':'close'});res.end();return;}chunks.push(chunk);}
    const headers=new Headers(req.headers);for(const name of [...headers.keys()])if(name.startsWith('oai-'))headers.delete(name);
-   const request=new Request(url,{method:req.method,headers,...(req.method==='POST'?{body:Buffer.concat(chunks)}:{})});
-   const leaveBody=url.pathname==='/api/rooms/leave'?await request.clone().json().catch(()=>null):null;
-   const response=await authenticatedApi(request,{DB,SUPABASE_URL:process.env.SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY:process.env.SUPABASE_PUBLISHABLE_KEY},api);
+   const relayOnly=/^\/relay-api\/rooms\/(create|join|sync|leave)$/.test(url.pathname);
+   if(url.pathname.startsWith('/relay-api/')&&!relayOnly){res.writeHead(404);res.end();return;}
+   if(relayOnly)res.setHeader('X-Saga-Relay-API','1');
+   const localUrl=new URL(url);if(relayOnly)localUrl.pathname=localUrl.pathname.replace('/relay-api/rooms/','/api/rooms/');
+   const request=new Request(localUrl,{method:req.method,headers,...(req.method==='POST'?{body:Buffer.concat(chunks)}:{})});
+   const leaveBody=localUrl.pathname==='/api/rooms/leave'?await request.clone().json().catch(()=>null):null;
+   const response=backend&&!relayOnly?await forwardAccountRequest(request,backend):await authenticatedApi(request,{DB,SUPABASE_URL:process.env.SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY:process.env.SUPABASE_PUBLISHABLE_KEY},api);
    if(leaveBody&&response.ok)relay.roomClosed(leaveBody.code);
    res.writeHead(response.status,Object.fromEntries(response.headers));
    res.end(Buffer.from(await response.arrayBuffer()));return;
