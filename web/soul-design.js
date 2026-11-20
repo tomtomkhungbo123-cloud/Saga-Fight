@@ -1,6 +1,8 @@
 // One approved contour across idle, running, and airborne poses.
 (()=>{'use strict';
 const D=window.SoulDesignData,clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),pivot=155,visualScale=.8;
+// Shared shades sampled from the approved blade artwork (dominant RGB 216,72,80).
+const weaponPalette=Object.freeze(['#a52e3e','#c63c4c','#dc4c54','#ff8a96']);
 const body=new Path2D();D.points.forEach((p,i)=>i?body.lineTo(...p):body.moveTo(...p));body.closePath();
 const blade=new Image(),ready=new Promise(resolve=>{blade.onload=resolve;blade.onerror=resolve;});blade.src='soul-design-blade.png?v=approved1';
 const point=a=>({x:a[0],y:a[1]}),SOURCE_GRIP=point(D.wrist),S={x:130.5,y:108.5},H=point(D.freeWrist),FS={x:85.7,y:108},FH=point(D.wrist);
@@ -106,5 +108,5 @@ function draw(ctx,f,o={}){
  for(const binding of separate?armBindings:[]){const arm=new Path2D();for(let i=binding.first;i<=binding.last;i++){const p=points[i];if(i===binding.first)arm.moveTo(p.x,p.y);else arm.lineTo(p.x,p.y);}arm.closePath();ctx.fill(arm);const q=apply(pose.root,binding.pivot);ctx.beginPath();ctx.arc(q.x,q.y,6,0,Math.PI*2);ctx.fill();}
  if(!f.blade){const m=pose.root;ctx.save();ctx.transform(m.a,m.b,m.c,m.d,m.e,m.f);weapon(ctx,pose.wrist,pose.weaponAngle,o.bloom);ctx.restore();}
 }
-window.SoulDesign={draw,drawSpin,projectSpin,spinContour,spinShapes,weapon,deformed,outlineFor,armWrist,armBindings,normalArc,normalFrame,motionOptions,weaponLaunch,weaponTipOffset,heldWrist:H,visualScale,ready,data:D,bodyPath:body};
+window.SoulDesign={weaponPalette,draw,drawSpin,projectSpin,spinContour,spinShapes,weapon,deformed,outlineFor,armWrist,armBindings,normalArc,normalFrame,motionOptions,weaponLaunch,weaponTipOffset,heldWrist:H,visualScale,ready,data:D,bodyPath:body};
 })();

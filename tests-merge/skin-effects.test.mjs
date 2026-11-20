@@ -38,3 +38,21 @@ for(const [type,palette] of skins)test(type+' '+palette+' renders normals and ev
  c.run('var p0=fighterEffectContext(fighters[0]);var p1=fighterEffectContext(fighters[1]);');
  assert.notEqual(c.ctx.p0,c.ctx.p1,'opponent without skin keeps the default effect context');
 });
+
+test('Soulblade 58 Q, W blink, R and compact bleed use the emitting skin with cached read-only rendering',()=>{
+ const {c,brush}=harness();
+ c.run('window.riftGame.configure({p1:"soul",p2:"soul"});window.riftGame.begin();window.SagaShop={skin:f=>f.id===0?"amethyst":null};');
+ const calls=[
+  'fx.save();fx.translate(490,140);window.SoulQBlood.draw(fx,{action:{k:"q",age:.27}},false,true);window.SoulQBlood.draw(fx,{action:{k:"q",age:.27}},true,true);fx.restore();',
+  'drawEffect({type:"soulBlinkSlash",owner:owner,x:600,y:350,size:260,age:.1,life:.54,dir:1},fx);',
+  'drawEffect({type:"soulSlam",owner:owner,x:600,y:600,size:420,age:.25,life:.8},fx);',
+  'drawEffect({type:"bleedBurst",owner:owner,x:600,y:350,size:1,age:.2,life:.7,stacks:10},fx);'
+ ];
+ for(const owner of [0,1])for(const draw of calls){
+  brush.resetTransform();brush.clearRect(0,0,1200,800);c.ctx.owner=owner;c.run('var fx=fighterEffectContext(fighters[owner]);var vfxBefore=JSON.stringify(window.riftGame.rollback.capture());');c.run(draw);
+  const pixels=brush.getImageData(0,0,1200,800).data;let colored=0,wrong=0;
+  for(let i=0;i<pixels.length;i+=4)if(pixels[i+3]>40&&Math.max(pixels[i],pixels[i+1],pixels[i+2])-Math.min(pixels[i],pixels[i+1],pixels[i+2])>40){colored++;if(owner===0?pixels[i+2]<=pixels[i]:pixels[i]<=pixels[i+2])wrong++;}
+  assert.ok(colored>20,'visible effect');assert.equal(wrong,0,'owner palette applies to vectors and glow');
+  c.run(draw);assert.equal(c.run('JSON.stringify(window.riftGame.rollback.capture())'),c.run('vfxBefore'),'visual helpers do not mutate simulation');
+ }
+});

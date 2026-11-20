@@ -1,9 +1,34 @@
 // Cached radial cloud layers follow the same soft sprite approach as Fairi W.
 window.SoulMist=(()=>{let cloud,spark;function prepare(){if(cloud)return cloud;const canvas=typeof document!=='undefined'?document.createElement('canvas'):typeof OffscreenCanvas!=='undefined'?new OffscreenCanvas(256,384):null;if(!canvas)return null;canvas.width=256;canvas.height=384;const c=canvas.getContext('2d');for(let i=0;i<17;i++){const x=128+Math.sin(i*2.4)*48,y=42+i*18,r=48+i%3*10,g=c.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,'rgba(237,104,137,.20)');g.addColorStop(.35,'rgba(194,49,85,.14)');g.addColorStop(1,'rgba(126,25,51,0)');c.fillStyle=g;c.fillRect(x-r,y-r,r*2,r*2);}cloud=canvas;spark=typeof document!=='undefined'?document.createElement('canvas'):new OffscreenCanvas(48,48);spark.width=spark.height=48;const sc=spark.getContext('2d'),halo=sc.createRadialGradient(24,24,0,24,24,24);halo.addColorStop(0,'rgba(255,247,242,.95)');halo.addColorStop(.18,'rgba(255,181,207,.70)');halo.addColorStop(1,'rgba(238,88,139,0)');sc.fillStyle=halo;sc.fillRect(0,0,48,48);sc.fillStyle='#fff1f0';sc.beginPath();sc.moveTo(24,11);sc.quadraticCurveTo(25,22,35,24);sc.quadraticCurveTo(25,25,24,37);sc.quadraticCurveTo(23,26,13,24);sc.quadraticCurveTo(23,23,24,11);sc.fill();return cloud;}
 function draw(ctx,t,view,front){if(view.mist<.001)return;const sprite=prepare();if(!sprite)return;ctx.save();ctx.globalAlpha*=view.mist*(front?.65:1);ctx.translate(110+Math.sin(t*.7+(front?1.7:0))*5,133-Math.sin(t*.5)*2-view.exit*9);ctx.rotate(Math.sin(t*.65)*.055+(front?-.12:0));const width=(front?140:160)*view.spread,height=(front?220:235)*view.spread;ctx.drawImage(sprite,-width*.5,-height*.5,width,height);ctx.restore();if(front&&spark){ctx.save();ctx.globalCompositeOperation='lighter';for(let i=0;i<11;i++){const life=((t*.43+i*.237)%1+1)%1,alpha=Math.sin(Math.PI*life)**2*view.mist*.95,drift=Math.sin(i*2.399+t*.55)*48*view.spread,x=110+drift,y=230-life*185-view.exit*12,size=(10+5*Math.sin(i*3.7)**2)*( .8+.2*Math.sin(Math.PI*life));ctx.globalAlpha=alpha;ctx.drawImage(spark,x-size/2,y-size/2,size,size);}ctx.restore();}}return {draw};})();
+// Four cached liquid-red sheets inspired by the supplied blood-ring reference.
+// Geometry is generated once; rendering reads simulation age only.
+window.SoulQBlood=(()=>{
+ const starts=[0,.15,.30,.45],life=.34,frames=28,cache=[],C=window.SoulDesign?.weaponPalette||['#a52e3e','#c63c4c','#dc4c54','#ff8a96'];
+ const clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),smooth=x=>{x=clamp(x,0,1);return x*x*(3-2*x);};
+ function curve(path,points){path.moveTo(points[0][0],points[0][1]);for(let j=1;j<points.length;j++){const a=points[j],b=points[(j+1)%points.length];path.quadraticCurveTo(a[0],a[1],(a[0]+b[0])*.5,(a[1]+b[1])*.5);}path.closePath();}
+ function build(u){const shape=new Path2D(),radius=.66+.34*smooth(u/.38),tear=smooth((u-.40)/.52),width=.19*(1-.84*tear),sweep=1.6+4.6*smooth(u/.36),offset=-2.3+u*1.8;
+  // One continuous fill before breakup: no separately closed wedges or inset bands.
+  const spans=tear>.60?[[0,1/6],[2/6,4/6],[5/6,1]]:[[0,1]];
+  for(const [from,to] of spans){const outer=[],inner=[],count=Math.ceil((to-from)*72);for(let j=0;j<=count;j++){const v=from+(to-from)*j/count,a=offset+v*sweep,r=radius+Math.sin(a*3+u*2)*.045+Math.sin(a*7)*.022,w=width*(.35+.65*Math.sin(Math.PI*v)**.6)*(1+.4*Math.sin(a*5+1)),notch=tear*.09*Math.sin(a*11)**2;outer.push([(r+notch)*Math.cos(a),(r+notch)*Math.sin(a)]);inner.unshift([(r-w)*Math.cos(a),(r-w)*Math.sin(a)]);}curve(shape,outer.concat(inner));}
+  const drops=new Path2D();for(let i=0;i<10;i++){const a=i*2.399+u*.4,r=radius+tear*(.10+(i%3)*.08),size=(.018+i%3*.006)*smooth((u-.30)/.20)*(1-smooth((u-.84)/.16));if(size<.001)continue;const x=Math.cos(a)*r,y=Math.sin(a)*r;drops.moveTo(x+size*Math.cos(a),y+size*Math.sin(a));drops.ellipse(x,y,size,size*(1.5+tear),a,0,Math.PI*2);}return {shape,drops};
+ }
+ for(let i=0;i<frames;i++)cache.push(build(i/(frames-1)));
+ // Bake soft emission once at startup, not as a full-canvas blur every frame.
+ for(const entry of cache){const sprite=typeof document!=='undefined'?document.createElement('canvas'):typeof OffscreenCanvas!=='undefined'?new OffscreenCanvas(256,256):null;if(!sprite)continue;sprite.width=sprite.height=256;const g=sprite.getContext('2d');g.translate(128,128);g.scale(256/3,256/3);g.shadowColor=C[3];g.shadowBlur=12;g.fillStyle=C[2];g.fill(entry.shape);g.shadowColor=C[2];g.shadowBlur=7;g.fill(entry.drops);entry.glow=sprite;}
+
+ function view(f){const s=f.soulMotion||{},a=f.action;if(a?.k==='q')return {age:a.age,stopAge:a.age,fade:1};if(s.qVfxTail>0)return {age:s.qVfxAge,stopAge:s.qVfxStop,fade:clamp(s.qVfxTail/.10,0,1)};return null;}
+ function pulses(f){const v=view(f);if(!v)return [];return starts.map((start,i)=>{const elapsed=v.age-start,duration=i===3?life+.20:life,age=i===3&&elapsed>.12?.12+(elapsed-.12)*(life-.12)/(duration-.12):elapsed;return {i,u:age/life,fade:v.fade,start,duration};}).filter(p=>p.start<=v.stopAge+1e-7&&p.u>=0&&p.u<1);}
+ function draw(ctx,f,front,bloom=true){const active=pulses(f);if(!active.length)return;const scale=window.SoulDesign?.visualScale||.8,radius=(window.SoulbladeLab?.config.qRange??400)/scale*.72;
+  for(const p of active){const entry=cache[Math.min(frames-1,Math.floor(p.u*(frames-1)))],expand=.76+.24*smooth(p.u/.32);ctx.save();ctx.translate(110,151);ctx.rotate(-.13+(p.i%2?1:-1)*.17);ctx.scale(radius*expand,radius*.42*expand);ctx.globalAlpha*=p.fade*smooth(p.u/.10)*(1-smooth((p.u-.70)/.30));ctx.shadowBlur=0;if(bloom&&entry.glow&&!front){ctx.save();ctx.globalCompositeOperation='lighter';ctx.globalAlpha*=.75;ctx.drawImage(entry.glow,-1.5,-1.5,3,3);ctx.restore();}ctx.beginPath();ctx.rect(-1.5,front?-.002:-1.5,3,1.502);ctx.clip();ctx.fillStyle=C[2];ctx.fill(entry.shape);ctx.fillStyle=C[2];ctx.fill(entry.drops);ctx.restore();}
+ }
+ // W recast is a single destination-anchored slash, independent of actions.
+ function drawBlink(ctx,e,bloom=true){if(e.age<0||e.age>=e.life)return false;const t=clamp(e.age/e.life,0,1),u=.30+.70*smooth(t),entry=cache[Math.min(frames-1,Math.floor(u*(frames-1)))],radius=e.size*.72*(.92+.08*smooth(t/.3)),fade=smooth(e.age/.025)*(1-smooth((t-.25)/.75));ctx.save();ctx.translate(e.x,e.y);ctx.rotate(-.18*(e.dir||1));ctx.scale(radius,radius*.42);ctx.globalAlpha*=fade;ctx.shadowBlur=0;if(bloom&&entry.glow){ctx.save();ctx.globalCompositeOperation='lighter';ctx.globalAlpha*=.75;ctx.drawImage(entry.glow,-1.5,-1.5,3,3);ctx.restore();}ctx.fillStyle=C[2];ctx.fill(entry.shape);ctx.fill(entry.drops);ctx.restore();return true;}
+ return {draw,drawBlink,view,pulses,frames,life,palette:C};
+})();
 window.drawSoul = function(ctx, fighter, time, bloom=true,effectContext=ctx){
 const p=fighter,action=p.action,blade=p.blade,t=time,clamp=(x,a,b)=>Math.max(a,Math.min(b,x));const $=()=>({checked:bloom}),BODY='#651d1e';
-function path(points,fill,g=ctx){g.beginPath();points.forEach((p,i)=>i?g.lineTo(...p):g.moveTo(...p));g.closePath();g.fillStyle=fill;g.fill();}
+function path(points,fill){ctx.beginPath();points.forEach((p,i)=>i?ctx.lineTo(...p):ctx.moveTo(...p));ctx.closePath();ctx.fillStyle=fill;ctx.fill();}
 // Smooth, hand-drawn contours; all turn poses keep a positive body width.
 const cache=window.soulPathCache??=(new Map());
 function contour(d,color='#791520'){ctx.fillStyle=color;let shape=cache.get(d);if(!shape){shape=new Path2D(d);if(cache.size<100)cache.set(d,shape);}ctx.fill(shape);}
@@ -28,32 +53,7 @@ function person(x,y,dir=1){
  const bob=window.SoulDesign.motionOptions(p).bob;
  ctx.save();ctx.translate(x,y);ctx.scale(window.SoulDesign.visualScale,window.SoulDesign.visualScale);ctx.translate(0,en*4);ctx.scale(-dir,1-slam*.20);ctx.rotate(-swing*.10);ctx.translate(-110,-240);
  // Rear and front half-arcs interleave with the body, matching the reference.
- function spinRibbons(front,ctx){
-  if(en<.01)return;
-  const cross=p.crossBlend||0;
-  for(let layer=0;layer<2;layer++)for(let j=0;j<3;j++){
-   if(layer&&j>0)continue;const strength=j===0?1:cross;if(strength<.01)continue;
-   const radius=layer?400/window.SoulDesign.visualScale:132+j*8;
-   const tilt=j===0?-.13:j===1?.44:-.48;
-   const height=layer?.21:.32;
-   const start=phase+j*1.9;
-   const point=(v,inner)=>{const ang=start-v*4.7,r=radius-(inner?Math.sin(v*Math.PI)*(layer?37:29):0);return [Math.cos(ang)*r,Math.sin(ang)*r*height];};
-   ctx.save();ctx.translate(110,151);ctx.rotate(tilt);ctx.globalAlpha*=(layer?.88:.96)*en*strength;
-   // Clip a continuous ribbon into front/back halves without segment seams.
-   const ribbon=[];
-   for(let i=0;i<=40;i++)ribbon.push(point(i/40,false));
-   for(let i=40;i>=0;i--)ribbon.push(point(i/40,true));
-   const ribbonColor=j===0?'#f45571':j===1?'#fa5b79':'#eb496c';
-   if($('glow').checked&&!front){
-    ctx.save();ctx.globalCompositeOperation='lighter';ctx.shadowColor='#ff315f';
-    ctx.globalAlpha*=.38;ctx.shadowBlur=28;path(ribbon,ribbonColor,ctx);
-    ctx.globalAlpha*=1.5;ctx.shadowBlur=10;path(ribbon,'#ff7190',ctx);ctx.restore();
-   }
-   ctx.beginPath();ctx.rect(-radius-5,front?0:-radius,2*radius+10,radius);ctx.clip();
-   ctx.shadowBlur=0;path(ribbon,ribbonColor,ctx);
-   ctx.restore();
-  }
- }
+ function spinRibbons(front){window.SoulQBlood.draw(effectContext,p,front,bloom);}
  function normalSweep(front,ctx){
   if(!front||!attack||attack.q<.001||attack.trail<.001)return;
   const samples=[],count=28,thrust=action.n===3;
@@ -66,9 +66,9 @@ function person(x,y,dir=1){
  }
 
  window.SoulMist.draw(effectContext,t,form,false);
- if(morph<1){ctx.globalAlpha=1-morph;spinRibbons(false,effectContext);
+ if(morph<1){ctx.globalAlpha=1-morph;spinRibbons(false);normalSweep(false,effectContext);
  const drawOptions={weight,air,bob,run,en,turn,slam,attack,bloom};if(action?.k==='q')window.SoulDesign.drawSpin(ctx,p,drawOptions,phase);else window.SoulDesign.draw(ctx,morph>0?{...p,blade:true}:p,drawOptions);
- spinRibbons(true,effectContext);normalSweep(true,effectContext);}
+ spinRibbons(true);normalSweep(true,effectContext);}
  if(morph>0){ctx.save();ctx.globalAlpha=1;const pose=window.SoulDesign.deformed(p,{weight,air,bob,run,en,turn,slam}),m=pose.root,w=pose.wrist,hx=m.a*w.x+m.c*w.y+m.e,hy=m.b*w.x+m.d*w.y+m.f,offset=window.SoulDesign.weaponTipOffset,upright=-Math.PI/2-Math.atan2(offset.y,offset.x),heldAngle=pose.weaponAngle+Math.atan2(m.b,m.a);sword(hx+(110-hx)*morph,hy+(164+Math.sin(t*1.7)*1.1-hy)*morph,heldAngle+(upright-heldAngle)*morph,1+.12*morph);ctx.restore();}
  ctx.globalAlpha=1;window.SoulMist.draw(effectContext,t,form,true);
  ctx.restore();

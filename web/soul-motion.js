@@ -4,6 +4,10 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),tau=Math.PI*2,smooth=v=>{v=clamp(
 function spring(s,key,target,dt,k=130,d=20){let v=s[key+'V']||0,x=s[key]||0;v+=((target-x)*k-v*d)*dt;x+=v*dt;s[key]=x;s[key+'V']=v;return x;}
 function update(f,dt){
  if(!(dt>0))return;const a=f.action,s=f.soulMotion??={phase:0,weight:0,previousVx:f.vx,ground:f.ground,land:0};
+ // Let already-started liquid sheets tear into droplets after Q; never spawn
+ // a future damage pulse from a visual tail or advance time in the renderer.
+ if(a?.k==='q'){s.qVfxAge=a.age;s.qVfxStop=a.age;s.qVfxTail=0;s.qVfxWas=true;}
+ else if(s.qVfxWas||s.qVfxTail>0){if(s.qVfxWas){s.qVfxWas=false;s.qVfxTail=s.qVfxStop>=.45?.40:.20;}s.qVfxAge+=dt;s.qVfxTail=Math.max(0,s.qVfxTail-dt);}
  if(a?.k==='e'){s.eWas=true;s.eRelease=smooth(a.age/.5);s.eFog=smooth(a.age/.22)*(.56+.20*(1-s.eRelease));s.eTail=0;}else if(s.eWas||s.eTail>0){s.eWas=false;s.eTail=(s.eTail||0)+dt;if(s.eTail>=.65){s.eTail=0;s.eRelease=0;}}
  const speed=clamp(Math.abs(f.vx)/430,0,1),accel=clamp((f.vx-s.previousVx)/dt/5000,-1,1);s.previousVx=f.vx;
  const takeoff=!f.ground&&s.ground;if(f.ground&&!s.ground)s.land=1;else s.land*=Math.exp(-dt*12);s.ground=f.ground;
