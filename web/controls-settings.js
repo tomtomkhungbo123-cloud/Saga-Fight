@@ -24,6 +24,13 @@
  $('controlSize').addEventListener('input',()=>{percent=Math.max(80,Math.min(140,Number($('controlSize').value)||100));apply(true);});
  $('resetControlSize').onclick=()=>{percent=100;apply(true);};
  $('closeSettings').onclick=()=>$('settings').close();
+ // Require the gesture to begin and end on the backdrop, not on a slider or scroll area.
+ const settings=$('settings');let backdropPress=false;
+ function onBackdrop(event){const r=settings.getBoundingClientRect();return event.target===settings&&(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom);}
+ settings.addEventListener('pointerdown',event=>{backdropPress=event.button===0&&onBackdrop(event);});
+ settings.addEventListener('pointercancel',()=>{backdropPress=false;});
+ settings.addEventListener('click',event=>{const dismiss=backdropPress&&onBackdrop(event);backdropPress=false;if(dismiss&&settings.open)settings.close();});
+ settings.addEventListener('close',()=>{backdropPress=false;});
  $('settings').addEventListener('close',()=>{if(!$('help').open)document.body.classList.remove('help-open');});
  window.controlSettings={refresh:()=>apply(),open(){apply();document.body.classList.add('help-open');$('settings').showModal();}};
  window.addEventListener('resize',()=>apply());window.addEventListener('pageshow',()=>apply());
