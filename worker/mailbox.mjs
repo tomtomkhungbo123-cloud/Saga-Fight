@@ -65,5 +65,6 @@ export async function updateMailbox(DB,user,data,now){
     WHERE r.user_id=? AND m.id=? AND r.claimed_at IS NOT NULL AND m.item_id IS NOT NULL`).bind(now,user,data.id)
   ]);
  }else throw Object.assign(Error('Thao tác hộp thư không hợp lệ.'),{status:400});
+ if(DB.inventory?.mode==='supabase'&&data.action==='claim')await DB.inventory.sync(user);
  return {updated:true};
 }

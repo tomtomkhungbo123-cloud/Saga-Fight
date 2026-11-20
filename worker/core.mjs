@@ -1,3 +1,4 @@
+import {inventoryDatabase} from './inventory-store.mjs';
 import {roomPlayers} from './room-players.mjs';
 import {readMailbox,adminMailbox,sendAdminMail,updateMailbox} from './mailbox.mjs';
 import {shopOffer,shopAccount,mutateShop,savePveScoin,saveOnlineScoin,matchScoin,shopLoadouts} from './shop.mjs';
@@ -31,6 +32,7 @@ async function leaderboard(DB,id,page,season){
 }
 async function playerStats(DB,id){const total=await DB.prepare(RESULTS+' SELECT COUNT(*) played,COALESCE(SUM(won),0) wins FROM results WHERE user_id=?').bind(id).first();const favorite=await DB.prepare(RESULTS+' SELECT fighter,COUNT(*) games FROM results WHERE user_id=? GROUP BY fighter ORDER BY games DESC,MAX(finished_at) DESC,fighter ASC LIMIT 1').bind(id).first();const rank=await DB.prepare(rankResults(await activeSeason(DB))+' SELECT position FROM ranks WHERE user_id=?').bind(id).first();return {rank:rank?.position??null,played:total.played,wins:total.wins,losses:total.played-total.wins,winRate:total.played?Math.round(total.wins/total.played*1000)/10:0,favorite:favorite?{type:favorite.fighter,games:favorite.games}:null};}
 export async function api(request,env){
+ env={...env,DB:await inventoryDatabase(env)};
  const url=new URL(request.url),now=Date.now();
  if(url.pathname==='/api/account'){
   if(request.method!=='GET')return json({error:'Chỉ hỗ trợ GET.'},405);

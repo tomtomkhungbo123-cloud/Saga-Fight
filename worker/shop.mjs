@@ -29,12 +29,14 @@ function cosmeticsFor(rows,id) {
 }
 
 export async function shopLoadouts(DB,ids) {
+ if(DB.inventory?.mode==='supabase')return Promise.all(ids.map(async id=>id?(await DB.inventory.sync(id)).equipped:{}));
  const rows = (await DB.prepare('SELECT user_id,slot,item_id FROM cosmetic_loadouts WHERE user_id IN (?,?)')
   .bind(ids[0],ids[1]).all()).results;
  return ids.map(id=>cosmeticsFor(rows,id));
 }
 
 export async function shopAccount(DB,id,admin=false) {
+ if(DB.inventory?.mode==='supabase'){const state=await DB.inventory.sync(id);return {...state,balance:admin?null:state.balance,unlimited:admin};}
  const state = await DB.prepare(`SELECT (${balanceSQL}) AS balance,
   (SELECT json_group_array(item_id) FROM (SELECT source_id item_id FROM scoin_ledger WHERE user_id=? AND kind='purchase' UNION SELECT item_id FROM cosmetic_inventory WHERE user_id=?)) AS owned,
   (SELECT json_group_object(slot,item_id) FROM cosmetic_loadouts WHERE user_id=?) AS equipped`).bind(id,id,id,id).first();
@@ -45,6 +47,13 @@ export async function mutateShop(DB,id,data,now,admin=false) {
  const item = shopById.get(data.itemId);
  if(!item)return {status:404,error:'Không tìm thấy vật phẩm.'};
  const slot = shopSlot(item);
+ if(DB.inventory){
+  if(DB.inventory.mode==='migrating')return {status:503,error:'Đang chuyển hòm đồ sang Supabase. Vui lòng thử lại sau ít phút.'};
+  if(!['buy','equip','unequip'].includes(data.action))return {status:400,error:'Thao tác không hợp lệ.'};
+  if(data.action==='buy'&&item.forSale===false)return {status:409,error:'Vật phẩm này đang tạm ngừng bán.'};
+  const state=await DB.inventory.mutate(id,item,data.action,now,admin);
+  return state.error?state:{account:{...state,balance:admin?null:state.balance,unlimited:admin}};
+ }
  if(data.action==='buy') {
   if(item.forSale===false)return {status:409,error:'Vật phẩm này đang tạm ngừng bán.'};
   const owned=await DB.prepare("SELECT 1 owned FROM scoin_ledger WHERE user_id=? AND kind='purchase' AND source_id=? UNION ALL SELECT 1 FROM cosmetic_inventory WHERE user_id=? AND item_id=? LIMIT 1").bind(id,item.id,id,item.id).first();
@@ -84,6 +93,7 @@ export async function savePveScoin(DB,id,winner,now) {
      AND recent.kind='pve' AND recent.created_at>game_matches.finished_at-?)`)
   .bind(scoinRules.pve.win,scoinRules.pve.loss,id,winner,now,scoinRules.minimumSeconds*1000,scoinRules.minimumSeconds*1000);
  await DB.batch([write,award]);
+ if(DB.inventory?.mode==='supabase'){const match=await DB.prepare('SELECT host_user_id FROM game_matches WHERE id=?').bind(id).first();if(match?.host_user_id)await DB.inventory.sync(match.host_user_id);}
 }
 
 export async function saveOnlineScoin(DB,match,player,winner,now) {
@@ -104,6 +114,7 @@ export async function saveOnlineScoin(DB,match,player,winner,now) {
   .bind(scoinRules.online.win,scoinRules.online.loss,now,match.id,scoinRules.minimumSeconds*1000,
    scoinRules.online.win,scoinRules.online.loss,now,match.id,scoinRules.minimumSeconds*1000));
  await DB.batch(statements);
+ if(DB.inventory?.mode==='supabase')for(const user of new Set([match.host_user_id,match.guest_user_id].filter(Boolean)))await DB.inventory.sync(user);
  const settled = await DB.prepare(readMatch).bind(match.id).first();
  const reports = (await DB.prepare('SELECT player,winner FROM online_score_reports WHERE match_id=?').bind(match.id).all()).results;
  return {pending:reports.length<2,conflict:reports.some(value=>value.player===player && value.winner!==winner)

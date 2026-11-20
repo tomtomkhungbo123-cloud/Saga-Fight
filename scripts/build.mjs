@@ -1,0 +1,10 @@
+import {releaseInfo} from './release-check.mjs';
+releaseInfo();
+import fs from 'node:fs';import path from 'node:path';
+const files={};const types={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'application/javascript; charset=utf-8','.webmanifest':'application/manifest+json; charset=utf-8','.wav':'audio/wav','.ogg':'audio/ogg','.mp3':'audio/mpeg','.png':'image/png','.svg':'image/svg+xml','.json':'application/json'};
+function walk(dir){for(const item of fs.readdirSync(dir,{withFileTypes:true})){const p=path.join(dir,item.name);if(item.isDirectory())walk(p);else files['/'+path.relative('web',p).split(path.sep).join('/')]=[types[path.extname(p)]||'application/octet-stream',fs.readFileSync(p).toString('base64')];}}walk('web');
+const shop=fs.readFileSync('worker/shop.mjs','utf8').replace(/^export (async )?function /gm,'$1function ');
+const core=fs.readFileSync('worker/core.mjs','utf8').split('export default')[0].replace(/^import .*?;\n/gm,'').replace('export async function api','async function api');
+const strip=s=>s.replace(/^import .*?;\s*$/gm,'').replace(/^export \{api\};\s*$/gm,'').replace(/export async function /g,'async function ');
+const worker=strip(fs.readFileSync('worker/inventory-store.mjs','utf8')).replace(/export function /g,'function ')+'\n'+strip(fs.readFileSync('worker/room-players.mjs','utf8'))+'\n'+shop+'\n'+strip(fs.readFileSync('worker/mailbox.mjs','utf8'))+'\n'+core+'\n'+strip(fs.readFileSync('worker/account-auth.mjs','utf8')).replace(/export function /g,'function ')+'\n'+strip(fs.readFileSync('worker/render-bridge.mjs','utf8'))+'\n'+strip(fs.readFileSync('worker/index.mjs','utf8'));
+fs.rmSync('dist',{recursive:true,force:true});fs.mkdirSync('dist/server',{recursive:true});fs.mkdirSync('dist/.openai',{recursive:true});fs.writeFileSync('dist/server/index.js','const FILES = '+JSON.stringify(files)+';\n'+worker);fs.copyFileSync('.openai/hosting.json','dist/.openai/hosting.json');console.log('Built 6.36.0 Worker + '+Object.keys(files).length+' exact release assets.');

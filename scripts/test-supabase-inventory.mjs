@@ -1,0 +1,20 @@
+// Optional integration test: runtime credentials arrive on hidden stdin, never source files.
+import assert from 'node:assert/strict';import crypto from 'node:crypto';import readline from 'node:readline';import {execFileSync} from 'node:child_process';
+import {inventoryRpc} from '../worker/inventory-store.mjs';
+if(process.stdin.isTTY)execFileSync('stty',['-echo'],{stdio:['inherit','ignore','ignore']});
+const input=readline.createInterface({input:process.stdin});const [line]=await Promise.all([new Promise(resolve=>input.once('line',resolve))]);input.close();const env=JSON.parse(line),user=env.TEST_USER;
+const rpc=async(action,data={})=>{const result=await inventoryRpc(env,action,{user,...data});console.log('checked',action);return result;};
+const snapshot={balance:1000,owned:['thunder-jade'],equipped:{'skin:thunder':'thunder-jade'},ledger:[{kind:'pve',source_id:'legacy-reward',amount:1180,created_at:1000},{kind:'purchase',source_id:'thunder-jade',amount:-180,created_at:2000}]};
+const imported=await rpc('bootstrap',{snapshot});assert.equal(imported.balance,1000);assert.deepEqual(imported.owned,['thunder-jade']);
+await rpc('bootstrap',{snapshot:{...snapshot,balance:999999,owned:[]}});assert.equal((await rpc('read')).balance,1000,'bootstrap cannot overwrite existing wallet');
+const purchase={item:'thunder-crimson',slot:'skin:thunder',price:240,now:3000,admin:false};
+const results=await Promise.all(Array.from({length:2},()=>rpc('buy',purchase)));assert.ok(results.every(s=>s.balance===760));
+assert.equal((await rpc('equip',purchase)).equipped['skin:thunder'],'thunder-crimson');
+assert.equal((await rpc('equip',{...purchase,item:'unowned'})).status,403);
+assert.equal((await rpc('buy',{...purchase,item:'too-expensive',price:2000})).status,409);
+const sync={events:[{kind:'pve',source_id:'legacy-reward',amount:1180,created_at:1000},{kind:'online',source_id:'new-reward',amount:70,created_at:4000}],gifts:[{item_id:'soul-amethyst',source:'mail-fixture',created_at:5000}]};
+await rpc('sync',sync);assert.equal((await rpc('sync',sync)).balance,830,'replayed rewards cannot duplicate balance');
+assert.ok((await rpc('read')).owned.includes('soul-amethyst'));
+const admin=await rpc('buy',{...purchase,item:'cylast-gold',admin:true});assert.equal(admin.balance,830);
+await assert.rejects(()=>inventoryRpc({...env,SAGA_INVENTORY_KEY:crypto.randomBytes(32).toString('hex')},'read',{user}));
+console.log(JSON.stringify({passed:true,checks:10}));
