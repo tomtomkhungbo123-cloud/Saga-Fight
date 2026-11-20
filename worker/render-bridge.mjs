@@ -7,10 +7,11 @@ const bridgeHash=async value=>Array.from(new Uint8Array(await crypto.subtle.dige
 const bridgeFighter=value=>['thunder','soul','cylast','mox','melanta','fairi','aether'].includes(value)?value:'thunder';
 async function upstreamRoom(action,data,authorization=''){
  const headers={'Content-Type':'application/json',Origin:RENDER_ORIGIN};if(authorization)headers.Authorization=authorization;
- const options=()=>({method:'POST',headers,body:JSON.stringify(data),redirect:'error',signal:AbortSignal.timeout(12000)});
+ const options=()=>({method:'POST',headers,body:JSON.stringify(data),redirect:'manual',signal:AbortSignal.timeout(12000)});
  let response=await fetch(RENDER_ORIGIN+'/relay-api/rooms/'+action,options());
  // Old Render releases do not yet expose the relay-only path. Remove after rollout.
  if(response.status===404&&response.headers.get('X-Saga-Relay-API')!=='1')response=await fetch(RENDER_ORIGIN+'/api/rooms/'+action,options());
+ if(response.status>=300&&response.status<400)throw Error('Unexpected Render redirect');
  if(!response.headers.get('Content-Type')?.includes('application/json'))throw Error('Render HTTP '+response.status+' returned '+(response.headers.get('Content-Type')||'unknown content type'));
  return response;
 }
