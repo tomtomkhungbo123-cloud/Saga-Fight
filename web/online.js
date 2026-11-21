@@ -5,7 +5,7 @@
  let session=null;
  const connectionChoice=el('connectionMode');let connectionMode='auto';try{if(localStorage.getItem('saga.connection.v1')==='direct')connectionMode='direct';}catch{}connectionChoice.value=connectionMode;connectionChoice.addEventListener('change',()=>{connectionMode=connectionChoice.value==='direct'?'direct':'auto';try{localStorage.setItem('saga.connection.v1',connectionMode);}catch{}});
  const diagnosticsButton=el('copyNetDiagnostics');
- async function diagnosticReport(){const n=session;if(!n)return {build:BUILD,session:false};await inspectRoute(n);const d=n.metrics.directIce||{},pc=n.pc,route=n.metrics.route||{};return {build:BUILD,origin:new URL(location.href).origin,exchangeMode:'trickle-6.25.7-recovery',pairs:d.pairs||[],role:n.role,policy:directRequired(n)?'direct':'auto',route:n.activeRoute||'pending',ice:d.state||pc?.iceConnectionState||'unknown',gathering:d.gathering||pc?.iceGatheringState||'unknown',localCandidates:d.local||{},remoteCandidates:d.remote||{},rejectedCandidates:d.rejectedCandidates||0,candidateError:d.lastCandidateError||null,stunError:d.stunError||null,negotiationError:d.error||null,extendedWait:!!d.extendedWait,iceTransitions:d.transitions||[],attempt:n.directGeneration||0,probeReceived:!!n.localDirectReady,peerReady:!!n.peerDirectReady,localDescriptionType:pc?.localDescription?.type||d.localDescriptionType||null,remoteDescriptionType:pc?.remoteDescription?.type||d.remoteDescriptionType||null,remoteSdpCandidates:pc?(pc.remoteDescription?.sdp?.match(/^a=candidate:/gm)||[]).length:(d.sdpCandidates||0),selectedTypes:{local:route.local||null,remote:route.remote||null,protocol:route.protocol||null},rttMs:n.peerPing,jitterMs:n.jitter,channelState:n.directChannel?.readyState||null,channelBufferedAmount:n.directChannel?.bufferedAmount||0,serverSocketState:n.socket?.readyState??null,started:!!n.started,suspended:!!n.suspended,rollback:n.metrics.rollback||null,recoveries:n.metrics.recoveries||0,recoveryReasons:n.metrics.recoveryReasons||{},hashMismatches:n.metrics.hashMismatches||0,lastHashMismatch:n.metrics.lastHashMismatch||null,checksumStreak:n.checksumStreak||0,suspensions:n.metrics.suspensions||0,directRecoveries:n.metrics.directRecoveries||0,lastRecovery:n.metrics.lastRecovery||null,lastDirectFailure:n.metrics.lastDirectFailure||null,lastWatchdog:n.metrics.lastWatchdog||null,sendSkips:n.metrics.sendSkips||0};}
+ async function diagnosticReport(){const n=session;if(!n)return {build:BUILD,session:false};await inspectRoute(n);const d=n.metrics.directIce||{},pc=n.pc,route=n.metrics.route||{};return {build:BUILD,origin:new URL(location.href).origin,exchangeMode:'trickle-6.25.7-recovery',pairs:d.pairs||[],role:n.role,policy:directRequired(n)?'direct':'auto',route:n.activeRoute||'pending',ice:d.state||pc?.iceConnectionState||'unknown',gathering:d.gathering||pc?.iceGatheringState||'unknown',localCandidates:d.local||{},remoteCandidates:d.remote||{},rejectedCandidates:d.rejectedCandidates||0,candidateError:d.lastCandidateError||null,stunError:d.stunError||null,negotiationError:d.error||null,extendedWait:!!d.extendedWait,attempt:n.directGeneration||0,probeReceived:!!n.localDirectReady,peerReady:!!n.peerDirectReady,localDescriptionType:pc?.localDescription?.type||d.localDescriptionType||null,remoteDescriptionType:pc?.remoteDescription?.type||d.remoteDescriptionType||null,remoteSdpCandidates:pc?(pc.remoteDescription?.sdp?.match(/^a=candidate:/gm)||[]).length:(d.sdpCandidates||0),selectedTypes:{local:route.local||null,remote:route.remote||null,protocol:route.protocol||null}};}
  if(diagnosticsButton)diagnosticsButton.onclick=async()=>{const value=JSON.stringify(await diagnosticReport(),null,2);try{await navigator.clipboard.writeText(value);diagnosticsButton.textContent='ĐÃ SAO CHÉP CHẨN ĐOÁN';}catch{el('netDiagnosticsText').hidden=false;el('netDiagnosticsText').value=value;el('netDiagnosticsText').select?.();}};
  function directRequired(n){return n.config?.connection==='direct';}
  function directUnavailable(n,notify=true){if(session!==n||n.directFailed)return;if(notify)signal(n,'fallback',{reason:'direct-required'});n.directFailed=true;n.transportReady=false;n.directDisabled=true;closeDirect(n);n.activeRoute='pending';if(n.started)suspend(n);const report=n.metrics.directIce||{},remote=Object.values(report.remote||{}).reduce((a,b)=>a+b,0);const message='Phòng chỉ dùng DIRECT. Không thiết lập được DIRECT. Cùng Wi-Fi vẫn có thể bị giới hạn bởi trình duyệt hoặc router. ICE: '+(n.metrics.directIce?.state||n.pc?.iceConnectionState||'chưa kết nối')+'; ứng viên máy này: '+Object.values(n.metrics.directIce?.local||{}).reduce((a,b)=>a+b,0)+'; máy kia gửi: '+remote+'. Bấm Sao chép chẩn đoán trên cả hai máy để kiểm tra. Có thể chọn Tự động để dùng server dự phòng.';error(message);el('lobbyState').textContent=message;if(n.started){el('netCurtain').querySelector('strong').textContent='KHÔNG KẾT NỐI ĐƯỢC DIRECT';el('netCurtain').querySelector('p').textContent=message;}status('CHỈ DIRECT · KHÔNG KẾT NỐI ĐƯỢC');}
@@ -42,8 +42,7 @@
  function paintPing(n){const node=el('netBadge'),value=Number.isFinite(n?.peerPing)?Math.max(0,Math.round(n.peerPing)):null;node.textContent=(value??'—')+' ms';const jitter=n?.jitter||0;node.dataset.quality=n?.suspended?'bad':value===null?'pending':value>150||jitter>80?'bad':value>80||jitter>40?'fair':'good';node.hidden=!n;node.setAttribute?.('aria-label','Ping '+(value===null?'đang đo':value+' mili giây')+' · '+{good:'tốt',fair:'trung bình',bad:'yếu hoặc gián đoạn',pending:'đang đo'}[node.dataset.quality]);}
  const status=text=>{el('netBadge').title=text;paintPing(session);};const error=text=>el('netError').textContent=text;
  async function api(path,body={},token){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),5000);try{const r=await fetch('/api/rooms/'+path,{method:'POST',headers:{'Content-Type':'application/json',...(['create','join'].includes(path)?await window.SagaAccount?.headers?.()||{}:{}),...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify(body),signal:controller.signal,cache:'no-store'}),data=await r.json();if(!r.ok)throw Object.assign(Error(data.error||'Không kết nối được phòng.'),{config:data.config,status:r.status});return data;}finally{clearTimeout(timer);}}
- function wire(n,message){if(directRequired(n)&&n.activeRoute!=='direct'&&['rb-input','rb-hash','ping','pong'].includes(message?.type))return null;// Large checkpoints stay on signaling; small rollback control packets must use the active DIRECT data channel.
-  if(message?.type==='rb-init')return n.channel;return n.activeRoute==='direct'&&message?.type!=='server-ping'?n.directChannel:n.channel;}
+ function wire(n,message){if(directRequired(n)&&n.activeRoute!=='direct'&&['rb-input','rb-hash','ping','pong'].includes(message?.type))return null;if(message?.type?.startsWith('rb-')&&message.type!=='rb-input'&&message.type!=='rb-hash')return n.channel;return n.activeRoute==='direct'&&message?.type!=='server-ping'?n.directChannel:n.channel;}
  function signal(n,kind,data={}){if(session!==n||n.channel?.readyState!=='open')return false;try{n.channel.send(JSON.stringify({type:'direct',kind,...(['offer','answer','candidate','ready','fallback'].includes(kind)?{attempt:n.directGeneration||0}:{}),...data}));return true;}catch{return false;}}
  function closeDirect(n){
   clearTimeout(n.directTimer);n.directTimer=null;clearTimeout(n.iceDisconnectTimer);
@@ -60,25 +59,14 @@
  }
  function selectRoute(n,mode){
   if(session!==n||n.role!=='host')return;if(mode==='ws'&&directRequired(n)){directUnavailable(n);return;}
-  if(n.pendingRoute?.mode===mode||n.activeRoute===mode&&n.transportReady&&!n.pendingRoute)return;
+  if(n.pendingRoute?.mode===mode)return;
   if(mode==='direct'&&(n.directDisabled||!n.localDirectReady||!n.peerDirectReady||n.directChannel?.readyState!=='open'))return;
   if(n.started){suspend(n);n.awaitingResume=false;}
   n.transportReady=false;n.pendingRoute={id:(n.routeSerial||0)+1,mode};n.routeSerial=n.pendingRoute.id;n.routeSelectAt=performance.now();n.routeSelectSent=performance.now();
   signal(n,'select',n.pendingRoute);
  }
  function fallback(n,notify=true){
-  if(session!==n)return;if(directRequired(n)){
-   if(n.started&&n.activeRoute==='direct'&&!n.directFailed){
-    const now=performance.now();if(now-(n.lastDirectRecovery??-Infinity)<7000)return;
-    n.lastDirectRecovery=now;n.metrics.directRecoveries=(n.metrics.directRecoveries||0)+1;
-    n.metrics.lastDirectFailure={at:Date.now(),ice:n.pc?.iceConnectionState||null,channel:n.directChannel?.readyState||null,route:n.activeRoute};
-    suspend(n);
-    if(n.role==='host'){resetRouteAttempt(n);startDirect(n,true);}
-    else if(notify)signal(n,'fallback',{reason:'retry'});
-    return;
-   }
-   directUnavailable(n,notify);return;
-  }
+  if(session!==n)return;if(directRequired(n)){directUnavailable(n,notify);return;}
   n.directDisabled=true;
   if(n.activeRoute==='ws'&&n.transportReady&&n.started&&!n.pendingRoute){closeDirect(n);n.directRetryAt=performance.now()+30000;if(notify)signal(n,'fallback');return;}
   if(n.activeRoute==='direct'&&n.started)suspend(n);
@@ -103,7 +91,7 @@
   if(!window.RTCPeerConnection)throw Error('No WebRTC');
   n.metrics.directIce={local:{},remote:{}};const pc=n.pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.cloudflare.com:3478'}],bundlePolicy:'max-bundle'});
   pc.onicecandidate=e=>{if(session!==n||n.directDisabled)return;const d=n.metrics.directIce??={local:{},remote:{}};if(!e.candidate){d.gathering='complete';return;}const c=e.candidate.toJSON?e.candidate.toJSON():e.candidate,type=e.candidate.type||/ typ (\w+)/.exec(c.candidate||'')?.[1]||'unknown';d.local[type]=(d.local[type]||0)+1;signal(n,'candidate',{candidate:c});};pc.onicecandidateerror=e=>{n.metrics.directIce??={local:{},remote:{}};n.metrics.directIce.stunError=e.errorCode;};
-  pc.oniceconnectionstatechange=()=>{if(session!==n||n.directDisabled)return;n.metrics.directIce??={local:{},remote:{}};n.metrics.directIce.state=pc.iceConnectionState;n.metrics.directIce.lastChangeAt=Date.now();n.metrics.directIce.transitions??=[];n.metrics.directIce.transitions.push({state:pc.iceConnectionState,at:Date.now()});if(n.metrics.directIce.transitions.length>20)n.metrics.directIce.transitions.shift();clearTimeout(n.iceDisconnectTimer);if(pc.iceConnectionState==='failed')fallback(n);else if(pc.iceConnectionState==='disconnected')n.iceDisconnectTimer=setTimeout(()=>{if(session===n&&n.pc===pc&&pc.iceConnectionState==='disconnected')fallback(n);},8000);};
+  pc.oniceconnectionstatechange=()=>{if(session!==n||n.directDisabled)return;n.metrics.directIce??={local:{},remote:{}};n.metrics.directIce.state=pc.iceConnectionState;clearTimeout(n.iceDisconnectTimer);if(pc.iceConnectionState==='failed')fallback(n);else if(pc.iceConnectionState==='disconnected')n.iceDisconnectTimer=setTimeout(()=>{if(session===n&&n.pc===pc&&pc.iceConnectionState==='disconnected')fallback(n);},2500);};
   pc.ondatachannel=e=>directChannel(n,e.channel);return pc;
  }
  async function addCandidate(n,pc,c){try{await pc.addIceCandidate(c);}catch(e){const d=n.metrics.directIce??={local:{},remote:{}};d.rejectedCandidates=(d.rejectedCandidates||0)+1;d.lastCandidateError=e.name||'ICEError';}}
@@ -133,7 +121,7 @@
   if(m.kind==='candidate'&&Number.isSafeInteger(m.attempt)&&m.attempt===(n.directGeneration||0)+1&&n.activeRoute!=='direct'){
    n.earlyCandidates??=[];if(n.earlyCandidates.length<64)n.earlyCandidates.push({attempt:m.attempt,candidate:m.candidate});return;
   }
-  if(m.kind==='offer'&&n.role==='guest'&&(n.activeRoute!=='direct'||n.suspended||n.directFailed||directRequired(n)&&m.attempt>(n.directGeneration||0))){
+  if(m.kind==='offer'&&n.role==='guest'&&(n.activeRoute!=='direct'||n.suspended||n.directFailed)){
    if(!Number.isSafeInteger(m.attempt)||m.attempt<1||m.attempt<=(n.directGeneration||0))return;
    if(n.directFailed){n.directFailed=false;n.initPacket=null;n.startPacket=null;n.waitingStart=false;n.pendingRoute=null;}
    closeDirect(n);n.directCandidates=(n.earlyCandidates||[]).filter(c=>c.attempt===m.attempt).map(c=>c.candidate);n.earlyCandidates=[];n.directGeneration=m.attempt;n.directDisabled=false;n.answeringDirect=false;
@@ -194,13 +182,11 @@
  }
  function action(k){const n=session;if(n?.rb&&n.synced&&!n.suspended)n.rb.queue(k);}
  function networkFrame(dt){const n=session;if(!n?.rb||n.inLobby||!n.synced||n.suspended||performance.now()<n.startAt)return;n.rbAcc=Math.min((n.rbAcc||0)+dt,.08);let steps=0,stalled=false;if(n.clockSkew>2&&n.rbAcc>=STEP){n.rbAcc-=STEP;n.clockSkew--;n.metrics.clockHolds=(n.metrics.clockHolds||0)+1;}while(n.rbAcc>=STEP&&steps++<10){if(!n.rb.advance(document.hidden?0:G.getMove())){n.rbAcc=0;stalled=true;break;}n.rbAcc-=STEP;}G.rollback.present(dt,stalled?1:n.rbAcc/STEP);n.metrics.frameMs=dt*1000;n.metrics.render=G.renderMetrics?.();n.metrics.rollback={...n.rb.stats,tick:n.rb.tick,confirmed:n.rb.confirmed,predicted:n.rb.tick-n.rb.confirmed};n.metrics.rttMs=n.peerPing;n.metrics.jitterMs=n.jitter;n.metrics.transport=n.activeRoute==='direct'?'webrtc-direct':'websocket';}
- function suspend(n){if(n.suspended)return;n.metrics.suspensions=(n.metrics.suspensions||0)+1;n.metrics.lastSuspendAt=Date.now();n.suspended=true;n.synced=false;n.lostAt=performance.now();n.rbAcc=0;// Short checkpoint handshakes are not network failures: avoid flashing the curtain or cutting audio.
-  status('ONLINE · ĐANG ĐỒNG BỘ');}
- function requestCheckpoint(n,reason='desync',detail={}){
-  if(n.suspended||n.initPacket||n.waitingStart)return;n.metrics.lastRecovery={reason,at:Date.now(),epoch:n.epoch,tick:n.rb?.tick,...detail};n.metrics.recoveryReasons??={};n.metrics.recoveryReasons[reason]=(n.metrics.recoveryReasons[reason]||0)+1;suspend(n);if(n.role==='host')recover(n);else requestResync(n);}
+ function suspend(n){if(n.suspended)return;n.suspended=true;n.synced=false;n.lostAt=performance.now();n.rbAcc=0;window.sagaAudio?.stopCombat();window.sagaAudio?.syncMusic?.('pause');el('netCurtain').hidden=false;status('ONLINE · MẤT ĐỒNG BỘ · ĐANG KHÔI PHỤC');}
+ function requestCheckpoint(n,reason='desync',detail={}){n.metrics.lastRecovery={reason,epoch:n.epoch,tick:n.rb?.tick,...detail};suspend(n);if(n.role==='host')recover(n);else requestResync(n);}
  function requestResync(n){const now=performance.now();if(n.waitingStart||n.lastResyncEpoch===n.epoch&&now-(n.lastResyncSent||0)<1000)return;n.lastResyncEpoch=n.epoch;n.lastResyncSent=now;send({type:'rb-resync',epoch:n.epoch});}
  function ackCheckpoint(n){n.lastAckSent=performance.now();send({type:'rb-ack',epoch:n.epoch});}
- function makeRollback(n,state){n.checksumStreak=0;n.lastChecksumTick=-1;n.clockSkew=0;n.probeTicks=new Map();G.rollback.restore(window.SagaRollback.unpack(state));G.rollback.resetView?.();n.rb=new window.SagaRollback.Rollback({player:n.role==='host'?0:1,adapter:G.rollback});n.rbAcc=0;n.lastHash=0;n.peerHashQueue=new Map();n.lastState=n.lastStateAck=performance.now();}
+ function makeRollback(n,state){n.clockSkew=0;n.probeTicks=new Map();G.rollback.restore(window.SagaRollback.unpack(state));G.rollback.resetView?.();n.rb=new window.SagaRollback.Rollback({player:n.role==='host'?0:1,adapter:G.rollback});n.rbAcc=0;n.lastHash=0;n.peerHashQueue=new Map();n.lastState=n.lastStateAck=performance.now();}
  function initRollback(n,state){n.startPacket=null;n.metrics.recoveries=(n.metrics.recoveries||0)+1;n.epoch++;n.synced=false;n.suspended=true;n.lostAt=performance.now();makeRollback(n,state);n.initPacket={type:'rb-init',epoch:n.epoch,state,config:n.config};send(n.initPacket);n.initSent=performance.now();}
  function recover(n){if(n.inLobby||n.directFailed||n.role!=='host'||!n.suspended||n.initPacket||n.pendingRoute||!n.transportReady)return;const state=n.rb?.checkpoint();if(state)initRollback(n,state);}
  function canEdit(field=0){const n=session;if(!n)return G.getPhase()==='menu';return n.inLobby&&!n.suspended&&!n.lobbyBusy&&!n.config.lobby.ready[n.role==='host'?0:1]&&(field==='map'?n.role==='host':field===0);}
@@ -236,17 +222,6 @@
   G.configure(n.config);G.begin();G.rollback.seed(0x53414741);n.started=true;
   initRollback(n,window.SagaRollback.pack(G.rollback.capture()));
  }}
- function checksumMismatch(n,t,localHash,remoteHash){
-  const now=performance.now();n.metrics.hashMismatches=(n.metrics.hashMismatches||0)+1;
-  n.metrics.lastHashMismatch={at:Date.now(),tick:t,localHash,remoteHash,epoch:n.epoch};
-  if(n.lastChecksumTick===t)return;
-  n.checksumStreak=now-(n.checksumAt||0)>4000?1:(n.checksumStreak||0)+1;
-  n.lastChecksumTick=t;n.checksumAt=now;
-  // Confirm multiple distinct committed ticks before forcing a rollback checkpoint.
-  if(n.checksumStreak<3||now-(n.lastChecksumRecovery??-Infinity)<8000)return;
-  n.checksumStreak=0;n.lastChecksumRecovery=now;
-  requestCheckpoint(n,'checksum',{hashTick:t,localHash,remoteHash});
- }
  function rollbackMessage(n,m){
   if(!n.peerHello)return;
   if(m.type==='rb-init'){if((m.config?.lobby?.revision??-1)<(n.config.lobby?.revision??0))return;if(m.config?.lobby?.stage==='playing')applyRoomConfig(n,m.config);}
@@ -265,8 +240,8 @@
   if(m.type==='rb-start'&&n.role==='guest'&&n.rb){if(n.synced&&!n.suspended)return;n.waitingStart=false;n.synced=true;n.suspended=false;const wait=Number.isFinite(m.wait)?Math.max(0,Math.min(1000,m.wait)):120,rtt=Number.isFinite(m.controlRtt)?Math.max(0,Math.min(5000,m.controlRtt)):0;n.metrics.startControlRttMs=rtt;n.startAt=performance.now()+Math.max(0,wait-rtt/2);return;}
   if(m.type==='rb-resync'){if(n.role==='host'&&!n.initPacket){requestCheckpoint(n,'peer-request');}return;}
   if(!n.rb||n.suspended)return;
-  if(m.type==='rb-input'){if(!n.rb.receive(m)){requestCheckpoint(n,'invalid-input');return;}n.lastState=n.lastStateAck=performance.now();n.peerHashQueue??=new Map();for(const [t,h]of n.peerHashQueue)if(t<=n.rb.confirmed){n.peerHashQueue.delete(t);const ours=n.rb.digest(t);if(ours&&ours.hash!==h){checksumMismatch(n,t,ours.hash,h);if(n.suspended)return;}}return;}
-  if(m.type==='rb-hash'&&Number.isSafeInteger(m.tick)&&m.tick>=0&&m.tick<=n.rb.tick+240&&typeof m.hash==='string'&&m.hash.length<=16){if(m.tick<=n.rb.confirmed){const ours=n.rb.digest(m.tick);if(ours&&ours.hash!==m.hash)checksumMismatch(n,m.tick,ours.hash,m.hash);}else{n.peerHashQueue??=new Map();if(n.peerHashQueue.size<16)n.peerHashQueue.set(m.tick,m.hash);}}
+  if(m.type==='rb-input'){if(!n.rb.receive(m)){requestCheckpoint(n,'invalid-input');return;}n.lastState=n.lastStateAck=performance.now();n.peerHashQueue??=new Map();for(const [t,h]of n.peerHashQueue)if(t<=n.rb.confirmed){n.peerHashQueue.delete(t);const ours=n.rb.digest(t);if(ours&&ours.hash!==h){requestCheckpoint(n,'checksum',{hashTick:t,localHash:ours.hash,remoteHash:h});return;}}return;}
+  if(m.type==='rb-hash'&&Number.isSafeInteger(m.tick)&&m.tick>=0&&m.tick<=n.rb.tick+240&&typeof m.hash==='string'&&m.hash.length<=16){if(m.tick<=n.rb.confirmed){const ours=n.rb.digest(m.tick);if(ours&&ours.hash!==m.hash)requestCheckpoint(n,'checksum',{hashTick:m.tick,localHash:ours.hash,remoteHash:m.hash});}else{n.peerHashQueue??=new Map();if(n.peerHashQueue.size<16)n.peerHashQueue.set(m.tick,m.hash);}}
  }
  function channel(dc){const n=session;if(!n)return;if(n.channel&&n.channel!==dc){n.channel.onopen=n.channel.onmessage=n.channel.onclose=n.channel.onerror=null;n.channel.close();}n.channel=dc;dc.onopen=()=>{if(session!==n)return;n.lastPeer=performance.now();send({type:'hello',version:94,simulation:SIMULATION});};dc.onmessage=event=>{if(session!==n||typeof event.data!=='string'||event.data.length>512000)return;let m;try{m=JSON.parse(event.data);}catch{return;}if(!m||typeof m!=='object'||Array.isArray(m))return;n.metrics.bytesReceived+=event.data.length;
  if(!['hello','ping','pong','rb-input','rb-init','rb-ack','rb-start','rb-hash','rb-resync'].includes(m.type))return;n.lastPeer=performance.now();if(m.type.startsWith('rb-')){try{rollbackMessage(n,m);}catch(e){n.metrics.rollbackError=String(e.message);requestCheckpoint(n,'exception',{message:String(e.message)});}return;}
@@ -277,12 +252,7 @@
  function badge(n){paintPing(n);el('netBadge').title=(n.activeRoute==='direct'?'DIRECT':directRequired(n)?'CHỜ DIRECT':'SERVER WS')+' · RTT '+(n.peerPing==null?'đang đo':Math.round(n.peerPing)+' ms')+' · dao động '+Math.round(n.jitter||0)+' ms';}
  async function inspectRoute(n){n.route=n.activeRoute==='direct'?'DIRECT':directRequired(n)?'CHỜ DIRECT':'SERVER WS';n.metrics.route={type:n.route,protocol:n.activeRoute==='direct'?'webrtc':directRequired(n)?'pending':'wss',rttMs:n.peerPing};const pc=n.pc;if(pc?.getStats){try{const stats=await pc.getStats();if(session!==n||n.pc!==pc)return;const pairs=[];let selected;const shape=c=>!c?.address&&!c?.ip?'hidden':String(c.address||c.ip).endsWith('.local')?'mdns':String(c.address||c.ip).includes(':')?'ipv6':'ipv4';for(const row of stats.values()){if(row.type==='transport'&&row.selectedCandidatePairId)selected=stats.get(row.selectedCandidatePairId);if(row.type==='candidate-pair'&&pairs.length<12){const local=stats.get(row.localCandidateId),remote=stats.get(row.remoteCandidateId);pairs.push({state:row.state||'unknown',localType:local?.candidateType||null,remoteType:remote?.candidateType||null,localForm:shape(local),remoteForm:shape(remote),protocol:local?.protocol||null,requestsSent:row.requestsSent||0,responsesReceived:row.responsesReceived||0,nominated:!!row.nominated});}}n.metrics.directIce??={local:{},remote:{}};n.metrics.directIce.pairs=pairs;if(selected){const local=stats.get(selected.localCandidateId),remote=stats.get(selected.remoteCandidateId);n.metrics.route.local=local?.candidateType;n.metrics.route.remote=remote?.candidateType;n.metrics.route.protocol=local?.protocol||'webrtc';}}catch{}}badge(n);}
  function connected(n){return wire(n)?.readyState==='open';}
- function connectionGuard(n){if(session!==n)return;if(n.directFailed){if(n.started&&!n.audioSuspended){n.audioSuspended=true;window.sagaAudio?.stopCombat();window.sagaAudio?.syncMusic?.('pause');}recoveryUI(n);el('netCurtain').hidden=!n.started;return;}const now=performance.now(),stall=Math.max(6000,Math.min(10000,(n.peerPing||0)*6+(n.jitter||0)*6));if(!n.started&&!n.inLobby)el('lobbyState').textContent=n.joined?(n.transportReady===false?(directRequired(n)?'Đang kết nối DIRECT · Không dùng server dự phòng':'Đang thử kết nối trực tiếp · Có server dự phòng'):'Đã đủ hai người · Đang đồng bộ trận đấu…'):'Đang chờ đối thủ · WebSocket server';if(n.started&&!n.suspended&&!n.initPacket&&!n.waitingStart&&(now-n.lastPeer>stall||n.role==='guest'&&now-n.lastState>stall||n.role==='host'&&now-n.lastStateAck>stall+500)){n.metrics.lastWatchdog={at:Date.now(),route:n.activeRoute,ice:n.pc?.iceConnectionState||null,peerAgeMs:Math.round(now-n.lastPeer),stateAgeMs:Math.round(now-n.lastState),ackAgeMs:Math.round(now-n.lastStateAck),stallMs:Math.round(stall),bufferedAmount:n.directChannel?.bufferedAmount||0};if(n.activeRoute==='direct')fallback(n);else suspend(n);}if((n.suspended&&now-n.lostAt>15000)||(n.reconnectAt&&now-n.reconnectAt>15000)||(!n.inLobby&&!n.started&&n.joined&&now-n.joinedAt>40000)){if(n.started)suspend(n);recoveryUI(n,'Chưa khôi phục được kết nối. Trận đấu vẫn tạm dừng. Bấm Thử lại kết nối để tiếp tục trong phòng này, hoặc chọn Rời phòng.');el('netCurtain').hidden=!n.started;return;}const showRecovery=n.suspended&&now-(n.lostAt||now)>=1200;
-  if(showRecovery){
-   recoveryUI(n);
-   if(!n.audioSuspended){n.audioSuspended=true;window.sagaAudio?.stopCombat();window.sagaAudio?.syncMusic?.('pause');}
-  }else if(!n.suspended&&n.audioSuspended){n.audioSuspended=false;window.sagaAudio?.syncMusic?.('play');}
-  el('netCurtain').hidden=!showRecovery;}
+ function connectionGuard(n){if(session!==n)return;if(n.directFailed){recoveryUI(n);el('netCurtain').hidden=!n.started;return;}const now=performance.now(),stall=Math.max(1500,Math.min(4000,(n.peerPing||0)*4+(n.jitter||0)*4));if(!n.started&&!n.inLobby)el('lobbyState').textContent=n.joined?(n.transportReady===false?(directRequired(n)?'Đang kết nối DIRECT · Không dùng server dự phòng':'Đang thử kết nối trực tiếp · Có server dự phòng'):'Đã đủ hai người · Đang đồng bộ trận đấu…'):'Đang chờ đối thủ · WebSocket server';if(n.started&&!n.initPacket&&!n.waitingStart&&(now-n.lastPeer>stall||n.role==='guest'&&now-n.lastState>stall||n.role==='host'&&now-n.lastStateAck>stall+500)){if(n.activeRoute==='direct')fallback(n);else suspend(n);}if((n.suspended&&now-n.lostAt>15000)||(n.reconnectAt&&now-n.reconnectAt>15000)||(!n.inLobby&&!n.started&&n.joined&&now-n.joinedAt>40000)){if(n.started)suspend(n);recoveryUI(n,'Chưa khôi phục được kết nối. Trận đấu vẫn tạm dừng. Bấm Thử lại kết nối để tiếp tục trong phòng này, hoặc chọn Rời phòng.');el('netCurtain').hidden=!n.started;return;}if(n.suspended)recoveryUI(n);el('netCurtain').hidden=!n.suspended;}
  function connectSocket(n){
   if(session!==n)return;
   if(!window.WebSocket){error('Trình duyệt cần hỗ trợ WebSocket để chơi Online.');return;}
@@ -300,29 +270,23 @@
    if(message.event==='authenticated'){
     authenticated=true;n.reliable=true;n.reconnectAt=0;n.retryDelay=500;n.route=directRequired(n)?'CHỜ DIRECT':'SERVER WS';n.metrics.transport=directRequired(n)?'direct-pending':'websocket';if(!n.started){n.suspended=false;n.transportReady=false;}error('');dc.onopen?.();
    }else if(message.event==='ready'){
-    n.joined=true;n.joinedAt=performance.now();applyRoomConfig(n,message.config);connectionChoice.value=directRequired(n)?'direct':'auto';n.metrics.connectionMode=directRequired(n)?'direct':'auto';if(!n.started)n.peerHello=false;n.lastPeer=performance.now();
-    const activeDirect=n.started&&n.activeRoute==='direct'&&n.directChannel?.readyState==='open';
-    if(activeDirect){/* Keep the existing P2P route during signaling reconnection. */}
-    else if(n.started&&n.activeRoute==='ws'&&n.transportReady){if(n.suspended&&n.role==='host')recover(n);}
-    else if(directRequired(n)){resetRouteAttempt(n);startDirect(n,true);}
-    else if(n.started||n.directDisabled){n.directDisabled=true;if(n.role==='host'&&n.activeRoute!=='ws')selectRoute(n,'ws');}
-    else startDirect(n);send({type:'hello',version:94,simulation:SIMULATION});
+    n.joined=true;n.joinedAt=performance.now();applyRoomConfig(n,message.config);connectionChoice.value=directRequired(n)?'direct':'auto';n.metrics.connectionMode=directRequired(n)?'direct':'auto';n.peerHello=false;n.lastPeer=performance.now();
+    if(directRequired(n)){resetRouteAttempt(n);startDirect(n,true);}else if(n.started||n.directDisabled){n.directDisabled=true;if(n.role==='host')selectRoute(n,'ws');}else startDirect(n);send({type:'hello',version:94,simulation:SIMULATION});
    }else if(message.event==='peer-disconnected'){
-    if(n.activeRoute==='direct'&&n.directChannel?.readyState==='open'){status('DIRECT · MẤT TÍN HIỆU SERVER, P2P VẪN HOẠT ĐỘNG');}else{n.directDisabled=true;n.activeRoute='ws';closeDirect(n);if(directRequired(n))directUnavailable(n,false);else{if(n.started)suspend(n);status('ONLINE · ĐỐI THỦ MẤT KẾT NỐI · ĐANG CHỜ');}}
+    n.directDisabled=true;n.activeRoute='ws';closeDirect(n);if(directRequired(n))directUnavailable(n,false);else{if(n.started)suspend(n);status('ONLINE · ĐỐI THỦ MẤT KẾT NỐI · ĐANG CHỜ');}
    }else if(message.event==='room-closed'){
     leave();G.menu();error('Đối thủ đã rời phòng. Hãy tạo phòng mới.');
    }
   };
-  socket.onerror=()=>{if(session===n&&n.socket===socket&&n.started&&!(n.activeRoute==='direct'&&n.directChannel?.readyState==='open'))dc.onerror?.();};
+  socket.onerror=()=>{if(session===n&&n.socket===socket&&n.started)dc.onerror?.();};
   socket.onclose=event=>{
-   authenticated=false;if(session!==n||n.socket!==socket)return;
-   const directAlive=n.activeRoute==='direct'&&n.directChannel?.readyState==='open';
-   if(!directAlive){n.directDisabled=true;n.activeRoute='ws';closeDirect(n);dc.onclose?.();if(directRequired(n))directUnavailable(n,false);}
+   authenticated=false;if(session!==n||n.socket!==socket)return;n.directDisabled=true;n.activeRoute='ws';closeDirect(n);
+   dc.onclose?.();if(directRequired(n))directUnavailable(n,false);
    if(event.code>=4000&&event.code<4100){leave();G.menu();error(event.code===4004?'Phiên chơi đã được mở ở kết nối khác.':'Phòng hoặc phiên chơi không hợp lệ. Hai máy hãy tải lại cùng bản game và tạo phòng mới.');return;}
-   if(!directAlive)n.reconnectAt||=performance.now()||.001;
+   n.reconnectAt||=performance.now()||.001;
    const delay=n.retryDelay||500;n.retryDelay=Math.min(delay*2,4000);
    clearTimeout(n.reconnectTimer);n.reconnectTimer=setTimeout(()=>connectSocket(n),delay+Math.random()*200);
-   status(directAlive?'DIRECT · ĐANG KHÔI PHỤC SIGNALING':'ONLINE · ĐANG KẾT NỐI LẠI SERVER');
+   status('ONLINE · ĐANG KẾT NỐI LẠI SERVER');
   };
  }
  async function poll(n){if(session!==n)return;const start=performance.now();try{
@@ -331,8 +295,7 @@
  }catch(e){if(session!==n)return;if(/đã đóng|không tồn tại|không hợp lệ|đã rời/.test(e.message)){leave();G.menu();error(e.message);return;}}
  if(session===n)n.pollTimer=setTimeout(()=>poll(n),n.inLobby?600:n.reliable&&connected(n)&&n.started?10000:1600);}
  function fast(n){if(session!==n)return;const now=performance.now();routeTick(n,now);if(connected(n)){
- // Do not opportunistically upgrade a live match from WS to DIRECT: switching routes suspends rollback gameplay.
-  // Route discovery is only permitted before the match starts or during explicit recovery.
+ if(n.role==='host'&&n.activeRoute==='ws'&&n.synced&&!n.suspended&&!n.pc&&window.RTCPeerConnection&&(n.directAttempts||0)<4&&n.directRetryAt!=null&&now>=n.directRetryAt)startDirect(n,true);
  if(!n.peerHello)send({type:'hello',version:94,simulation:SIMULATION});
  if(now-n.lastProbe>=500){n.lastProbe=now;for(const [id,t]of n.probes)if(now-t>3000){n.probes.delete(id);n.probeTicks?.delete(id);}const id=++n.probeId;n.probes.set(id,now);n.probeTicks??=new Map();if(n.rb&&n.synced)n.probeTicks.set(id,{tick:n.rb.tick,epoch:n.epoch});send({type:'ping',id,rtt:n.peerPing});}
  if(now-(n.lastServerProbe||0)>=1000){n.lastServerProbe=now;n.serverProbes??=new Map();for(const [id,t]of n.serverProbes)if(now-t>5000)n.serverProbes.delete(id);const id=++n.probeId;n.serverProbes.set(id,now);send({type:'server-ping',id});}
