@@ -63,7 +63,18 @@ function updateRibbons(f,s,dt){
   for(let i=1;i<nodes.length;i++){const a=nodes[i-1],b=nodes[i],length=Math.hypot(rest[i][0]-rest[i-1][0],rest[i][1]-rest[i-1][1])*visualScale,dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1;b.x=a.x+dx/d*length;b.y=a.y+dy/d*length;b.vx=clamp((b.x-b.oldx)/dt*.95,-450,450);b.vy=clamp((b.y-b.oldy)/dt*.95,-450,450);}
  }
 }
-function make(){return {wx:40,wy:-153,lean:0,cloth:0,lift:0,hair:0,rear:0,hemX:38,hemY:-99,clock:0,arm:solveArm(40,-153),points:new Float64Array(outline.length*2),hairPoints:new Float64Array(hairOutline.length*2),handPoints:new Float64Array(palmOutline.length*2),sleevePoints:[]};}
+function ensureDrawBuffers(s){
+ // Render-derived geometry is not authoritative game state. Keep these buffers out of rollback hashes.
+ for(const [key,length] of [['points',outline.length*2],['hairPoints',hairOutline.length*2],['handPoints',palmOutline.length*2]]){
+  const value=s[key];
+  if(!(value instanceof Float64Array)||value.length!==length)Object.defineProperty(s,key,{value:new Float64Array(length),writable:true,configurable:true,enumerable:false});
+  else if(Object.prototype.propertyIsEnumerable.call(s,key))Object.defineProperty(s,key,{value,writable:true,configurable:true,enumerable:false});
+ }
+ if(!Array.isArray(s.sleevePoints))Object.defineProperty(s,'sleevePoints',{value:[],writable:true,configurable:true,enumerable:false});
+ else if(Object.prototype.propertyIsEnumerable.call(s,'sleevePoints'))Object.defineProperty(s,'sleevePoints',{value:s.sleevePoints,writable:true,configurable:true,enumerable:false});
+ return s;
+}
+function make(){return ensureDrawBuffers({wx:40,wy:-153,lean:0,cloth:0,lift:0,hair:0,rear:0,hemX:38,hemY:-99,clock:0,arm:solveArm(40,-153)});}
 function targetPose(f){const a=f.action,k=a?.k,age=a?.age||0;let x=40,y=-153;
  if(k==='attack'){const start=a.startup||.1;if(age<start){const u=smooth(age/start);x-=13*u;y+=6*u;}else{const u=smooth((age-start)/.065),relax=smooth((age-start-.10)/.18);x+=7*u*(1-relax);y-=12*u*(1-relax);}}
  if(k==='q'){const cast=root.ThunderTuning?.qCast??.5;if(age<cast){const u=smooth(age/Math.max(.06,cast*.6));x=40-5*u;y=-153+3*u;}else{const fire=smooth((age-cast)/.06),recover=smooth((age-cast-.10)/Math.max(.06,(a.duration??.72)-cast-.10));x=35+20*fire;y=-150-4*fire;x+=(40-x)*recover;y+=(-153-y)*recover;}}
@@ -93,7 +104,7 @@ function sleeveGeometry(a,s){
  quad([ex+unx*9,ey+uny*9],cuff);quad([tip[0]+4,tip[1]-10],tip);quad([ex-16,ey+18],inner);
  return points;
 }
-function skin(f,s){const a=s.arm,angle=foreAngle(a),fc=Math.cos(angle),fs=Math.sin(angle);
+function skin(f,s){ensureDrawBuffers(s);const a=s.arm,angle=foreAngle(a),fc=Math.cos(angle),fs=Math.sin(angle);
  for(let i=0;i<weights.length;i++){const p=weights[i];let x=p.x,y=p.y;
  if(p.rear){const v=rotatePoint(x,y,-25,-174,s.rear*f.dir);x+=(v[0]-x)*p.rear;y+=(v[1]-y)*p.rear;}
  const lower=smooth((p.y+85)/65),drag=(s.capeMid??s.cloth)*(1-lower)+(s.capeTip??s.cloth)*lower,flutter=Math.sin(s.clock*4.1-p.y*.035)*Math.min(1,Math.abs(f.vx||0)/330)*1.2;
