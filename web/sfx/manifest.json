@@ -762,7 +762,59 @@
       "sha256": "f52b3c6b6f9a9f06f51b2a161b01cc5270f3f30fe9190689508c3c7b90175b19",
       "max_instances": 4,
       "min_interval_ms": 0
+    },
+    {
+      "id": "melanta_q_impact",
+      "group": "Melanta",
+      "label": "Q · đao chạm đất",
+      "event": "melanta.q_impact",
+      "file": "wav/melanta_q_slam.wav",
+      "duration": 0.28,
+      "gain": 0.76,
+      "priority": 3,
+      "sha256": "a3017d1d8ed9b718157ae424da8e89ffd9bf16818fe188d4849cce45ce9ed9b4",
+      "max_instances": 2,
+      "min_interval_ms": 0
+    },
+    {
+      "id": "melanta_normal_swing",
+      "group": "Melanta",
+      "label": "Đánh thường · vung đao",
+      "event": "melanta.normal_swing",
+      "file": "wav/melanta_normal_swing.wav",
+      "duration": 0.865,
+      "gain": 0.74,
+      "priority": 3,
+      "sha256": "8b5475a9f0b78b3826ff01377f81cb0f355084bd9db8b285352613644743f048",
+      "max_instances": 2,
+      "min_interval_ms": 0
+    },
+    {
+      "id": "melanta_r_cut",
+      "group": "Melanta",
+      "label": "R · chém trúng",
+      "event": "melanta.r_cut",
+      "file": "wav/melanta_r_cut.wav",
+      "duration": 0.27,
+      "gain": 0.83,
+      "priority": 3,
+      "sha256": "beae19912acbcba09d33eef049c4c97030bc47bc0644b1f976d9e53dbb2b46bf",
+      "max_instances": 2,
+      "min_interval_ms": 0
+    },
+    {
+      "id": "melanta_r_swing",
+      "group": "Melanta",
+      "label": "R · đao lướt qua",
+      "event": "melanta.r_swing",
+      "file": "wav/melanta_r_swing.wav",
+      "duration": 0.23,
+      "gain": 0.57,
+      "priority": 3,
+      "sha256": "d0b65452659d74e48e0771d1169196d438bba8c5154ed015ca7659a79d663d78",
+      "max_instances": 2,
+      "min_interval_ms": 0
     }
   ],
-  "revision": "soul45-thunder32"
+  "revision": "melanta-impact-523"
 }

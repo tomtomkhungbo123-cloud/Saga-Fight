@@ -1,0 +1,1 @@
+window.MelantaQSource={"width":312,"height":306,"columns":6,"durationsMs":[80,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,80,40,40,80,40,40,40],"durationMs":1200,"groundPivot":[162,260],"originalCellWidth":372,"sourceSha256":"f296403176a95e25e3d7c7ffbe3db7665db9e3ac969a77ecd801cd2d7738d18b"};

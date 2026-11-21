@@ -7,8 +7,9 @@ const smooth=x=>{x=clamp(x,0,1);return x*x*(3-2*x)};
 const SKILLS={attack:{cd:.48,duration:.5},q:{cd:3,duration:1.32},w:{cd:6,duration:1.05,range:700},e:{cd:3,duration:.78,range:400},r:{cd:14,duration:4,range:500}};
 const Q_IMPACT_TIME=.72,Q_REACH=375,Q_RADIUS=190;
 const R_SWING_PERIOD=.6,R_HIT_INTERVAL=R_SWING_PERIOD/2;
+const BLADE_SCALE=.68,BLADE_NOSE={x:41*BLADE_SCALE,y:-27*BLADE_SCALE};
 function qHop(t){if(t<.14)return 0;if(t<.39)return 112*smooth((t-.14)/.25);if(t<.76)return 112+(14-112)*smooth((t-.39)/.37);if(t<.92)return 14*(1-smooth((t-.76)/.16));return 0}
-function qTip(a,t){const origin={x:a.sx,y:-a.sy-qHop(t)},dir=a.dir,impact={x:clamp(a.impactX??(a.sx+dir*Q_REACH),a.boundsMin??80,a.boundsMax??1520),y:a.impactY??0};if(t<.44){const u=smooth(t/.44);return {x:origin.x-dir*(40+50*u),y:origin.y-125-105*u}}if(t<Q_IMPACT_TIME){const u=Math.pow(clamp((t-.44)/.28,0,1),1.65),h=1-u,startY=-a.sy-qHop(.44);return {x:h*h*h*(origin.x-dir*90)+3*h*h*u*(origin.x+dir*140)+3*h*u*u*(impact.x-dir*25)+u*u*u*impact.x,y:h*h*h*(startY-230)+3*h*h*u*(startY-295)+3*h*u*u*(-150)+u*u*u*impact.y}}if(t<.86)return impact;const u=smooth((t-.86)/.46);return {x:impact.x+(origin.x+dir*23-impact.x)*u,y:impact.y+(origin.y-127-impact.y)*u}}
+function qTip(a,t){const origin={x:a.sx,y:-a.sy-qHop(t)},dir=a.dir,impact={x:clamp(a.impactX??(a.sx+dir*Q_REACH),a.boundsMin??80,a.boundsMax??1520),y:a.impactY??0};if(t<.44){const u=smooth(t/.44);return {x:origin.x-dir*(40+50*u),y:origin.y-125-105*u}}if(t<Q_IMPACT_TIME){const u=Math.pow(clamp((t-.44)/.28,0,1),1.65),h=1-u,startY=-a.sy-qHop(.44);return {x:h*h*h*(origin.x-dir*90)+3*h*h*u*(origin.x+dir*140)+3*h*u*u*(impact.x-dir*25)+u*u*u*impact.x,y:h*h*h*(startY-230)+3*h*h*u*(startY-295)+3*h*u*u*(-150)+u*u*u*impact.y}}if(t<1.0)return impact;const u=smooth((t-1.0)/.32);return {x:impact.x+(origin.x+dir*23-impact.x)*u,y:impact.y+(origin.y-127-impact.y)*u}}
 function qTrailSamples(a,t){const end=t,start=Math.min(end,Math.max(.44,end-.19)),points=[];for(let i=0;i<=32;i++){const at=start+(end-start)*i/32;points.push({...qTip(a,at),age:end-at})}return points}
 // Skill 4 visual contacts share the original thirteen impact positions/times.
 function rImpactX(a,index){return a.sx+Math.sin(index*2.4)*420}
@@ -35,10 +36,13 @@ const BLADE_OUTLINE=(()=>{const out=[{x:-4,y:-3}],cubic=(a,b,c,d)=>{for(let i=1;
 function attackOriginAt(a,t){const motion=a.motion;if(!motion?.length)return {x:a.sx,y:a.sy};if(t<=motion[0].t)return {x:motion[0].x,y:motion[0].y};for(let i=motion.length-1;i>0;i--){const left=motion[i-1],right=motion[i];if(t>=left.t){const u=clamp((t-left.t)/(right.t-left.t||1),0,1);return {x:left.x+(right.x-left.x)*u,y:left.y+(right.y-left.y)*u}}}return {x:a.sx,y:a.sy}}
 function advanceVertical(p,dt){p.vy-=1800*dt;p.y=Math.max(0,p.y+p.vy*dt);if(p.y===0)p.vy=0}
 function rawAttackTip(a,t){const n=a.n||1,wind=smooth(t/.10),u=clamp((t-.10)/.24,0,1);let x,y;if(t<.10){x=23+2*wind-Math.sin(Math.PI*clamp(t/.10,0,1))*65;y=-127+((n===2?-190:n===3?-100:-60)+127)*wind}else if(t<=.34){x=25+275*Math.sin(Math.PI*u);y=n===1?-105+45*Math.cos(Math.PI*u):n===2?-120-70*Math.cos(Math.PI*u):-100-55*Math.sin(Math.PI*2*u)}else{const r=smooth((t-.34)/.16),endY=n===1?-150:n===2?-50:-100;x=25+(23-25)*r;y=endY+(-127-endY)*r}const origin=attackOriginAt(a,t);return {x:origin.x+a.dir*x,y:-origin.y+y}}
-function bladePolygon(pose){const c=Math.cos(pose.angle),s=Math.sin(pose.angle);return BLADE_OUTLINE.map(p=>({x:pose.x+.68*(p.x*c-p.y*s),y:pose.y+.68*(p.x*s+p.y*c)}))}
+function bladePolygon(pose){const c=Math.cos(pose.angle),s=Math.sin(pose.angle);return BLADE_OUTLINE.map(p=>({x:pose.x+BLADE_SCALE*(p.x*c-p.y*s),y:pose.y+BLADE_SCALE*(p.x*s+p.y*c)}))}
 function attackBladePose(a,t){const tip=rawAttackTip(a,t),before=rawAttackTip(a,Math.max(0,t-.0001)),after=rawAttackTip(a,Math.min(a.duration,t+.0001)),angle=Math.atan2(after.y-before.y,after.x-before.x)-.3;const pose={...tip,angle};const origin=attackOriginAt(a,t),excess=Math.max(0,...bladePolygon(pose).map(p=>(p.x-origin.x)*a.dir-ATTACK_REACH));pose.x-=a.dir*excess;return pose}
 function attackTip(a,t){const p=attackBladePose(a,t);return {x:p.x,y:p.y}}
-function attackTrailSamples(a,t){const start=Math.min(t,Math.max(ATTACK_START,t-.11));return Array.from({length:25},(_,i)=>({...attackTip(a,start+(t-start)*i/24),age:(t-start)*(1-i/24)}))}
+function attackCuttingPoint(a,t){
+ const pose=attackBladePose(a,t),c=Math.cos(pose.angle),s=Math.sin(pose.angle);
+ return {x:pose.x+BLADE_NOSE.x*c-BLADE_NOSE.y*s,y:pose.y+BLADE_NOSE.x*s+BLADE_NOSE.y*c};
+}
 function segmentRect(a,b,r){let lo=0,hi=1;for(const [start,delta,min,max] of [[a.x,b.x-a.x,r.left,r.right],[a.y,b.y-a.y,r.top,r.bottom]]){if(Math.abs(delta)<1e-9){if(start<min||start>max)return null}else{let t0=(min-start)/delta,t1=(max-start)/delta;if(t0>t1)[t0,t1]=[t1,t0];lo=Math.max(lo,t0);hi=Math.min(hi,t1);if(lo>hi)return null}}return {x:a.x+(b.x-a.x)*lo,y:a.y+(b.y-a.y)*lo}}
 function polygonRect(poly,r){for(let i=0;i<poly.length;i++){const hit=segmentRect(poly[i],poly[(i+1)%poly.length],r);if(hit)return hit}const x=(r.left+r.right)/2,y=(r.top+r.bottom)/2;let inside=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const a=poly[i],b=poly[j];if((a.y>y)!==(b.y>y)&&x<(b.x-a.x)*(y-a.y)/(b.y-a.y)+a.x)inside=!inside}return inside?{x,y}:null}
 function sweepNormal(a,t0,t1,enemy,previousEnemy=enemy){const start=Math.max(ATTACK_START,t0),end=Math.min(ATTACK_END,t1);if(end<start)return null;const r={left:-ENEMY_HITBOX.halfWidth,right:ENEMY_HITBOX.halfWidth,top:-ENEMY_HITBOX.top,bottom:-ENEMY_HITBOX.bottom},steps=Math.max(1,Math.ceil((end-start)*720)),targetAt=t=>{const u=clamp((t-t0)/(t1-t0||1),0,1);return {x:previousEnemy.x+(enemy.x-previousEnemy.x)*u,y:previousEnemy.y+(enemy.y-previousEnemy.y)*u}},relativeAt=t=>{const e=targetAt(t);return bladePolygon(attackBladePose(a,t)).map(p=>({x:p.x-e.x,y:p.y+e.y}))};let prev=relativeAt(start);for(let i=0;i<=steps;i++){const t=start+(end-start)*i/steps,poly=relativeAt(t);let hit=polygonRect(poly,r);if(!hit)for(let j=0;j<poly.length;j++){hit=segmentRect(prev[j],poly[j],r);if(hit)break}if(hit){const e=targetAt(t);return {x:hit.x+e.x,y:hit.y-e.y,t}}prev=poly}return null}
@@ -56,7 +60,7 @@ class MelantaGame{
  if(active.hit){this.a=null;this.buffer=null;this.e.bind=0;const started=this.cast('r');if(started)this.a.fromW=true;return started}
  if((active.locked&&active.t>=.6)||active.t>=active.duration-.24)this.buffer={k:'r',life:.32};
  }else if(active.duration-active.t<.18&&k!=='r')this.buffer={k,life:.24};
- return false}this.buffer=null;if(this.cd[k]>.001)return false;const p=this.p,e=this.e;this.cd[k]=this.free?0:SKILLS[k].cd;this.a={k,t:0,duration:SKILLS[k].duration,sx:p.x,sy:p.y,dir:p.dir,hit:false,ticks:0,locked:false,tx:e.x};if(k==='attack'){this.a.motion=[{t:0,x:p.x,y:p.y}];this.a.n=this.t<=this.normalUntil?this.nextNormal:1;this.nextNormal=this.a.n%3+1;this.normalUntil=this.t+SKILLS.attack.duration+.55}if(k==='e'){p.speed=2;this.a.airborne=p.y>.01||p.vy>0;this.a.airTime=(p.vy+Math.sqrt(p.vy*p.vy+3600*p.y))/1800;}if(k==='r'){p.vx=0;this.a.phase=p.y>.01||p.vy>0?'plunge':'dance';if(this.a.phase==='plunge'){this.a.plungeTime=0;p.vy=Math.min(p.vy,-600)}else{p.y=0;p.vy=0}}this.last={attack:'Vũ khí quét vòng',q:'Vận phi đà • quật đất tại chỗ',w:'Phóng phi đà • trói buộc',e:'Lộn múa • tăng tốc 2s',r:'Vũ điệu gai tím • giảm sát thương 20%'}[k];if(k==='attack')this.last='N'+this.a.n+' • Vũ điệu phi đà';return true}
+ return false}this.buffer=null;if(this.cd[k]>.001)return false;const p=this.p,e=this.e;this.cd[k]=this.free?0:SKILLS[k].cd;this.a={k,t:0,duration:SKILLS[k].duration,sx:p.x,sy:p.y,dir:p.dir,hit:false,ticks:0,locked:false,tx:e.x};if(k==='attack'){this.a.motion=[{t:0,x:p.x,y:p.y}];this.a.n=this.t<=this.normalUntil?this.nextNormal:1;this.nextNormal=this.a.n%3+1;this.normalUntil=this.t+SKILLS.attack.duration+.55}if(k==='e'){p.speed=2;this.a.airborne=p.y>.01||p.vy>0;this.a.airTime=(p.vy+Math.sqrt(p.vy*p.vy+3600*p.y))/1800;}if(k==='r'){p.vx=0;this.a.phase=p.y>.01||p.vy>0?'plunge':'dance';if(this.a.phase==='plunge'){this.a.plungeTime=0;p.vy=Math.min(p.vy,-600)}else{p.y=0;p.vy=0}}this.last={attack:'Vũ khí quét vòng',q:'Vận phi đà • quật đất tại chỗ',w:'Phóng phi đà • trói buộc',e:'Lộn múa • tăng tốc 2s',r:'VẠN VŨ TỬ ĐẰNG • giảm sát thương 20%'}[k];if(k==='attack')this.last='N'+this.a.n+' • Vũ điệu phi đà';return true}
  jump(){if(this.matchState==='playing'&&!this.a&&this.p.y===0&&this.p.hp>0)this.p.vy=650}
  update(dt,input={}){dt=Math.min(dt,.034);if(this.matchState==='finishing'){this.fx=this.fx.filter(f=>(f.t+=dt)<f.life);this.finisher.t=Math.min(this.finisher.duration,this.finisher.t+dt);if(this.finisher.t+1e-8>=this.finisher.duration){this.finisher.t=this.finisher.duration;this.matchState='finished';this.last='Chiến thắng • Melanta'}return}if(this.matchState==='finished')return;this.t+=dt;const p=this.p,e=this.e,eBefore={x:e.x,y:e.y};for(const k in this.cd)this.cd[k]=Math.max(0,this.cd[k]-dt);const enemyFreeDt=Math.max(0,dt-Math.max(e.bind,e.stun));p.speed=Math.max(0,p.speed-dt);e.stun=Math.max(0,e.stun-dt);e.bind=Math.max(0,e.bind-dt);this.fx=this.fx.filter(f=>(f.t+=dt)<f.life);if(this.events.length>100)this.events.splice(0,this.events.length-100);
  if(this.buffer){this.buffer.life-=dt;if(this.buffer.life<=0)this.buffer=null}
@@ -67,7 +71,7 @@ class MelantaGame{
  if(a){
  if(a.k==='r'&&a.phase==='plunge'){
  a.plungeTime+=dt;p.vx=0;p.x=a.sx;p.vy-=3000*dt;p.y=Math.max(0,p.y+p.vy*dt);
- if(p.y===0){p.vy=0;a.phase='dance';a.t=0;a.landedAt=this.t;this.effect('rland',p.x,0,{life:.52,power:1});this.last='Nện đất • Vũ điệu gai tím'}
+ if(p.y===0){p.vy=0;a.phase='dance';a.t=0;a.landedAt=this.t;this.effect('qslam',p.x,0,{dir:a.dir,radius:190,t:window.MelantaQImpact?.leadIn??.08,life:window.MelantaQImpact?.duration??1.2});this.last='Nện đất • VẠN VŨ TỬ ĐẰNG'}
  return;
  }
  a.t+=dt;const u=a.t/a.duration,dir=a.dir;
@@ -84,14 +88,14 @@ class MelantaGame{
  a.motion.push({t:a.t,x:p.x,y:p.y});if(a.motion.length>80)a.motion.shift();
  }else p.vx=0;
  if(a.k==='attack'&&!a.hit&&e.hp>0){const contact=sweepNormal(a,a.t-dt,a.t,e,eBefore);if(contact){a.hit=true;a.contact=contact;const before=attackTip(a,Math.max(0,contact.t-.002)),after=attackTip(a,Math.min(a.duration,contact.t+.002));this.hit(60,contact.x,-contact.y,{angle:Math.atan2(after.y-before.y,after.x-before.x)});this.last='N'+a.n+' • 60 sát thương'}}
- if(a.k==='q'){p.x=a.sx;p.y=a.sy+qHop(a.t);p.vy=0;if(!a.hit&&a.t+1e-8>=Q_IMPACT_TIME){a.hit=true;const impact=qTip(a,Q_IMPACT_TIME);this.effect('qslam',impact.x,0,{dir:a.dir,life:1.05,power:1,radius:Q_RADIUS});if(e.hp>0&&Math.hypot(e.x-impact.x,e.y)<Q_RADIUS){this.hit(100);if(e.hp>0){e.stun=1;e.stunStartedAt=this.t;this.last='100 sát thương • Choáng 1s'}}}}
+ if(a.k==='q'){p.x=a.sx;p.y=a.sy+qHop(a.t);p.vy=0;if(!a.hit&&a.t+1e-8>=Q_IMPACT_TIME){a.hit=true;const impact=qTip(a,Q_IMPACT_TIME);this.effect('qslam',impact.x,0,{dir:a.dir,life:window.MelantaQImpact?.duration??1.6,power:1,radius:Q_RADIUS});if(e.hp>0&&Math.hypot(e.x-impact.x,e.y)<Q_RADIUS){this.hit(100);if(e.hp>0){e.stun=1;e.stunStartedAt=this.t;this.last='100 sát thương • Choáng 1s'}}}}
  if(a.k==='w'){
  if(!a.checked&&a.t+1e-8>=.28){a.checked=true;const dx=(e.x-a.sx)*dir,valid=dx>=0&&Math.hypot(e.x-a.sx,e.y-a.sy)<=700;a.throwX=valid?e.x:a.sx+dir*700;a.throwY=valid?e.y:a.sy;if(e.hp>0&&dx>=0&&Math.hypot(e.x-a.sx,e.y-a.sy)<=700){a.locked=true;a.tx=e.x;a.ty=e.y;a.stop=Math.min(72,Math.abs(e.x-a.sx)*.45);e.bind=Math.max(0,.8-a.t)+dt;this.last='Phi đà bắt trúng • Trói chân'}}
  if(a.locked&&!a.hit){if(e.hp<=0){a.locked=false;e.bind=0}else{e.bind=Math.max(e.bind,.8-a.t+dt);if(a.t>=.4){const v=clamp((a.t-.4)/.4,0,1),ease=v*v*v*(v*(v*6-15)+10);p.dir=dir;p.x=clamp(a.sx+(a.tx-dir*a.stop-a.sx)*ease,80,1520);p.y=a.sy+(a.ty-a.sy)*ease+18*Math.pow(Math.sin(Math.PI*v),2);p.vy=0;if(a.t+1e-8>=.8){a.hit=true;e.bind=0;this.hit(80,a.tx,a.ty+95);this.last='Lao tới mục tiêu • 80 sát thương'}}}}
  if(!a.locked){advanceVertical(p,dt)}
  }
  if(a.k==='e'){p.x=clamp(a.sx+dir*330*smooth(u),80,1520);if(a.airborne)advanceVertical(p,dt);else p.y=a.sy+Math.sin(Math.PI*clamp(u,0,1))*115;if(!a.hit&&e.hp>0&&Math.abs(e.x-p.x)<85&&Math.abs(e.y-p.y)<160){a.hit=true;this.hit(50)}}
- if(a.k==='r'){while(this.matchState==='playing'&&a.ticks<13&&a.t+1e-8>=(a.ticks+1)*R_HIT_INTERVAL){a.ticks++;const x=rImpactX(a,a.ticks);this.effect('spike',x,0,{power:1});this.effect('burst',x,0,{power:.4,life:.42});if(e.hp>0&&Math.hypot(e.x-p.x,e.y)<=500)this.hit(25)}}
+ if(a.k==='r'){while(this.matchState==='playing'&&a.ticks<13&&a.t+1e-8>=(a.ticks+1)*R_HIT_INTERVAL){a.ticks++;const x=rImpactX(a,a.ticks);this.effect('qslam',x,0,{dir:a.dir,radius:95,t:window.MelantaQImpact?.leadIn??.08,life:window.MelantaQImpact?.duration??1.2});if(e.hp>0&&Math.hypot(e.x-p.x,e.y)<=500)this.hit(25)}}
  // Consume the requested W→R link in this same simulation tick, without
  // an idle frame. A miss keeps its full recovery; a hit finishes on arrival.
  if(a.k==='w'&&this.buffer?.k==='r'&&(a.hit||a.t>=a.duration)){
@@ -179,10 +183,15 @@ class DashAfterimages{
 function eVisualTime(a){if(!a?.airborne)return a?.t||0;const span=Math.min(.78,Math.max(.10,(Number.isFinite(a.airTime)?a.airTime:a.duration||.78)-.025));return Math.min(1,a.t/span)*.78}
 function eFlipPose(a){if(a?.k!=='e')return {angle:0,fold:0,pivot:0};const t=eVisualTime(a),u=Math.max(0,Math.min(1,(t-.08)/.60)),turn=u*u*u*(u*(u*6-15)+10),full=!a.airborne||(Number.isFinite(a.airTime)?a.airTime:a.duration||.78)>=.32;return {angle:full?turn*Math.PI*2:Math.sin(Math.PI*Math.min(1,t/.78))*.15,fold:poseSmooth((t-.09)/.16)*(1-poseSmooth((t-.48)/.24))*(full?.94:.35),pivot:-78}}
 
-function playerPose(g){const p=g.p,a=g.a,w=g.walkVisual||{phase:0,mix:0},phase=w.phase,mix=w.mix,grounded=(p.grounded??(p.y<.01))&&(!a||a.k==='attack'),gaitMix=grounded?mix:0,q=a?.k==='q',t=q?a.t:0;const charge=q?poseSmooth(t/.44):0,release=q?poseSmooth((t-.44)/.28):0,recover=q?poseSmooth((t-.86)/.46):0;
+function canShowStride(a){return !a||a.k==='attack'||(a.k==='w'&&a.hit)}
+function playerPose(g){const p=g.p,a=g.a,w=g.walkVisual||{phase:0,mix:0},phase=w.phase,mix=w.mix,grounded=(p.grounded??(p.y<.01))&&canShowStride(a),gaitMix=grounded?mix:0,q=a?.k==='q',t=q?a.t:0;const charge=q?poseSmooth(t/.44):0,release=q?poseSmooth((t-.44)/.28):0,recover=q?poseSmooth((t-.86)/.46):0;
  const visual=g.normalVisual||NORMAL_REST,air=g.airVisual||{mix:0,rise:0,fall:0,travel:0,land:0},airWeight=Math.max(air.mix,air.land),airArms=air.mix*(1-visual.weight)*(q||a?.k==='e'||a?.k==='r'?0:1);const normal=a?.k==='attack',normalU=normal?Math.max(0,Math.min(1,a.t/a.duration)):0,normalTwist=normal?Math.sin(normalU*Math.PI*2)*([0,.12,-.11,.16][a.n||1]):0;
  const crouch=q?(t<.14?Math.sin(t/.14*Math.PI)*5:t>.76&&t<1.12?Math.sin((t-.76)/.36*Math.PI)*7:0):0;
- const dance=a?.k==='r'&&a.phase!=='plunge'?rDance(a):null;return {dance,turnScale:1,run:gaitMix,phase,gaitMix,airState:air,airHeight:p.y,airWeight,eFlip:a?.k==='e',pivotY:a?.k==='e'?-78:0,plantWeight:visual.weight*(1-airWeight)*(1-gaitMix),qFold:a?.k==='e'?eFlipPose(a).fold:a?.k==='w'&&a.locked?Math.sin(Math.PI*Math.max(0,Math.min(1,(a.t-.4)/.4)))*.45:q?Math.sin(Math.PI*Math.max(0,Math.min(1,(t-.14)/.78)))*.78:0,qCrouch:crouch,normalWeight:Math.max(visual.weight,airArms),torso:visual.torso+air.mix*(.04+.045*air.rise-.07*air.fall),handX:visual.handX+(-23-visual.handX)*airArms,handY:visual.handY+(-109-14*air.rise+10*air.fall-visual.handY)*airArms,freeX:visual.freeX+(30+8*air.travel-visual.freeX)*airArms,freeY:visual.freeY+(-112-10*air.rise+13*air.fall-visual.freeY)*airArms,shift:Math.sin(phase)*1.4*gaitMix+visual.shift,bob:q?crouch:Math.sin(g.t*3)*1.2*(1-gaitMix)+(1-Math.cos(phase*2))*1.5*gaitMix+visual.load+air.land*6,hipRoll:visual.hip+Math.sin(phase)*.038*gaitMix+air.mix*(.035*air.rise-.025*air.fall),arm:normal?Math.sin(normalU*Math.PI)*(a.n===3?1.35:1.05):q?(.95*charge+.45*release)*(1-recover):a?Math.sin(Math.min(1,a.t/a.duration)*Math.PI):0,rot:normal?visual.torso*.06+air.mix*(.025*air.travel-.025*air.fall):a?.k==='e'?eFlipPose(a).angle:a?.k==='r'?(a.phase==='plunge'?-.08:dance.weight*(.045*Math.sin(dance.turn-.7))):a?.k==='w'?wDashLean(a):q?(-.13*charge+.48*release)*(1-recover):(.055+Math.sin(phase+.6)*.008)*gaitMix+Math.sin(g.t*2)*.004*(1-gaitMix)+air.mix*(.045*air.travel-.025*air.fall)}}
+ const exit=a?.flipExit,age=a?.phase==='plunge'?a.plungeTime:a?.t;
+ const blend=exit?1-poseSmooth(((a.plungeTime&&a.phase==='dance'?a.plungeTime:0)+(age||0))/.14):0;
+ const prior=blend?eFlipPose(exit):null;
+ const rotation=prior?Math.atan2(Math.sin(prior.angle),Math.cos(prior.angle))*exit.dir*p.dir*blend:0;
+ const dance=a?.k==='r'&&a.phase!=='plunge'?rDance(a):null;return {dance,turnScale:1,run:gaitMix,phase,gaitMix,airState:air,airHeight:p.y,airWeight,eFlip:a?.k==='e',pivotY:a?.k==='e'?-78:-78*blend,plantWeight:visual.weight*(1-airWeight)*(1-gaitMix),qFold:a?.k==='e'?eFlipPose(a).fold:a?.k==='w'&&a.locked?Math.sin(Math.PI*Math.max(0,Math.min(1,(a.t-.4)/.4)))*.45:q?Math.sin(Math.PI*Math.max(0,Math.min(1,(t-.14)/.78)))*.78:0,qCrouch:crouch,normalWeight:Math.max(visual.weight,airArms),torso:visual.torso+air.mix*(.04+.045*air.rise-.07*air.fall),handX:visual.handX+(-23-visual.handX)*airArms,handY:visual.handY+(-109-14*air.rise+10*air.fall-visual.handY)*airArms,freeX:visual.freeX+(30+8*air.travel-visual.freeX)*airArms,freeY:visual.freeY+(-112-10*air.rise+13*air.fall-visual.freeY)*airArms,shift:Math.sin(phase)*1.4*gaitMix+visual.shift,bob:q?crouch:Math.sin(g.t*3)*1.2*(1-gaitMix)+(1-Math.cos(phase*2))*1.5*gaitMix+visual.load+air.land*6,hipRoll:visual.hip+Math.sin(phase)*.038*gaitMix+air.mix*(.035*air.rise-.025*air.fall),arm:normal?Math.sin(normalU*Math.PI)*(a.n===3?1.35:1.05):q?(.95*charge+.45*release)*(1-recover):a?Math.sin(Math.min(1,a.t/a.duration)*Math.PI):0,rot:rotation+(normal?visual.torso*.06+air.mix*(.025*air.travel-.025*air.fall):a?.k==='e'?eFlipPose(a).angle:a?.k==='r'?(a.phase==='plunge'?-.08:dance.weight*(.045*Math.sin(dance.turn-.7))):a?.k==='w'?wDashLean(a):q?(-.13*charge+.48*release)*(1-recover):(.055+Math.sin(phase+.6)*.008)*gaitMix+Math.sin(g.t*2)*.004*(1-gaitMix)+air.mix*(.045*air.travel-.025*air.fall))}}
 function rigPoint(p,pose,t,x,y,upper=false){if(upper){const bone=torsoLocalPoint(pose,x,y);x=bone.x;y=bone.y}y+=pose.bob===undefined?Math.sin(t*3)*2:pose.bob;x+=pose.shift||0;const a=pose.rot||0,pivot=pose.pivotY||0,size=modelSize;return {x:p.x+size*p.dir*(pose.turnScale??1)*(x*Math.cos(a)-(y-pivot)*Math.sin(a)),y:-p.y+size*(pivot+x*Math.sin(a)+(y-pivot)*Math.cos(a))}}
 // Build a solid tapered volume around a smooth centerline. Width is measured
 // perpendicular to the curve, so turning cannot flatten the ponytail.
@@ -193,19 +202,19 @@ function hairVolume(rig){if(!rig.hair.nodes.length)return null;const rest=rig.ha
 // fresh rigid Bezier pose every frame.
 class QFlowRope{
  constructor(start,end,dir){this.nodes=[];this.history=[];const dx=end.x-start.x,dy=end.y-start.y,d=Math.hypot(dx,dy)||1;for(let i=0;i<29;i++){const f=i/28,bend=Math.sin(f*Math.PI)*32;this.nodes.push({x:start.x+dx*f-dy/d*bend*dir,y:start.y+dy*f+dx/d*bend*dir,vx:0,vy:0})}this.length=d+50}
- update(dt,start,end,t,normal=false,slackOverride){const n=this.nodes,N=n.length-1,distance=Math.hypot(end.x-start.x,end.y-start.y),release=Math.max(0,Math.min(1,(t-.44)/.28)),retract=Math.max(0,Math.min(1,(t-.86)/.46)),slack=slackOverride!==undefined?slackOverride:normal?(t<.10?55:t<.34?28+14*Math.sin((t-.10)/.24*Math.PI):45+30*Math.sin(Math.min(1,(t-.34)/.16)*Math.PI)):(t<.44?72:t<.72?60*(1-release)+15: t<.86?22:22+70*Math.sin(retract*Math.PI)),wanted=distance+slack;this.length=Math.max(distance*1.015,this.length+(wanted-this.length)*(1-Math.exp(-dt*16)));const length=this.length/N;
+ update(dt,start,end,t,normal=false,slackOverride,surfaceAt){const n=this.nodes,N=n.length-1,distance=Math.hypot(end.x-start.x,end.y-start.y),release=Math.max(0,Math.min(1,(t-.44)/.28)),retract=Math.max(0,Math.min(1,(t-.86)/.46)),slack=slackOverride!==undefined?slackOverride:normal?(t<.10?55:t<.34?28+14*Math.sin((t-.10)/.24*Math.PI):45+30*Math.sin(Math.min(1,(t-.34)/.16)*Math.PI)):(t<.44?72:t<.72?60*(1-release)+15: t<.86?22:22+70*Math.sin(retract*Math.PI)),wanted=distance+slack;this.length=Math.max(distance*1.015,this.length+(wanted-this.length)*(1-Math.exp(-dt*16)));const length=this.length/N;
  for(let i=1;i<N;i++){const p=n[i];p.ox=p.x;p.oy=p.y;p.vy+=330*dt;p.vx*=Math.exp(-dt*3.5);p.vy*=Math.exp(-dt*3.5);p.x+=p.vx*dt;p.y+=p.vy*dt}
  n[0]={...start,vx:0,vy:0};n[N]={...end,vx:0,vy:0};const old=n.map(p=>({x:p.x,y:p.y}));for(let i=1;i<N;i++){n[i].x+=(old[i-1].x+old[i+1].x-2*old[i].x)*.07;n[i].y+=(old[i-1].y+old[i+1].y-2*old[i].y)*.07}
- for(let pass=0;pass<28;pass++){for(let k=0;k<N;k++){const i=pass%2?N-1-k:k,a=n[i],b=n[i+1],dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1,err=(d-length)/d,wa=i===0?0:1,wb=i+1===N?0:1,sum=wa+wb;if(sum){a.x+=dx*err*wa/sum;a.y+=dy*err*wa/sum;b.x-=dx*err*wb/sum;b.y-=dy*err*wb/sum}}for(let i=1;i<N;i++)n[i].y=Math.min(-1,n[i].y)}
+ for(let pass=0;pass<28;pass++){for(let k=0;k<N;k++){const i=pass%2?N-1-k:k,a=n[i],b=n[i+1],dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1,err=(d-length)/d,wa=i===0?0:1,wb=i+1===N?0:1,sum=wa+wb;if(sum){a.x+=dx*err*wa/sum;a.y+=dy*err*wa/sum;b.x-=dx*err*wb/sum;b.y-=dy*err*wb/sum}}for(let i=1;i<N;i++)n[i].y=Math.min(surfaceAt?surfaceAt(n[i].x)-1:-1,n[i].y)}
  for(let i=1;i<N;i++){const p=n[i];p.vx=(p.x-p.ox)/dt*.985;p.vy=(p.y-p.oy)/dt*.985;if(p.y>=-1&&p.vy>0)p.vy=0;const v=Math.hypot(p.vx,p.vy);if(v>2600){p.vx*=2600/v;p.vy*=2600/v}}this.history.push({t,points:n.map(p=>({x:p.x,y:p.y}))});while(this.history.length>28)this.history.shift();return n}
 }
 class MelantaRig{
  constructor(){this.hair=new FlowHair(18);this.low=new SoftChain(23);this.high=new SoftChain(21)}
- reset(){this.hairDir=null;this.hairRoot=null;this.weaponLag=0;this.weaponVelocity=0;this.weaponMotion=null;this.rRope=null;this.rRopes=null;this.rAction=null;this.qRope=null;this.qAction=null;this.eRope=null;this.eAction=null;this.wRope=null;this.wAction=null;this.normalRope=null;this.normalAction=null;this.normalAt=-10;this.poseReset=true;this.airReset=true;this.hair.nodes=[];this.low.nodes=[];this.high.nodes=[]}
+ reset(){this.hairDir=null;this.hairRoot=null;this.weaponLag=0;this.weaponVelocity=0;this.weaponMotion=null;this.rRope=null;this.rRopes=null;this.rAction=null;this.rBladePoses=null;this.rEntryTips=null;this.qRope=null;this.qAction=null;this.eRope=null;this.eAction=null;this.wRope=null;this.wAction=null;this.normalRope=null;this.normalAction=null;this.normalAt=-10;this.poseReset=true;this.airReset=true;this.hair.nodes=[];this.low.nodes=[];this.high.nodes=[]}
  update(dt,g,poseOverride=null){const p=g.p,t=g.t;
  const incomingW=g.a?.k==='r'&&g.a.phase!=='plunge'&&g.a.fromW&&this.rAction!==g.a?this.wRope:null;
  if(incomingW&&!g.a.rStartTips){g.a.rStartTips=[{...incomingW.nodes.at(-1)},{...this.low.nodes.at(-1)}]}
-if(this.poseReset){g.normalVisual=null;this.poseReset=false}updateNormalPose(g,dt);if(this.airReset){g.airVisual=null;this.airReset=false}updateAirPose(g,dt);if(!g.walkVisual||g.t<this.walkTime)g.walkVisual={phase:0,mix:0,phaseSpeed:0};const w=g.walkVisual,delta=p.x-(w.x??p.x),moved=Math.abs(delta),speed=moved/dt;w.x=p.x;const walking=(p.grounded??(p.y<.01))&&(!g.a||g.a.k==='attack')&&speed>8;w.mix+=((walking?Math.min(1,speed/240):0)-w.mix)*(1-Math.exp(-dt*12));w.phaseSpeed=((w.phaseSpeed||0)+((walking?speed/150*Math.PI*2*(Math.sign(delta*p.dir)||1):0)-(w.phaseSpeed||0))*(1-Math.exp(-dt*12)));if(Math.abs(w.phaseSpeed)<.001)w.phaseSpeed=0;w.phase=((w.phase+w.phaseSpeed*dt)%(Math.PI*2)+Math.PI*2)%(Math.PI*2);this.walkTime=g.t;const pose=poseOverride||playerPose(g),pt=(x,y)=>rigPoint(p,pose,t,x,y);const hair=[],anchors=[[280,130],[250,109],[226,145],[216,205],[194,256],[163,294],[146,334],[154,370]];this.hairRest=[];for(let i=0;i<18;i++){const f=i/17*(anchors.length-1),j=Math.min(anchors.length-2,Math.floor(f)),u=f-j,rx=anchors[j][0]*(1-u)+anchors[j+1][0]*u,ry=anchors[j][1]*(1-u)+anchors[j+1][1]*u;const target=rigPoint(p,pose,t,(rx-300)*.4,(ry-523)*.4,true);hair.push(target);this.hairRest.push({...target,rx,ry})}// Mirror persistent offsets about the bound root when facing changes.
+if(this.poseReset){g.normalVisual=null;this.poseReset=false}updateNormalPose(g,dt);if(this.airReset){g.airVisual=null;this.airReset=false}updateAirPose(g,dt);if(!g.walkVisual||g.t<this.walkTime)g.walkVisual={phase:0,mix:0,phaseSpeed:0};const w=g.walkVisual,delta=p.x-(w.x??p.x),moved=Math.abs(delta),speed=moved/dt;w.x=p.x;const walking=(p.grounded??(p.y<.01))&&canShowStride(g.a)&&speed>8;w.mix+=((walking?Math.min(1,speed/240):0)-w.mix)*(1-Math.exp(-dt*12));w.phaseSpeed=((w.phaseSpeed||0)+((walking?speed/150*Math.PI*2*(Math.sign(delta*p.dir)||1):0)-(w.phaseSpeed||0))*(1-Math.exp(-dt*12)));if(Math.abs(w.phaseSpeed)<.001)w.phaseSpeed=0;w.phase=((w.phase+w.phaseSpeed*dt)%(Math.PI*2)+Math.PI*2)%(Math.PI*2);this.walkTime=g.t;const pose=poseOverride||playerPose(g),pt=(x,y)=>rigPoint(p,pose,t,x,y);const hair=[],anchors=[[280,130],[250,109],[226,145],[216,205],[194,256],[163,294],[146,334],[154,370]];this.hairRest=[];for(let i=0;i<18;i++){const f=i/17*(anchors.length-1),j=Math.min(anchors.length-2,Math.floor(f)),u=f-j,rx=anchors[j][0]*(1-u)+anchors[j+1][0]*u,ry=anchors[j][1]*(1-u)+anchors[j+1][1]*u;const target=rigPoint(p,pose,t,(rx-300)*.4,(ry-523)*.4,true);hair.push(target);this.hairRest.push({...target,rx,ry})}// Mirror persistent offsets about the bound root when facing changes.
  // Do not let the old world-space chain stretch across the face on a turn.
  if(this.hairDir!==undefined&&this.hairDir!==null&&this.hairDir!==p.dir&&this.hair.nodes.length){const prev=this.hairRoot,next=hair[0];for(const n of this.hair.nodes){n.x=next.x-(n.x-prev.x);n.y=next.y+(n.y-prev.y);n.vx=-n.vx}}
  this.hairDir=p.dir;this.hairRoot={...hair[0]};this.hair.update(dt,hair,180,230);
@@ -234,12 +243,24 @@ if(this.poseReset){g.normalVisual=null;this.poseReset=false}updateNormalPose(g,d
  }else{this.wRope=null;this.wAction=null;this.wWrap=[];this.wPoints=null}
  if(g.a?.k==='r'&&g.a.phase!=='plunge'){
  const a=g.a,free=normalArm(pose,false).hand,roots=[low[0],pt(free.x,free.y)];
- if(this.rAction!==a){this.rAction=a;this.rRopes=roots.map((root,end)=>{if(end===0&&incomingW){incomingW.history=[];return incomingW}return new QFlowRope(root,ropeRTip(a,a.t,end),p.dir)})}
- this.rRopes.forEach((rope,end)=>rope.update(dt,roots[end],ropeRTip(a,a.t,end),a.t,false,25+25*(.5+.5*Math.sin(a.t*2*Math.PI/rSwingPeriod+end*Math.PI))));
+ const rest=[high.at(-1),low.at(-1)];
+ if(this.rAction!==a){
+  this.rAction=a;
+  this.rEntryTips=[a.rStartTips?.[0]||rest[0],a.rStartTips?.[1]||rest[1]];
+  this.rRopes=roots.map((root,end)=>{
+   if(end===0&&incomingW){incomingW.history=[];return incomingW;}
+   return new QFlowRope(root,this.rEntryTips[end],p.dir);
+  });
+ }
+ this.rBladePoses=roots.map((_,end)=>rVisualBladePose(a,end,this.rEntryTips[end],rest[end]));
+ this.rRopes.forEach((rope,end)=>{
+  const slack=25+25*(.5+.5*Math.sin(a.t*2*Math.PI/rSwingPeriod+end*Math.PI));
+  rope.update(dt,roots[end],this.rBladePoses[end],a.t,false,slack);
+ });
  this.rRope=this.rRopes[0];
- }else{this.rRope=null;this.rRopes=null;this.rAction=null}
+ }else{this.rRope=null;this.rRopes=null;this.rAction=null;this.rBladePoses=null;this.rEntryTips=null}
 
- if(g.a?.k==='q'){const tip=ropeQTip(g.a,g.a.t);if(this.qAction!==g.a){this.qAction=g.a;this.qRope=new QFlowRope(low[0],tip,p.dir)}this.qRope.update(dt,low[0],tip,g.a.t)}else{this.qRope=null;this.qAction=null}
+ if(g.a?.k==='q'){const tip=ropeQTip(g.a,g.a.t);if(this.qAction!==g.a){this.qAction=g.a;this.qRope=new QFlowRope(low[0],tip,p.dir)}this.qRope.update(dt,low[0],tip,g.a.t,false,undefined,typeof window.riftGame?.surface==='function'?x=>window.riftGame.surface(x,g.a.castY)-g.ground:undefined)}else{this.qRope=null;this.qAction=null}
 
  }
  points(){return [...this.low.nodes.slice().reverse(),...this.high.nodes.slice(1)]}
@@ -249,7 +270,7 @@ if(this.poseReset){g.normalVisual=null;this.poseReset=false}updateNormalPose(g,d
 // soften the entire contour at load time; animation only composites images.
 function bakeUltimateEdge(createCanvas,detail=false){
  const canvas=createCanvas();canvas.width=512;canvas.height=256;const c=canvas.getContext('2d'),gradient=c.createLinearGradient(-40,280,515,24);
- gradient.addColorStop(0,'#68258c00');gradient.addColorStop(.17,detail?'#ad67d9a0':'#843cafcc');gradient.addColorStop(.43,detail?'#c08be5b0':'#a05bcab8');gradient.addColorStop(.7,detail?'#a866d64a':'#8646b25e');gradient.addColorStop(1,'#75349500');c.fillStyle=gradient;
+ gradient.addColorStop(0,'#68258c00');gradient.addColorStop(.17,detail?'#ac62e0a0':'#6e25aecc');gradient.addColorStop(.43,detail?'#bd82eab0':'#9145ccb8');gradient.addColorStop(.7,detail?'#a866d64a':'#8646b25e');gradient.addColorStop(1,'#75349500');c.fillStyle=gradient;
  const center=u=>{const v=1-u,offset=detail?-12:0;return {x:v*v*v*(-100)+3*v*v*u*5+3*v*u*u*265+u*u*u*550,y:v*v*v*330+3*v*v*u*(244+offset)+3*v*u*u*(165+offset)+u*u*u*5}};
  const samples=40,layers=24;
  for(let layer=0;layer<layers;layer++){
@@ -258,7 +279,14 @@ function bakeUltimateEdge(createCanvas,detail=false){
   const edge=[...left,...right.reverse()];c.globalAlpha=.045+.025*q;c.beginPath();c.moveTo(edge[0].x,edge[0].y);
   for(let i=0;i<edge.length;i++){const a=edge[(i-1+edge.length)%edge.length],b=edge[i],d=edge[(i+1)%edge.length],e=edge[(i+2)%edge.length];c.bezierCurveTo(b.x+(d.x-a.x)/6,b.y+(d.y-a.y)/6,d.x-(e.x-b.x)/6,d.y-(e.y-b.y)/6,d.x,d.y)}c.closePath();c.fill();
  }
- c.globalAlpha=1;return canvas;
+ // Feather the baked texture itself so its bounds cannot show as hard cuts.
+ c.globalAlpha=1;
+ c.globalCompositeOperation='destination-in';
+ const feather=(x,y)=>{const g=c.createLinearGradient(0,0,x,y);g.addColorStop(0,'#ffffff00');g.addColorStop(.13,'#fff');g.addColorStop(.87,'#fff');g.addColorStop(1,'#ffffff00');c.fillStyle=g;c.fillRect(0,0,canvas.width,canvas.height);};
+ feather(canvas.width,0);
+ feather(0,canvas.height);
+ c.globalCompositeOperation='source-over';
+ return canvas;
 }
 class UltimateFrameEffect{
  constructor(createCanvas=()=>document.createElement('canvas')){this.base=bakeUltimateEdge(createCanvas);this.wisps=bakeUltimateEdge(createCanvas,true);this.reset()}
@@ -270,13 +298,16 @@ class UltimateFrameEffect{
   this.opacity=active?Math.min(1,this.opacity+dt/.16):Math.max(0,this.opacity-dt/.16);
  }
  draw(c,width,height,star,low=false){
-  if(this.opacity<=0)return;const alpha=this.opacity*this.opacity*(3-2*this.opacity),w=Math.min(width*.43,640),h=Math.min(height*.62,310),t=this.clock;
-  c.save();c.beginPath();c.rect(0,0,width,height);c.clip();
+  if(this.opacity<=0)return;const alpha=this.opacity*this.opacity*(3-2*this.opacity),w=Math.min(width*.43,640),h=Math.min(height*.62,w*(310/640)),t=this.clock;
+  // Corner light belongs to the camera viewport, not the stage coordinates.
+  // Bleed beyond the camera edges so the visible ribbon enters from offscreen.
+  const bleedX=w*.12,bleedY=h*.14;
+  c.save();c.setTransform(1,0,0,1,0,0);c.beginPath();c.rect(0,0,width,height);c.clip();
   for(let corner=0;corner<2;corner++){
    c.save();if(corner){c.translate(width,height);c.scale(-1,-1)}
    const flow=Math.sin(t*.85+corner*.6),breathe=.94+.06*Math.sin(t*1.15+corner*.5);
-   c.globalAlpha=alpha*.94*breathe;c.drawImage(this.base,-10+flow*4,height-h,w,h);
-   if(!low){c.globalAlpha=alpha*(.3+.055*Math.sin(t*1.2+corner*.5));c.drawImage(this.wisps,-10+flow*4,height-h+flow*1.5,w,h)}
+   c.globalAlpha=alpha*.94*breathe;c.drawImage(this.base,-bleedX+flow*4,height-h,w+bleedX,h+bleedY);
+   if(!low){c.globalAlpha=alpha*(.3+.055*Math.sin(t*1.2+corner*.5));c.drawImage(this.wisps,-bleedX+flow*4,height-h+flow*1.5,w+bleedX,h+bleedY)}
    const count=low?1:3;
    for(let i=0;i<count;i++){
     const u=(t*.16+i/count+corner*.37)%1,life=Math.sin(Math.PI*u)**2,x=w*(.04+.78*u),y=height-h*(.04+.72*u)+Math.sin(t*.9+i)*3,size=4+2*Math.sin(i*2.4)**2;
@@ -357,7 +388,35 @@ function rHealingMist(front=false){const v=game.rHealVisual,p=game.p;if(!v||p.hp
 }
 function path(points,color,width=3,alpha=1){ctx.save();ctx.globalAlpha*=alpha;ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();points.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();ctx.restore()}
 function ribbon(points,alpha=1,width=2.7){path(points,'#b25adc',width+11,alpha*.075);path(points,'#d58aef',width+5,alpha*.12);path(points,'#edb7fa',width,alpha);path(points,'#ffefff',.8,alpha*.8)}
-function blade(x,y,angle,alpha=1){ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.scale(.68,.68);ctx.globalAlpha*=alpha;halo(0,0,49,.5);ctx.fillStyle='#f3cbff';ctx.beginPath();BLADE_OUTLINE.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.fill();ctx.restore()}
+function traceBlade(context){
+ context.beginPath();
+ BLADE_OUTLINE.forEach((p,i)=>i?context.lineTo(p.x,p.y):context.moveTo(p.x,p.y));
+ context.closePath();
+}
+function blade(x,y,angle,alpha=1){
+ ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.scale(BLADE_SCALE,BLADE_SCALE);ctx.globalAlpha*=alpha;
+ halo(0,0,49,.5);
+ ctx.fillStyle='#f3cbff';traceBlade(ctx);ctx.fill();ctx.restore();
+}
+const litBlade=(()=>{
+ const sprite=document.createElement('canvas');sprite.width=sprite.height=128;
+ const paint=sprite.getContext('2d');
+ paint.translate(52,64);
+ const fill=paint.createLinearGradient(-12,21,41,-27);
+ fill.addColorStop(0,'#ad3af264');
+ fill.addColorStop(.38,'#dd95ffce');
+ fill.addColorStop(1,'#ffedff');
+ paint.fillStyle=fill;
+ paint.shadowColor='#ad3af299';paint.shadowBlur=7;
+ traceBlade(paint);paint.fill();
+ return sprite;
+})();
+function drawLitBlade(pose,brightness){
+ ctx.save();ctx.translate(pose.x,ground+pose.y);ctx.rotate(pose.angle);ctx.scale(BLADE_SCALE,BLADE_SCALE);
+ ctx.globalAlpha*=brightness;ctx.globalCompositeOperation='screen';
+ ctx.drawImage(litBlade,-52,-64);
+ ctx.restore();
+}
 function limb(a,b,c,width,color){ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(...a);ctx.quadraticCurveTo(...b,...c);ctx.stroke()}
 // Outline traced in the reference's own 591 × 603 coordinate system.
 // Keep the original proportions; animation deforms the limbs around their joints.
@@ -391,24 +450,59 @@ function drawQEnergy(rope,a){if(a.t<.42||a.t>.98)return;const grow=smooth((a.t-.
  // Soft energy on the rope itself shares every curve sample with the weapon.
  const first=Math.floor(rope.length*.42),segment=rope.slice(first);for(let layer=0;layer<3;layer++){const l=[],r=[];for(let i=0;i<segment.length;i++){const p=segment[i],prev=segment[Math.max(0,i-1)],next=segment[Math.min(segment.length-1,i+1)],dx=next.x-prev.x,dy=next.y-prev.y,len=Math.hypot(dx,dy)||1,u=i/(segment.length-1),width=(1+Math.sin(Math.PI*u)*((3-layer)*5)+u*3)*power;l.push({x:p.x-dy/len*width,y:p.y+dx/len*width});r.push({x:p.x+dy/len*width,y:p.y-dx/len*width})}ctx.save();ctx.globalAlpha=(.10+layer*.09)*power;ctx.fillStyle=['#ad57d8','#dc9bf5','#f8dcff'][layer];smoothFill([...l,...r.reverse()]);ctx.restore()}halo(end.x,ground+end.y,50,power*.85)
 }
-function drawNormalEnergy(rope,a){const power=smooth((a.t-.075)/.055)*(1-smooth((a.t-.34)/.14));if(power<=0)return;const trail=attackTrailSamples(a,a.t);trail[trail.length-1]={...rope.at(-1)};const left=[],right=[];for(let i=0;i<trail.length;i++){const p=trail[i],prev=trail[Math.max(0,i-1)],next=trail[Math.min(trail.length-1,i+1)],dx=next.x-prev.x,dy=next.y-prev.y,len=Math.hypot(dx,dy)||1,u=i/(trail.length-1),w=(Math.sin(u*Math.PI)*(a.n===3?21:15)+u*1.5)*power;left.push({x:p.x-dy/len*w,y:p.y+dx/len*w});right.push({x:p.x+dy/len*w,y:p.y-dx/len*w})}ctx.save();ctx.globalAlpha=.55*power;const first=trail[0],end=rope.at(-1),g=ctx.createLinearGradient(first.x,ground+first.y,end.x,ground+end.y);g.addColorStop(0,'#ac5bdb00');g.addColorStop(.65,'#d494f0a0');g.addColorStop(1,'#ffe9ff');ctx.fillStyle=g;smoothFill([...left,...right.reverse()]);ctx.restore();const h=rig.normalRope?.history||[];for(let i=Math.max(0,h.length-14);i<h.length-1;i+=4){ctx.save();ctx.globalAlpha=.08*power*Math.max(0,1-(a.t-h[i].t)/.12);curveStroke(h[i].points,'#dba2f3',7);ctx.restore()}ctx.save();ctx.globalAlpha=.18*power;curveStroke(rope,'#ce8cf1',12);ctx.restore();halo(end.x,ground+end.y,38,power*.65)}
+const NORMAL_TRAIL_FADE=.13;
+function normalTrailWindow(time){
+ const end=Math.min(time,ATTACK_END),overlap=end-ATTACK_START-.132;
+ const ease=clamp(overlap/.025,0,1);
+ const slide=overlap<=0?0:overlap*ease*(2-ease);
+ const start=ATTACK_START+slide;
+ const recovery=smooth((time-ATTACK_END)/NORMAL_TRAIL_FADE);
+ return {end,start:start+(end-start)*recovery,recovery};
+}
+function drawNormalEnergy(a){
+ if(a.t<=ATTACK_START||a.t>=ATTACK_END+NORMAL_TRAIL_FADE||window.MelantaWorkbench?.effects===false)return;
+ const {end,start,recovery}=normalTrailWindow(a.t);
+ const opacity=smooth((a.t-ATTACK_START)/.042)*(1-recovery);
+ window.MelantaRSlash?.drawNormal(ctx,a,a.t-ATTACK_START,attackCuttingPoint(a,end),attackCuttingPoint(a,start),ground,opacity);
+}
 function rBladeAngle(a,t,end){const before=rTip(a,Math.max(0,t-.006),end),after=rTip(a,Math.min(4,t+.006),end);return Math.atan2(after.y-before.y,after.x-before.x)-.3}
-function drawREnergy(sim,a,endIndex){const rope=sim.nodes;if(rope.length<2)return;const power=smooth(a.t/.15)*(1-smooth((a.t-3.9)/.1)),trail=[];
- for(let i=0;i<=36;i++){const t=Math.max(0,a.t-.14*(1-i/36));trail.push(rTip(a,t,endIndex))}trail[trail.length-1]={...rope.at(-1)};
- const left=[],right=[];for(let i=0;i<trail.length;i++){const prev=trail[Math.max(0,i-1)],next=trail[Math.min(trail.length-1,i+1)],p=trail[i],dx=next.x-prev.x,dy=next.y-prev.y,d=Math.hypot(dx,dy)||1,w=Math.sin(Math.PI*i/(trail.length-1))*14;left.push({x:p.x-dy/d*w,y:p.y+dx/d*w});right.push({x:p.x+dy/d*w,y:p.y-dx/d*w})}
- ctx.save();ctx.globalAlpha=.5*power;const start=trail[0],end=rope.at(-1),g=ctx.createLinearGradient(start.x,ground+start.y,end.x,ground+end.y);g.addColorStop(0,'#9c48dc00');g.addColorStop(.65,'#c578e9aa');g.addColorStop(1,'#f4cdff');ctx.fillStyle=g;smoothFill([...left,...right.reverse()]);ctx.restore();
- // Timestamped physics snapshots retain both blade shapes and entire rope poses.
- for(const delay of [.14,.10,.065,.032]){let sample;for(let i=sim.history.length-1;i>=0;i--){if(sim.history[i].t<=a.t-delay){sample=sim.history[i];break}}if(!sample)continue;
- const age=a.t-sample.t,opacity=(1-smooth(age/.19))*.26*power,tip=sample.points.at(-1);ctx.save();ctx.globalAlpha=opacity;curveStroke(sample.points,'#a956e3',6);curveStroke(sample.points,'#daa0ff',2);blade(tip.x,ground+tip.y,rBladeAngle(a,sample.t,endIndex),.8);ctx.restore()}
- ctx.save();ctx.globalAlpha=.15*power;curveStroke(rope,'#bd6bf3',12);ctx.restore();halo(end.x,ground+end.y,36,power*.6)
+function rVisualBladePose(a,end,entry,rest){
+ const t=a.t,cut=window.MelantaRSlash?.bladeTip(a,t,end);
+ if(!cut)return {...ropeRTip(a,t,end),angle:rBladeAngle(a,t,end)};
+ // The marker is the cutting point. Put the actual blade nose on it and
+ // attach the rope to the base of the blade.
+ const angle=cut.angle-Math.atan2(BLADE_NOSE.y,BLADE_NOSE.x);
+ const baseX=cut.x-BLADE_NOSE.x*Math.cos(angle)+BLADE_NOSE.y*Math.sin(angle);
+ const baseY=cut.y-BLADE_NOSE.x*Math.sin(angle)-BLADE_NOSE.y*Math.cos(angle);
+ const entering=t<.18,idle=entering?entry:rest;
+ const blend=entering?smooth(t/.18):1-smooth((t-3.77)/.23);
+ const idleAngle=a.dir===-1?Math.PI:0;
+ const turn=Math.atan2(Math.sin(angle-idleAngle),Math.cos(angle-idleAngle));
+ return {x:idle.x+(baseX-idle.x)*blend,y:idle.y+(baseY-idle.y)*blend,angle:idleAngle+turn*blend};
 }
-function drawRWeapon(a){const ropes=rig.rRopes;if(!ropes)return;const order=Math.sin(a.t*2*Math.PI/R_SWING_PERIOD)>=0?[0,1]:[1,0];
- for(const end of order)drawREnergy(ropes[end],a,end);
- const bridge=[ropes[0].nodes[0],ropes[1].nodes[0]];curveStroke(bridge,'#bf7cda',2.5);
- for(const end of order){const rope=ropes[end].nodes,tip=rope.at(-1);curveStroke(rope,'#bc79d51c',10);curveStroke(rope,'#bf7cda',2.5);curveStroke(rope,'#ecc0fa',.65);blade(tip.x,ground+tip.y,rBladeAngle(a,a.t,end),1)}
+function drawREnergy(a){
+ const slashVisible=window.MelantaRSlash?.draw(ctx,a,ground);
+ const poses=rig.rBladePoses;
+ if(!poses)return;
+ const light=slashVisible?smooth(a.t/.18)*(1-smooth((a.t-3.77)/.23)):0;
+ for(const pose of poses){
+  if(light<1)blade(pose.x,ground+pose.y,pose.angle,1-light);
+  if(light>0)drawLitBlade(pose,light);
+ }
 }
-function rGroundAura(a){const fade=smooth(a.t/.24)*(1-smooth((a.t-3.65)/.35));ctx.save();ctx.translate(game.p.x,ground+2);ctx.scale(1,.115);const g=ctx.createRadialGradient(0,0,0,0,0,500);g.addColorStop(0,'#ca82ed48');g.addColorStop(.42,'#af55d93a');g.addColorStop(.75,'#9e49d31c');g.addColorStop(1,'#8c3ccb00');ctx.globalAlpha=fade;ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,500,0,Math.PI*2);ctx.fill();ctx.restore();for(let i=0;i<3;i++){const age=(a.t+i*.44)%1.3,u=age/1.3,r=100+390*(1-(1-u)**2),alpha=Math.sin(Math.PI*u)*fade;ctx.save();ctx.translate(game.p.x,ground);ctx.scale(1,.115);for(const [width,opacity] of [[24,.025],[12,.04],[4,.09]]){ctx.strokeStyle='#d695f4';ctx.globalAlpha=alpha*opacity;ctx.lineWidth=width;ctx.beginPath();ctx.ellipse(0,0,r,r,0,0,Math.PI*2);ctx.stroke()}ctx.restore()}}
-function weapon(a){if(a?.k==='r'&&a.phase==='plunge')a=null;if(a?.k==='r'){drawRWeapon(a);return}const p=game.p,t=game.t,dir=p.dir,u=a?clamp(a.t/a.duration,0,1):0;let pts=rig.points().map(p=>({...p}));if(pts.length<3)return;
+function drawRWeapon(){
+ const ropes=rig.rRopes;
+ if(!ropes)return;
+ const bridge=[ropes[0].nodes[0],ropes[1].nodes[0]];
+ curveStroke(bridge,'#bf7cda',2.5);
+ for(const {nodes} of ropes){
+  curveStroke(nodes,'#bc79d51c',10);
+  curveStroke(nodes,'#bf7cda',2.5);
+  curveStroke(nodes,'#ecc0fa',.65);
+ }
+}
+function rGroundAura(a){const fade=smooth(a.t/.24)*(1-smooth((a.t-3.65)/.35));ctx.save();ctx.translate(game.p.x,ground+2);ctx.scale(1,.115);const g=ctx.createRadialGradient(0,0,0,0,0,500);g.addColorStop(0,'#b877eb48');g.addColorStop(.42,'#a255df3a');g.addColorStop(.75,'#843bbd1c');g.addColorStop(1,'#8c3ccb00');ctx.globalAlpha=fade;ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,500,0,Math.PI*2);ctx.fill();ctx.restore();for(let i=0;i<3;i++){const age=(a.t+i*.44)%1.3,u=age/1.3,r=100+390*(1-(1-u)**2),alpha=Math.sin(Math.PI*u)*fade;ctx.save();ctx.translate(game.p.x,ground);ctx.scale(1,.115);for(const [width,opacity] of [[24,.025],[12,.04],[4,.09]]){ctx.strokeStyle='#cd9bf6';ctx.globalAlpha=alpha*opacity;ctx.lineWidth=width;ctx.beginPath();ctx.ellipse(0,0,r,r,0,0,Math.PI*2);ctx.stroke()}ctx.restore()}}
+function weapon(a){if(a?.k==='r'&&a.phase==='plunge')a=null;if(a?.k==='r'){drawRWeapon();return}const p=game.p,t=game.t,dir=p.dir,u=a?clamp(a.t/a.duration,0,1):0;let pts=rig.points().map(p=>({...p}));if(pts.length<3)return;
  if(a){const grip=rig.low.nodes[0],tail=rig.low.nodes.slice().reverse(),front=[];if(a.k==='attack'){const nodes=rig.normalRope?.nodes;if(nodes)for(const node of nodes)front.push({x:node.x,y:node.y});else front.push({...grip},attackTip(a,a.t))}
  else if(a.k==='q'){const nodes=rig.qRope?.nodes;if(nodes)for(const node of nodes)front.push({x:node.x,y:node.y});else front.push({...grip},qTip(a,a.t))}
  else if(a.k==='w'){if(rig.wPoints)front.push(...(a.locked&&rig.wWrap?.length?rig.wRope.nodes:rig.wPoints))}
@@ -419,26 +513,13 @@ function weapon(a){if(a?.k==='r'&&a.phase==='plunge')a=null;if(a?.k==='r'){drawR
  // length as a stiff rod. Both endpoints remain exactly on their paths.
  const softened=(a.k==='q'||a.k==='attack'||a.k==='w'||a.k==='e'||a.k==='r')?front:front.map((v,i)=>{if(i===0||i===front.length-1)return v;const f=i/(front.length-1),prev=front[i-1],next=front[i+1],dx=next.x-prev.x,dy=next.y-prev.y,len=Math.hypot(dx,dy)||1,w=Math.sin(f*7-t*5)*Math.sin(f*Math.PI)*4;return {x:v.x-dy/len*w,y:v.y+dx/len*w}});
  const active=[...tail,...softened.slice(1)],rest=rig.points();const blend=a.k==='attack'?Math.min(1,a.t/.09,(a.duration-a.t)/.14):a.k==='q'?Math.min(1,a.t/.12,(a.duration-a.t)/.13):a.k==='w'?1-smooth((a.t-.97)/.08):a.k==='r'?1:Math.min(1,a.t/.17,(a.duration-a.t)/.22);pts=active.map((v,i)=>{const q=i/(active.length-1)*(rest.length-1),j=Math.floor(q),u=q-j,a=rest[j],b=rest[Math.min(j+1,rest.length-1)],base={x:a.x+(b.x-a.x)*u,y:a.y+(b.y-a.y)*u};return {x:base.x+(v.x-base.x)*blend,y:base.y+(v.y-base.y)*blend}})}
- if(a?.k==='q')drawQEnergy(pts,a);if(a?.k==='attack')drawNormalEnergy(pts,a);
+ if(a?.k==='q')drawQEnergy(pts,a);
  curveStroke(pts,'#bc79d51c',10);curveStroke(pts,'#bf7cda',2.5);curveStroke(pts,'#ecc0fa',.65);const first=pts[0],second=pts[1],end=pts.at(-1),prev=pts.at(-2);blade(first.x,ground+first.y,Math.atan2(first.y-second.y,first.x-second.x)-.3,.8);if(!(a?.k==='w'&&a.locked&&rig.wWrap?.length))blade(end.x,ground+end.y,a?.k==='attack'?attackBladePose(a,a.t).angle:Math.atan2(end.y-prev.y,end.x-prev.x)-.3,.8)
 }
 let backdrop=null,backdropHeight=0;
 function qEnergyShard(x,y,dx,dy,width,alpha){ctx.save();ctx.globalAlpha*=alpha;const length=Math.hypot(dx,dy)||1,nx=-dy/length,ny=dx/length,bend=width*.35;const gradient=ctx.createLinearGradient(x,y,x+dx,y+dy);gradient.addColorStop(0,'#edb9ff');gradient.addColorStop(.25,'#d68df0');gradient.addColorStop(.8,'#a565ce');gradient.addColorStop(1,'#a565ce80');ctx.fillStyle=gradient;ctx.beginPath();ctx.moveTo(x-nx*width*.35,y-ny*width*.35);ctx.bezierCurveTo(x+dx*.2+nx*width,y+dy*.2+ny*width,x+dx*.68+nx*bend,y+dy*.68+ny*bend,x+dx,y+dy);ctx.bezierCurveTo(x+dx*.62-nx*width*.12,y+dy*.62-ny*width*.12,x+dx*.12-nx*width*.5,y+dy*.12-ny*width*.5,x-nx*width*.35,y-ny*width*.35);ctx.fill();ctx.restore()}
 function qShockwave(x,y,R,t){const inherited=ctx.globalAlpha;for(let i=0;i<2;i++){const age=t-i*.085;if(age<=0||age>=.52)continue;const u=age/.52,spread=1-Math.pow(1-u,3),rx=R*(.10+.90*spread)*(i?.88:1),ry=rx*.18,opacity=smooth(age/.025)*Math.pow(1-u,1.7);ctx.save();ctx.globalAlpha*=opacity;for(const [width,color,alpha] of [[19,'#9f54dd',.10],[9,'#c77ef1',.28],[2.8,'#f0c3ff',.83]]){ctx.globalAlpha=inherited*opacity*alpha;ctx.strokeStyle=color;ctx.lineWidth=width*(1-u*.65);ctx.beginPath();ctx.ellipse(x,y-2,rx,ry,0,0,Math.PI*2);ctx.stroke()}ctx.restore()}}
-function qExplosion(f){const t=f.t,x=f.x,y=ground-(f.y||0),R=f.radius||Q_RADIUS,dir=f.dir||1,groundFade=1-smooth(t/.62);ctx.save();
- // A broad luminous base and expanding ground waves share the damage footprint.
- ctx.save();ctx.translate(x,y-1);ctx.scale(1,.18);const pool=ctx.createRadialGradient(0,0,0,0,0,R);pool.addColorStop(0,'#edb6ffa8');pool.addColorStop(.4,'#c679eb65');pool.addColorStop(1,'#a05acc00');ctx.globalAlpha*=groundFade;ctx.fillStyle=pool;ctx.beginPath();ctx.arc(0,0,R,0,Math.PI*2);ctx.fill();ctx.restore();qShockwave(x,y,R,t);
- const baseRise=1-Math.exp(-t*32),baseFade=1-smooth((t-.10)/.42);for(let i=0;i<5;i++){const offset=(i-2)*20,dx=(i-2)*R*.12,dy=-R*(.26+(i===2?.17:.07))*baseRise;qEnergyShard(x+offset,y-2,dx,dy,(i===2?34:25)*(1-smooth((t-.18)/.34)*.65),baseFade*(i===2?.95:.72))}
- for(const side of [-1,1])for(let i=0;i<3;i++){const u=Math.max(0,t-i*.012),spread=smooth(u/.13),fade=1-smooth(u/(.36+i*.05)),reach=R*(i===0?1:.82-i*.12),ex=x+side*reach,ey=y-3-i*4;ctx.save();ctx.globalAlpha*=fade*(i===0?.8:.48);ctx.fillStyle=i===0?'#e4a0fb':'#aa69cb';ctx.beginPath();ctx.moveTo(x,y-2);ctx.bezierCurveTo(x+side*reach*.24,y-21-i*5,x+side*reach*.72*spread,y-23-i*7,ex,ey);ctx.bezierCurveTo(x+side*reach*.68*spread,y-3-i*2,x+side*reach*.22,y+9,x,y-2);ctx.fill();ctx.restore()}
- // A tall central spear and staggered side splinters share the impact origin.
- const rays=[[-.10,1.50,21,0],[.05,1.21,18,.018],[.31,.96,14,.032],[-.39,.77,12,.024],[.58,.66,11,.045],[-.23,1.06,9,.055],[.44,.48,13,.012]];
- for(let i=0;i<rays.length;i++){const [dx,height,width,delay]=rays[i],u=t-delay;if(u<=0)continue;const rise=1-Math.exp(-u*24),fade=1-smooth((u-.09)/.37),lift=smooth((u-.12)/.35)*R*.10,bx=x+(i%2?1:-1)*(i%3)*15,by=y-3-lift;if(fade<=0)continue;qEnergyShard(bx,by,dir*R*dx*rise,-R*height*rise,width*(1-smooth((u-.12)/.3)*.78),fade*(i===0?.85:.72));if(i<4){qEnergyShard(bx+dir*3,by-2,dir*R*(dx+.035)*rise,-R*height*.72*rise,2,fade*.75)}}
- if(t<.16){const fade=1-smooth(t/.16);qEnergyShard(x,y-3,dir*33,-30,15,fade);qEnergyShard(x,y-2,-dir*30,-22,11,fade*.8);halo(x,y-9,38,fade*.38)}
- // Small soft dust pockets follow the floor; no broad glowing sphere.
- for(let i=0;i<5;i++){const u=Math.max(0,t-.04),fade=smooth(u/.08)*(1-smooth(u/.55));halo(x+Math.sin(i*2.4)*R*.44*(1-Math.exp(-u*8)),y-6-u*(12+i*3),38+u*29,fade*.21)}
- // Angular rock fragments retain ballistic weight and drop back to the floor.
- for(let i=0;i<24;i++){const seed=i*2.399,speed=R*(.65+(i%5)*.19),vx=Math.cos(seed)*speed,vy=-(90+Math.abs(Math.sin(seed))*(170+i%4*24)),dx=vx*t,dy=vy*t+420*t*t;if(dy>0)continue;const fade=1-smooth((t-.38)/.65),size=2.5+i%4*.9;ctx.save();ctx.globalAlpha*=fade;ctx.translate(x+dx,y+dy);ctx.rotate(seed+t*(i%2?4:-3));ctx.fillStyle=i%3?'#755586':'#b784c9';ctx.beginPath();ctx.moveTo(-size,-size*.8);ctx.lineTo(size*.7,-size*1.1);ctx.lineTo(size,size*.3);ctx.lineTo(-size*.3,size);ctx.closePath();ctx.fill();ctx.strokeStyle='#d4a6ea80';ctx.lineWidth=.6;ctx.stroke();ctx.restore()}
- ctx.restore()}
+function qExplosion(f){window.MelantaQImpact?.draw(ctx,f,ground);}
 // Tapered blade wounds use the actual contact tangent, rather than radial sparks.
 function cutShape(color){ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(-62,1);ctx.bezierCurveTo(-41,-4,-20,-9,16,-5);ctx.lineTo(59,-1);ctx.bezierCurveTo(35,3,12,7,-17,6);ctx.lineTo(-41,4);ctx.closePath();ctx.fill();ctx.beginPath();ctx.moveTo(-43,9);ctx.quadraticCurveTo(-12,3,27,6);ctx.lineTo(43,8);ctx.quadraticCurveTo(8,11,-43,9);ctx.fill();ctx.beginPath();ctx.moveTo(6,-11);ctx.quadraticCurveTo(31,-13,52,-10);ctx.lineTo(29,-8);ctx.closePath();ctx.fill()}
 function drawCut(f){const t=f.t,u=t/f.life,growth=smooth(t/.065),fade=1-smooth((u-.28)/.72);if(growth<=0||fade<=0)return;const x=f.x+game.e.x-f.targetX,y=ground-(f.y+game.e.y-f.targetY),size=f.size||1;
@@ -491,11 +572,11 @@ function bind(context,f,enemy,clock,surface,cinematic=false){
  if(source){const key=source.use?.id||source.id||source.k+':'+source.sx+':'+source.startedAt;if(!state.action||state.actionKey!==key){state.action={...source};state.actionKey=key;}else Object.assign(state.action,source);game.a=state.action;}else{game.a=null;state.action=null;}
  if(state.rigAt!==clock){if(rig.low?.nodes?.some(p=>!Number.isFinite(p.x+p.y))||game.normalVisual&&Object.values(game.normalVisual).some(v=>typeof v==='number'&&!Number.isFinite(v))){state.rig=rig=new MelantaRig();state.dash=dashGhosts=new DashAfterimages();game.normalVisual=null;game.airVisual=null;game.walkVisual=null;}rig.update(dt,game);ultFrame.update(dt,game);dashGhosts.update(dt,game,playerPose(game),rig);state.rigAt=clock;}return state;
 }
-window.MelantaLab={rImpactX,MelantaGame,SKILLS,sweepNormal,attackBladePose,attackTip,attackOriginAt,bladePolygon,ATTACK_START,ATTACK_END,ATTACK_REACH,Q_IMPACT_TIME,Q_REACH,Q_RADIUS,qHop,qTip,rTip};
+window.MelantaLab={rImpactX,MelantaGame,SKILLS,sweepNormal,attackBladePose,attackTip,attackCuttingPoint,normalTrailWindow,NORMAL_TRAIL_FADE,attackOriginAt,bladePolygon,ATTACK_START,ATTACK_END,ATTACK_REACH,Q_IMPACT_TIME,Q_REACH,Q_RADIUS,qHop,qTip,rTip};
 window.MelantaVisual={
- character(context,f,enemy,clock,surface){bind(context,f,enemy,clock,surface);const p=game.p,a=game.a;for(const g of dashGhosts.samples){const fade=1-smooth(g.age/g.life);if(!g.sprite)g.sprite=bakeAfterimage(g);ctx.save();ctx.globalAlpha*=fade*.52;ctx.drawImage(g.sprite,g.x-160,ground-g.y-240,320,320);ctx.restore();}if(a?.k==='r'&&a.phase!=='plunge')rGroundAura(a);for(const effect of game.fx)drawFx(effect);stunMist(game.e);rHealingMist(false);weapon(a);drawHair();fighter(p.x,p.y,p.dir,playerPose(game),p.hp>0?1:.35);rHealingMist(true);},
- front(context,f,enemy,clock,surface){bind(context,f,enemy,clock,surface);stunMist(game.e,true);if(f.melanta?.a?.k!=='w'||!f.melanta.a.locked)return;if(!rig.wWrap?.length)return;const pts=[rig.wRope.nodes.at(-1),...rig.wWrap],end=pts.at(-1),prev=pts.at(-2);curveStroke(pts,'#bc79d51c',10);curveStroke(pts,'#bf7cda',2.5);curveStroke(pts,'#ecc0fa',.65);blade(end.x,ground+end.y,Math.atan2(end.y-prev.y,end.x-prev.x)-.3,.8);},
- frame(context,f,enemy,clock,surface,width=1600,height=1120){bind(context,f,enemy,clock,surface);ultFrame.draw(context,width,height,healStar,false);},
+ character(context,f,enemy,clock,surface){bind(context,f,enemy,clock,surface);const p=game.p,a=game.a;for(const g of dashGhosts.samples){const fade=1-smooth(g.age/g.life);if(!g.sprite)g.sprite=bakeAfterimage(g);ctx.save();ctx.globalAlpha*=fade*.52;ctx.drawImage(g.sprite,g.x-160,ground-g.y-240,320,320);ctx.restore();}if(a?.k==='r'&&a.phase!=='plunge')rGroundAura(a);for(const effect of game.fx)if(effect.k!=='qslam')drawFx(effect);stunMist(game.e);rHealingMist(false);weapon(a);drawHair();fighter(p.x,p.y,p.dir,playerPose(game),p.hp>0?1:.35);rHealingMist(true);},
+ front(context,f,enemy,clock,surface){bind(context,f,enemy,clock,surface);if(game.a?.k==='r'&&game.a.phase!=='plunge'&&rig.rRopes)drawREnergy(game.a);if(game.a?.k==='attack')drawNormalEnergy(game.a);if(window.MelantaWorkbench?.effects!==false)for(const effect of game.fx)if(effect.k==='qslam')drawFx(effect);stunMist(game.e,true);if(f.melanta?.a?.k!=='w'||!f.melanta.a.locked)return;if(!rig.wWrap?.length)return;const pts=[rig.wRope.nodes.at(-1),...rig.wWrap],end=pts.at(-1),prev=pts.at(-2);curveStroke(pts,'#bc79d51c',10);curveStroke(pts,'#bf7cda',2.5);curveStroke(pts,'#ecc0fa',.65);blade(end.x,ground+end.y,Math.atan2(end.y-prev.y,end.x-prev.x)-.3,.8);},
+ frame(context,f,enemy,clock,surface){bind(context,f,enemy,clock,surface);ultFrame.draw(context,context.canvas.width,context.canvas.height,healStar,false);},
  finisher(context,f,enemy,clock,surface,elapsed,width=1600,height=1120){const state=bind(context,f,enemy,clock,surface,true);W=width;H=height;game.matchState='finishing';if(!state.finishAction||elapsed<state.finishAction.t)state.finishAction={t:0,duration:2,dir:f.dir};const action=state.finishAction;action.t=elapsed;game.finisher=action;finisherScene=state.finish??=(new FinisherScene());finisherScene.update(1/120,action);drawFinisher(action);},
  reset(){actors.clear();}
 };
