@@ -288,14 +288,14 @@
     leave();G.menu();error('Đối thủ đã rời phòng. Hãy tạo phòng mới.');
    }
   };
-  socket.onerror=()=>{if(session===n&&n.socket===socket&&n.started)dc.onerror?.();};
+  socket.onerror=()=>{if(session===n&&n.socket===socket&&n.started&&!(directRequired(n)&&n.activeRoute==='direct'&&n.directChannel?.readyState==='open'))dc.onerror?.();};
   socket.onclose=event=>{
    authenticated=false;if(session!==n||n.socket!==socket)return;
    const directAlive=directRequired(n)&&n.activeRoute==='direct'&&n.directChannel?.readyState==='open';
    if(!directAlive){n.directDisabled=true;n.activeRoute='ws';closeDirect(n);}
    if(!directAlive){dc.onclose?.();if(directRequired(n))directUnavailable(n,false);}
    if(event.code>=4000&&event.code<4100){leave();G.menu();error(event.code===4004?'Phiên chơi đã được mở ở kết nối khác.':'Phòng hoặc phiên chơi không hợp lệ. Hai máy hãy tải lại cùng bản game và tạo phòng mới.');return;}
-   n.reconnectAt||=performance.now()||.001;
+   if(!directAlive)n.reconnectAt||=performance.now()||.001;
    const delay=n.retryDelay||500;n.retryDelay=Math.min(delay*2,4000);
    clearTimeout(n.reconnectTimer);n.reconnectTimer=setTimeout(()=>connectSocket(n),delay+Math.random()*200);
    status('ONLINE · ĐANG KẾT NỐI LẠI SERVER');
