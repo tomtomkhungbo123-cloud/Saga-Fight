@@ -1,0 +1,12 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),crypto=require('node:crypto');
+const prelude=fs.readFileSync(path.join(__dirname,'mox.test.cjs'),'utf8');const {run,reset,advance}=new Function('require','__dirname',prelude+';return {run,reset,advance};')(require,__dirname);
+const cues=()=>JSON.parse(run('JSON.stringify(sfxEvents.map(e=>e.id))'));
+function punch(code=''){reset('mox');run("fighters[0].dir=1;fighters[1].x=750;fighters[1].y=fighters[0].y;sfxEvents=[];"+code+";request(fighters[0],'attack')");advance(.17);return cues();}
+let events=punch();assert.equal(events.filter(x=>x==='mox_punch_hit').length,1);assert.ok(!events.includes('mox_punch_whiff'));assert.ok(!events.includes('mox_melee'));assert.ok(!events.some(x=>/^hit_/.test(x)),'no generic hit layered over supplied impact');
+events=punch('fighters[1].x=1100');assert.equal(events.filter(x=>x==='mox_punch_whiff').length,1);assert.ok(!events.includes('mox_punch_hit'));
+events=punch('fighters[1].x=450');assert.ok(events.includes('mox_punch_whiff'),'target behind the punch is a miss');assert.ok(!events.includes('mox_punch_hit'));
+events=punch('fighters[1].invulnUntil=time+2');assert.ok(events.includes('mox_punch_whiff'));assert.ok(!events.includes('mox_punch_hit'),'invulnerable target cannot trigger flesh impact');
+events=punch('fighters[1].shield=1000;fighters[1].shieldUntil=time+2');assert.ok(events.includes('block'));assert.ok(!events.includes('mox_punch_hit'));assert.ok(!events.includes('mox_punch_whiff'),'shield contact is not an air miss');
+reset('mox');run("fighters[0].dir=1;fighters[1].x=750;fighters[1].y=fighters[0].y;request(fighters[0],'q');sfxEvents=[];request(fighters[0],'attack')");advance(.5);assert.ok(!cues().includes('mox_punch_hit'),'ranged attacks retain their own sound');
+const manifest=JSON.parse(fs.readFileSync(path.join(__dirname,'../web/sfx/manifest.json')));for(const id of ['mox_punch_hit','mox_punch_whiff']){const cue=manifest.sounds.find(s=>s.id===id);assert.ok(cue);const bytes=fs.readFileSync(path.join(__dirname,'../web/sfx',cue.file));assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'),cue.sha256);assert.ok(cue.duration<.6,'a single strike rather than the full multi-hit recording');}
+console.log('PASS confirmed hit, distance/direction misses, invulnerability, shield contact, ranged isolation and single-strike audio assets');

@@ -1,0 +1,49 @@
+{
+  "source_url": "https://public-files.gumroad.com/g6ppc3pv4g6b7h4jldutn37e2sxt",
+  "source_sha256": "18cf8b41ea9f571b095cecbd03e20ccae72baf27ef849a3a2da9cc505b60e331",
+  "cell": 3,
+  "row": 1,
+  "column": 3,
+  "grid_columns": 7,
+  "crop": [
+    552,
+    0,
+    816,
+    260
+  ],
+  "frames": 25,
+  "durations_ms": [
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40,
+    40
+  ],
+  "tile": 320,
+  "columns": 5,
+  "anchor": [
+    169,
+    258
+  ],
+  "atlas_sha256": "a5125a4e0c828a129af17a2431ee0d4c187b02977867b2f45cf93e33cdf8c8d1"
+}

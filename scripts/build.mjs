@@ -1,7 +1,7 @@
 import {releaseInfo} from './release-check.mjs';
 releaseInfo();
 import fs from 'node:fs';import path from 'node:path';
-const files={};const types={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'application/javascript; charset=utf-8','.webmanifest':'application/manifest+json; charset=utf-8','.wav':'audio/wav','.ogg':'audio/ogg','.mp3':'audio/mpeg','.png':'image/png','.svg':'image/svg+xml','.json':'application/json'};
+const files={};const types={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'application/javascript; charset=utf-8','.webmanifest':'application/manifest+json; charset=utf-8','.wav':'audio/wav','.ogg':'audio/ogg','.mp3':'audio/mpeg','.png':'image/png','.webp':'image/webp','.svg':'image/svg+xml','.json':'application/json'};
 function walk(dir){for(const item of fs.readdirSync(dir,{withFileTypes:true})){const p=path.join(dir,item.name);if(item.isDirectory())walk(p);else files['/'+path.relative('web',p).split(path.sep).join('/')]=[types[path.extname(p)]||'application/octet-stream',fs.readFileSync(p).toString('base64')];}}walk('web');
 const shop=fs.readFileSync('worker/shop.mjs','utf8').replace(/^export (async )?function /gm,'$1function ');
 const core=fs.readFileSync('worker/core.mjs','utf8').split('export default')[0].replace(/^import .*?;\n/gm,'').replace('export async function api','async function api');

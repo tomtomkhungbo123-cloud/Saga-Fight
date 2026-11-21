@@ -5,11 +5,14 @@
  try{const saved=JSON.parse(localStorage.getItem('saga-fight.controls.virtual.v1')||'null');if(saved){if(['buttons','fixed','floating'].includes(saved.mode))mode=saved.mode;if(Number.isFinite(saved.opacity))opacity=Math.max(20,Math.min(100,saved.opacity));}}catch{}
  try{const saved=Number(localStorage.getItem(key));if(Number.isFinite(saved)&&saved>=80&&saved<=140)percent=Math.round(saved/5)*5;}catch{}
  function apply(save=false){
+  const ios=document.documentElement.classList.contains('ios-controls');
   const pad=$('touch'),portrait=window.matchMedia('(orientation:portrait)').matches;
   const narrow=portrait&&innerWidth<=560,base=narrow?(innerWidth<=350?42:44):innerHeight<=450&&!portrait?51:56;
   const style=getComputedStyle(pad),width=pad.getBoundingClientRect().width||innerWidth;
   const usable=width-(parseFloat(style.paddingLeft)||0)-(parseFloat(style.paddingRight)||0)-(parseFloat(style.columnGap)||0);
-  const unit=Math.max(35,Math.min(base*percent/100,usable/(narrow?6.82:7.02)));
+  const vertical=ios?(innerHeight-(parseFloat(style.paddingTop)||0)-(parseFloat(style.paddingBottom)||0)-88)/3.4:Infinity;
+  const divisor=ios?(narrow?6.6:6.8):(narrow?6.82:7.02);
+  const unit=Math.max(ios?44:35,Math.min(base*percent/100,usable/divisor,vertical));
   pad.style.setProperty('--pad-unit',unit+'px');
   pad.dataset.virtualControl=mode;
   document.documentElement.style.setProperty('--control-opacity',opacity/100);

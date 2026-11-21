@@ -1,7 +1,9 @@
 // Home Screen mode is independent of the optional browser Fullscreen API.
 (()=>{
  const standalone=window.matchMedia?.('(display-mode: standalone)'),fullscreen=window.matchMedia?.('(display-mode: fullscreen)');
- const touchDevice=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)||window.matchMedia?.('(pointer: coarse)')?.matches;
+ const ios=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+ const touchDevice=ios||window.matchMedia?.('(pointer: coarse)')?.matches;
+ document.documentElement.classList.toggle('ios-controls',!!ios);
  document.documentElement.classList.toggle('touch-layout',!!touchDevice);
  function viewport(){
   if(!touchDevice)return;

@@ -1,0 +1,11 @@
+/* iPhone/iPad: reference thumb arc, with a central attack and a separate upper-right jump. */
+html.ios-controls #touch{padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
+html.ios-controls #touch .touch-actions{flex-basis:calc(var(--pad-unit)*3.9);width:calc(var(--pad-unit)*3.9);height:calc(var(--pad-unit)*3.4)}
+html.ios-controls #touch .touch-actions button{width:var(--pad-unit);height:var(--pad-unit);min-width:44px;min-height:44px;font-size:clamp(20px,calc(var(--pad-unit)*.36),26px)}
+html.ios-controls #touch [data-do="q"]{left:calc(var(--pad-unit)*.30);right:auto;bottom:calc(var(--pad-unit)*.05)}
+html.ios-controls #touch [data-do="w"]{left:0;right:auto;bottom:calc(var(--pad-unit)*1.175)}
+html.ios-controls #touch [data-do="e"]{left:calc(var(--pad-unit)*.66);right:auto;bottom:calc(var(--pad-unit)*2.10)}
+html.ios-controls #touch [data-do="r"]{left:calc(var(--pad-unit)*1.74);right:auto;bottom:calc(var(--pad-unit)*2.34)}
+html.ios-controls #touch .touch-main [data-do="attack"]{left:calc(var(--pad-unit)*1.21);right:auto;bottom:calc(var(--pad-unit)*.71);width:calc(var(--pad-unit)*1.5);height:calc(var(--pad-unit)*1.5);font-size:clamp(30px,calc(var(--pad-unit)*.58),42px)}
+html.ios-controls #touch .touch-main [data-do="jump"]{left:calc(var(--pad-unit)*2.88);right:auto;bottom:calc(var(--pad-unit)*1.50);font-size:clamp(26px,calc(var(--pad-unit)*.5),36px)}
+@media(max-width:560px) and (orientation:portrait){html.ios-controls #touch{padding-left:max(8px,env(safe-area-inset-left));padding-right:max(8px,env(safe-area-inset-right))}}

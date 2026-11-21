@@ -1,0 +1,15 @@
+{
+  "frames": 27,
+  "tile": 640,
+  "columns": 5,
+  "source": "vector contours traced from reference explosion15",
+  "blur_pixels": {
+    "body": 0.18,
+    "inner_light": 0.28,
+    "halo": [
+      5,
+      14
+    ]
+  },
+  "atlas_sha256": "581085ac95bff2f42e445db23c9755566dd3594d51832c5e58317470dfd3a23f"
+}

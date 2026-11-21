@@ -3,7 +3,7 @@
 'use strict';
 const MOX={q:{cd:2,name:'Chuyển dạng'},w:{cd:5,name:'Song hỏa cầu'},e:{cd:4,name:'Lướt ảnh'},r:{cd:15,name:'Thiên giáng'}};
 function moxMuzzle(hand=0,kind='basic'){return {x:kind==='r'?(hand?78:86):kind==='w'?(hand?48:56):(hand?66:74),y:kind==='r'?101:kind==='w'?86:(hand?102:98)};}
-const MOX_W_RANGE=500,MOX_R_RANGE={melee:300,ranged:450};
+const MOX_W_RANGE=500,MOX_R_RANGE={melee:300,ranged:MOX_W_RANGE};
 function moxArcPoint(b,t){if(b.k==='r')t=t*t*(3-2*t);return {x:b.sx+(b.tx-b.sx)*t,y:b.sy+(b.ty-b.sy)*t+(b.k==='r'?Math.sin(t*Math.PI)*b.bend:Math.sin(t*Math.PI*2)*b.bend*(1-.35*t))};}
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 class MoxGame{
@@ -17,7 +17,7 @@ class MoxGame{
  use(k){const p=this.p,e=this.e;if(p.hp<=0||p.cc>0)return false;
  if(this.action){if(this.action.remaining<.16)this.buffer={k,life:.22};return false;}
  if(!this.free&&this.cd[k]>0){if(this.cd[k]<.12)this.buffer={k,life:.18};return false;}
- if(k==='q'){this.cd.q=this.free?0:MOX.q.cd;p.form=1-p.form;p.immune=1;this.anim={k:'q',t:0};this.effect('shift',p.x,p.y+75,.6);this.last=p.form?'DẠNG ĐÁNH XA · miễn khống chế 1s':'DẠNG CẬN CHIẾN · miễn khống chế 1s';return true;}
+ if(k==='q'){this.cd.q=this.free?0:MOX.q.cd;p.form=1-p.form;p.immune=1;this.anim={k:'q',t:0};this.effect('shift',p.x,p.y+75,1.2,{dir:p.dir,form:p.form});this.last=p.form?'DẠNG ĐÁNH XA · miễn khống chế 1s':'DẠNG CẬN CHIẾN · miễn khống chế 1s';return true;}
  if(!['attack','w','e','r'].includes(k))return false;
  if(k==='r'&&(e.hp<=0||this.distance()>(p.form?MOX_R_RANGE.ranged:MOX_R_RANGE.melee))){this.last='R · mục tiêu ngoài tầm '+(p.form?MOX_R_RANGE.ranged:MOX_R_RANGE.melee);this.emit('miss');return false;}
  if(e.hp>0&&['w','r'].includes(k))p.dir=e.x>=p.x?1:-1;
@@ -58,12 +58,12 @@ class MoxGame{
  if(t<.32){p.y=a.enemyStartY-7*Math.sin(smooth((t-.22)/.1)*Math.PI);p.turn=0;e.y=a.enemyStartY;}
  else if(t<.78){const u=smooth((t-.32)/.46);p.y=a.enemyStartY+230*u;p.turn=-.12*Math.sin(u*Math.PI);e.y=p.y+12*u;}
  else if(t<1.06){const u=smooth((t-.78)/.28);p.y=a.enemyStartY+230+18*Math.sin(u*Math.PI);p.turn=-Math.PI*u;e.y=p.y+12;e.turn=Math.PI*u;}
- else if(t<1.28){const u=clamp((t-1.06)/.22,0,1);p.y=(a.enemyStartY+230)*(1-u*u*u);p.turn=-Math.PI;e.y=p.y;e.turn=Math.PI;if(Math.floor(t*45)!==Math.floor((t-dt)*45))this.effect('diveTrail',e.x,e.y+90,.16,{dir:p.dir});}
- else {if(!a.slammed){a.slammed=true;p.y=0;e.y=0;this.hit(400);if(e.hp>0)e.stun=1;this.effect('slam',e.x,0,1.05);this.effect('debris',e.x,0,1.05);this.emit('slam');this.last='THIÊN GIÁNG · 400 sát thương · choáng 1s';}const u=smooth((t-1.28)/.24);p.y=Math.sin(u*Math.PI)*11;e.y=0;p.turn=-Math.PI-Math.PI*u;e.turn=Math.PI+Math.PI*u;}
+ else if(t<1.28){const u=clamp((t-1.06)/.22,0,1);p.y=(a.enemyStartY+230)*(1-u*u*u);p.turn=-Math.PI;e.y=p.y;e.turn=Math.PI;}
+ else {if(!a.slammed){a.slammed=true;p.y=0;e.y=0;this.hit(400);if(e.hp>0)e.stun=1;this.effect('slam',e.x,0,1.2);this.emit('slam');this.last='THIÊN GIÁNG · 400 sát thương · choáng 1s';}const u=smooth((t-1.28)/.24);p.y=Math.sin(u*Math.PI)*11;e.y=0;p.turn=-Math.PI-Math.PI*u;e.turn=Math.PI+Math.PI*u;}
  }
  if(a.remaining<=0){p.turn=0;e.turn=0;p.y=0;e.y=0;p.vy=0;}
  }
- else if(a.k==='r'&&a.form){for(let i=0;i<4;i++){let key='shot'+i;if(a.age>=.15+i*.22&&!a[key]){a[key]=true;this.balls.push({k:'r',sx:p.x+p.dir*84,sy:p.y+113,x:p.x+p.dir*84,y:p.y+113,age:0,duration:.62,bend:(i%2?1:-1)*(95+i*32),damage:87.5,trail:[]});this.effect('muzzle',p.x+p.dir*84,p.y+113,.2);}}}
+ else if(a.k==='r'&&a.form){for(let i=0;i<8;i++){let key='shot'+i;if(a.age>=.15+i*.105&&!a[key]){a[key]=true;this.balls.push({k:'r',sx:p.x+p.dir*84,sy:p.y+113,x:p.x+p.dir*84,y:p.y+113,age:0,duration:.62,bend:(i%2?1:-1)*(95+(i%4)*32),damage:43.75,trail:[]});this.effect('muzzle',p.x+p.dir*84,p.y+113,.2);}}}
  else if(!a.released&&a.age>=(a.k==='w'?.18:.12)){a.released=true;this.release(a);}
  if(a.remaining<=0)this.action=null;
  }

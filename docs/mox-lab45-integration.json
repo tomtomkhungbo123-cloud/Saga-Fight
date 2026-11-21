@@ -1,0 +1,30 @@
+{
+  "source_site": "appgprj_6af316909b788191a0d85b8d62633956",
+  "source_version": 45,
+  "source_commit": "68e01c742468d367c4a6a54edc3bafcd69ae9028",
+  "integrated_files": {
+    "mox/slam-vfx.js": "791bc81bc9f67cd13560ff4a920d1de5ad50f72783234347602ff6a3ca8c256b",
+    "mox/provenance.json": "914b95be6eb5af7c75af61e03de9a5b7849ad04086a1390cca2e5030583f13d5",
+    "mox/finisher.js": "ac421e843da6dc9d067eef23456dc60706f102e97d367c0639a48c6b2c3d925b",
+    "mox/shift-vfx.js": "fc1ee0077ff44c20c329e1798f1fb2b4cb85bc482fae833a30e850bec59b776c",
+    "mox/visual.js": "f724db2de0459936d4d34c63589eaef26b106d8d73f768a507cede2400c212bf",
+    "mox/punch-vfx.js": "d1ddf3f3241903264b294acacc67c305055ab1384d686c1a9658f3dda8702bb0",
+    "mox/explosion.js": "87efb21827ebb2bf24ef938d398649682932545ea5b2657ebb13866d2929348f",
+    "mox/base.js": "f6d87453882b9d97675bc2bd94a27f6acaeb0c8efd595189c225c520284f45c7",
+    "mox/combat.js": "c50f1765062537693c6bb768d7271af65277a484c4b418af782f7ccae44ab984",
+    "mox/assets/punch-glove14.webp": "87480ef7915940716347dd2c4cd347ef744e72a862ee4866774cf41366bf2a1c",
+    "mox/assets/r-rise09.webp": "2efa46c89a655ba9c26825bdd9d2091c81155524b9c19c19ab3d1e2c0e3e7383",
+    "mox/assets/shift-cell09.json": "d2cd5bb27dab52a837adc0b05b89ed7cd2a6dd059c4446460840048b51a34374",
+    "mox/assets/explosion-cell08.webp": "8497da98ed770d9da8c0f7131405811e94d732e7ef10045fce23d40c4c466da0",
+    "mox/assets/projectile-cell03.json": "aa71106d30f4b53daced5f36e0ff9eb746ab51643ced67bee35d871d226433cc",
+    "mox/assets/r-dive02.webp": "720aab956829f15ccf858ebe12d61839b235bfc1bd2590a5897a734f9c717306",
+    "mox/assets/r-slam15-soft.webp": "581085ac95bff2f42e445db23c9755566dd3594d51832c5e58317470dfd3a23f",
+    "mox/assets/r-rise09.json": "29f38d06c5a427e2bf1849599e05d229803b015f295e8ee2b49418fd48ca8b95",
+    "mox/assets/projectile-cell03.webp": "a5125a4e0c828a129af17a2431ee0d4c187b02977867b2f45cf93e33cdf8c8d1",
+    "mox/assets/shift-cell09.webp": "a837d68a1659a8c6fa7b20980485847e43bffcd5cd68c775f0ea1cc99cb070da",
+    "mox/assets/explosion-cell08.json": "2818c9df50855fec48f1b32a5b499ffb7a5de0f097b1f01dc834ebd3d59834d2",
+    "mox/assets/r-slam15-soft.json": "ca24fd00a90c4264cd9d2c848e4cd243c3c85f61e2a1ff5fe615c0dec16d9f47",
+    "mox/assets/r-dive02.json": "a7c5932736c4412a2760dacce1f980b2b864b682338b10dca409db4487805a7d"
+  },
+  "notes": "Mox only; retain current shared engine, skins, iOS layout and persistent inventory. Ranged R 8x43.75, range500; foreground1500 square melee R VFX."
+}

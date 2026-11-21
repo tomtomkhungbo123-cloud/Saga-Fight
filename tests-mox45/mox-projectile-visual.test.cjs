@@ -1,0 +1,7 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),crypto=require('node:crypto'),path=require('node:path');
+const root=path.join(__dirname,'../web/'),s=fs.readFileSync(root+'mox/visual.js','utf8');const c=vm.createContext({Math});vm.runInContext(s.slice(s.indexOf('function sampleProjectileSpine('),s.indexOf('function flameHead('))+';this.sample=sampleProjectileSpine',c);
+let p=c.sample([{x:0,y:0},{x:100,y:0}],30);assert.equal(p.x,70);assert.equal(p.y,0);assert.equal(p.angle,0);
+p=c.sample([{x:100,y:0},{x:0,y:0}],30);assert.equal(p.x,30);assert.ok(Math.abs(Math.abs(p.angle)-Math.PI)<1e-10);
+const curve=Array.from({length:101},(_,i)=>({x:100*Math.cos(i/100*Math.PI/2),y:100*Math.sin(i/100*Math.PI/2)}));for(const distance of [0,15,30,60,90]){p=c.sample(curve,distance);assert.ok(Math.abs(Math.hypot(p.x,p.y)-100)<.01,'flame stays on arc, not straight tangent');}p=c.sample([{x:0,y:0},{x:100,y:0}],-5);assert.equal(p.x,105);
+const meta=JSON.parse(fs.readFileSync(root+'mox/assets/projectile-cell03.json'));assert.equal(meta.cell,3);assert.equal(meta.row,1);assert.equal(meta.column,3);assert.equal(meta.frames,25);assert.ok(meta.durations_ms.every(d=>d===40));const hash=crypto.createHash('sha256').update(fs.readFileSync(root+'mox/assets/projectile-cell03.webp')).digest('hex');assert.equal(hash,meta.atlas_sha256);assert.ok(s.includes(hash.slice(0,12)));
+console.log('PASS cell-3 25-frame source/timing/hash and straight, curved, mirrored flight-spine mapping');
