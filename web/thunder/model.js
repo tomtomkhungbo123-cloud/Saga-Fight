@@ -40,8 +40,15 @@ const ribbonBindings=hairOutline.map(([x,y],index)=>{
  return best;
 });
 function ribbonLocal(f,s,p){const angle=s.lean*f.dir,c=Math.cos(angle),si=Math.sin(angle),x=(p.x-f.x)/visualScale*f.dir,y=(p.y-f.y)/visualScale+16+Math.sin(s.clock*2.8)*MOTION.bob;return {x:x*c+y*si,y:-x*si+y*c};}
+function ensureVisualArray(s,key){
+ const value=s[key];
+ if(!Array.isArray(value)||Object.prototype.propertyIsEnumerable.call(s,key))Object.defineProperty(s,key,{value:Array.isArray(value)?value:[],writable:true,configurable:true,enumerable:false});
+ return s[key];
+}
 function updateRibbons(f,s,dt){
- if(!dt)return;s.ribbons??=[];
+ // Hair constraints amplify tiny trig differences; they never affect aim or damage.
+ // Restored checkpoints rebuild these local strands from the current pose.
+ if(!dt)return;ensureVisualArray(s,'ribbons');
  for(let j=0;j<ribbonRest.length;j++){
   const rest=ribbonRest[j],target=rest.map(p=>transform(f,...p)),root=target[0];let chain=s.ribbons[j];
   if(!chain){chain=s.ribbons[j]={nodes:target.map(p=>({...p,vx:0,vy:0})),root:{...root},dir:f.dir};}
@@ -70,8 +77,7 @@ function ensureDrawBuffers(s){
   if(!(value instanceof Float64Array)||value.length!==length)Object.defineProperty(s,key,{value:new Float64Array(length),writable:true,configurable:true,enumerable:false});
   else if(Object.prototype.propertyIsEnumerable.call(s,key))Object.defineProperty(s,key,{value,writable:true,configurable:true,enumerable:false});
  }
- if(!Array.isArray(s.sleevePoints))Object.defineProperty(s,'sleevePoints',{value:[],writable:true,configurable:true,enumerable:false});
- else if(Object.prototype.propertyIsEnumerable.call(s,'sleevePoints'))Object.defineProperty(s,'sleevePoints',{value:s.sleevePoints,writable:true,configurable:true,enumerable:false});
+ ensureVisualArray(s,'sleevePoints');ensureVisualArray(s,'ribbons');
  return s;
 }
 function make(){return ensureDrawBuffers({wx:40,wy:-153,lean:0,cloth:0,lift:0,hair:0,rear:0,hemX:38,hemY:-99,clock:0,arm:solveArm(40,-153)});}
