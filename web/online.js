@@ -60,7 +60,7 @@
  }
  function selectRoute(n,mode){
   if(session!==n||n.role!=='host')return;if(mode==='ws'&&directRequired(n)){directUnavailable(n);return;}
-  if(n.pendingRoute?.mode===mode)return;
+  if(n.pendingRoute?.mode===mode||n.activeRoute===mode&&n.transportReady&&!n.pendingRoute)return;
   if(mode==='direct'&&(n.directDisabled||!n.localDirectReady||!n.peerDirectReady||n.directChannel?.readyState!=='open'))return;
   if(n.started){suspend(n);n.awaitingResume=false;}
   n.transportReady=false;n.pendingRoute={id:(n.routeSerial||0)+1,mode};n.routeSerial=n.pendingRoute.id;n.routeSelectAt=performance.now();n.routeSelectSent=performance.now();
@@ -282,25 +282,29 @@
    if(message.event==='authenticated'){
     authenticated=true;n.reliable=true;n.reconnectAt=0;n.retryDelay=500;n.route=directRequired(n)?'CHỜ DIRECT':'SERVER WS';n.metrics.transport=directRequired(n)?'direct-pending':'websocket';if(!n.started){n.suspended=false;n.transportReady=false;}error('');dc.onopen?.();
    }else if(message.event==='ready'){
-    n.joined=true;n.joinedAt=performance.now();applyRoomConfig(n,message.config);connectionChoice.value=directRequired(n)?'direct':'auto';n.metrics.connectionMode=directRequired(n)?'direct':'auto';n.peerHello=false;n.lastPeer=performance.now();
-    if(directRequired(n)){if(!(n.started&&n.activeRoute==='direct'&&n.directChannel?.readyState==='open')){resetRouteAttempt(n);startDirect(n,true);}}else if(n.started||n.directDisabled){n.directDisabled=true;if(n.role==='host')selectRoute(n,'ws');}else startDirect(n);send({type:'hello',version:94,simulation:SIMULATION});
+    n.joined=true;n.joinedAt=performance.now();applyRoomConfig(n,message.config);connectionChoice.value=directRequired(n)?'direct':'auto';n.metrics.connectionMode=directRequired(n)?'direct':'auto';if(!n.started)n.peerHello=false;n.lastPeer=performance.now();
+    const activeDirect=n.started&&n.activeRoute==='direct'&&n.directChannel?.readyState==='open';
+    if(activeDirect){/* Keep the existing P2P route during signaling reconnection. */}
+    else if(n.started&&n.activeRoute==='ws'&&n.transportReady){if(n.suspended&&n.role==='host')recover(n);}
+    else if(directRequired(n)){resetRouteAttempt(n);startDirect(n,true);}
+    else if(n.started||n.directDisabled){n.directDisabled=true;if(n.role==='host'&&n.activeRoute!=='ws')selectRoute(n,'ws');}
+    else startDirect(n);send({type:'hello',version:94,simulation:SIMULATION});
    }else if(message.event==='peer-disconnected'){
-    if(directRequired(n)&&n.activeRoute==='direct'&&n.directChannel?.readyState==='open'){status('DIRECT · MẤT TÍN HIỆU SERVER, P2P VẪN HOẠT ĐỘNG');}else{n.directDisabled=true;n.activeRoute='ws';closeDirect(n);if(directRequired(n))directUnavailable(n,false);else{if(n.started)suspend(n);status('ONLINE · ĐỐI THỦ MẤT KẾT NỐI · ĐANG CHỜ');}}
+    if(n.activeRoute==='direct'&&n.directChannel?.readyState==='open'){status('DIRECT · MẤT TÍN HIỆU SERVER, P2P VẪN HOẠT ĐỘNG');}else{n.directDisabled=true;n.activeRoute='ws';closeDirect(n);if(directRequired(n))directUnavailable(n,false);else{if(n.started)suspend(n);status('ONLINE · ĐỐI THỦ MẤT KẾT NỐI · ĐANG CHỜ');}}
    }else if(message.event==='room-closed'){
     leave();G.menu();error('Đối thủ đã rời phòng. Hãy tạo phòng mới.');
    }
   };
-  socket.onerror=()=>{if(session===n&&n.socket===socket&&n.started&&!(directRequired(n)&&n.activeRoute==='direct'&&n.directChannel?.readyState==='open'))dc.onerror?.();};
+  socket.onerror=()=>{if(session===n&&n.socket===socket&&n.started&&!(n.activeRoute==='direct'&&n.directChannel?.readyState==='open'))dc.onerror?.();};
   socket.onclose=event=>{
    authenticated=false;if(session!==n||n.socket!==socket)return;
-   const directAlive=directRequired(n)&&n.activeRoute==='direct'&&n.directChannel?.readyState==='open';
-   if(!directAlive){n.directDisabled=true;n.activeRoute='ws';closeDirect(n);}
-   if(!directAlive){dc.onclose?.();if(directRequired(n))directUnavailable(n,false);}
+   const directAlive=n.activeRoute==='direct'&&n.directChannel?.readyState==='open';
+   if(!directAlive){n.directDisabled=true;n.activeRoute='ws';closeDirect(n);dc.onclose?.();if(directRequired(n))directUnavailable(n,false);}
    if(event.code>=4000&&event.code<4100){leave();G.menu();error(event.code===4004?'Phiên chơi đã được mở ở kết nối khác.':'Phòng hoặc phiên chơi không hợp lệ. Hai máy hãy tải lại cùng bản game và tạo phòng mới.');return;}
    if(!directAlive)n.reconnectAt||=performance.now()||.001;
    const delay=n.retryDelay||500;n.retryDelay=Math.min(delay*2,4000);
    clearTimeout(n.reconnectTimer);n.reconnectTimer=setTimeout(()=>connectSocket(n),delay+Math.random()*200);
-   status('ONLINE · ĐANG KẾT NỐI LẠI SERVER');
+   status(directAlive?'DIRECT · ĐANG KHÔI PHỤC SIGNALING':'ONLINE · ĐANG KẾT NỐI LẠI SERVER');
   };
  }
  async function poll(n){if(session!==n)return;const start=performance.now();try{
@@ -309,7 +313,8 @@
  }catch(e){if(session!==n)return;if(/đã đóng|không tồn tại|không hợp lệ|đã rời/.test(e.message)){leave();G.menu();error(e.message);return;}}
  if(session===n)n.pollTimer=setTimeout(()=>poll(n),n.inLobby?600:n.reliable&&connected(n)&&n.started?10000:1600);}
  function fast(n){if(session!==n)return;const now=performance.now();routeTick(n,now);if(connected(n)){
- if(n.role==='host'&&n.activeRoute==='ws'&&n.synced&&!n.suspended&&!n.pc&&window.RTCPeerConnection&&(n.directAttempts||0)<4&&n.directRetryAt!=null&&now>=n.directRetryAt)startDirect(n,true);
+ // Do not opportunistically upgrade a live match from WS to DIRECT: switching routes suspends rollback gameplay.
+  // Route discovery is only permitted before the match starts or during explicit recovery.
  if(!n.peerHello)send({type:'hello',version:94,simulation:SIMULATION});
  if(now-n.lastProbe>=500){n.lastProbe=now;for(const [id,t]of n.probes)if(now-t>3000){n.probes.delete(id);n.probeTicks?.delete(id);}const id=++n.probeId;n.probes.set(id,now);n.probeTicks??=new Map();if(n.rb&&n.synced)n.probeTicks.set(id,{tick:n.rb.tick,epoch:n.epoch});send({type:'ping',id,rtt:n.peerPing});}
  if(now-(n.lastServerProbe||0)>=1000){n.lastServerProbe=now;n.serverProbes??=new Map();for(const [id,t]of n.serverProbes)if(now-t>5000)n.serverProbes.delete(id);const id=++n.probeId;n.serverProbes.set(id,now);send({type:'server-ping',id});}
