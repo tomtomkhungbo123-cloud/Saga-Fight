@@ -64,9 +64,18 @@ function fireRibbon(b,progress,opacity=1,head=true){
 }
 
 function limb(x,y,ex,ey,width,color){line([[x,y],[ex,ey]],color,width);}
-// Local visual state follows real displacement, never a wall-clock running loop.
-const locomotionStates=new WeakMap();
-function locomotion(f,clock){let m=locomotionStates.get(f);if(!m||clock<m.time){m={time:clock,x:f.x,phase:0,mix:0,lean:0,air:0,land:0,wasAir:!f.ground};locomotionStates.set(f,m);}const dt=Math.min(.05,Math.max(0,clock-m.time));if(dt>0){const dx=f.x-m.x,speed=Math.abs(f.vx||0),inAir=!f.ground,grabbing=!!f.mox?.action?.grab,targetMix=!inAir&&!grabbing?clamp(speed/300,0,1):0;m.mix+=(targetMix-m.mix)*(1-Math.exp(-dt*16));if(!inAir&&!grabbing&&Math.abs(dx)<100)m.phase+=Math.abs(dx)*Math.PI*2/(84/.57);const localVelocity=(f.vx||0)*(f.dir||1);m.lean+=(clamp(localVelocity/370,-1,1)*.14*(grabbing?0:1)-m.lean)*(1-Math.exp(-dt*12));m.air+=((inAir&&!grabbing?1:0)-m.air)*(1-Math.exp(-dt*16));if(m.wasAir&&!inAir)m.land=1;m.land*=Math.exp(-dt*15);m.wasAir=inAir;m.x=f.x;m.time=clock;}return m;}
+// Read the fixed-step, rollback-authoritative movement pose rather than
+// WeakMap state keyed by the fighter object: rollback restores/replaces fighters.
+function locomotion(f,clock){
+ const grabbing=!!f.mox?.action?.grab,air=!f.ground;
+ const speed=Math.abs(f.vx||0),run=Number.isFinite(f.runWeight)?f.runWeight*430:speed;
+ const mix=air||grabbing?0:clamp(Math.max(speed*.75,run)/320,0,1);
+ const phase=Number.isFinite(f.gait)?f.gait*1.08:clock*(2+speed/430*12);
+ const lean=grabbing?0:Number.isFinite(f.lean)?f.lean:clamp((f.vx||0)*(f.dir||1)/370,-1,1)*.14;
+ const airBlend=clamp(Number.isFinite(f.airWeight)?f.airWeight:(air?1:0),0,1);
+ // A short landing compression comes from the existing simulated air weight.
+ return {phase,mix,lean,air:grabbing?0:airBlend,land:air?0:clamp(airBlend*2.5,0,1)};
+}
 function moxLeg(phase,side,mix,air,vy,bob){
  const q=((phase/(2*Math.PI)+side*.5)%1+1)%1,stance=.57,u=q<stance?q/stance:(q-stance)/(1-stance),ease=u*u*(3-2*u),swing=q>=stance;
  const idle=side?28:-25,gaitX=swing?-42+84*ease:42-84*u,gaitY=swing?-23*Math.sin(Math.PI*u):0,tuck=air*(.65+clamp(vy/850,-.3,.35)),hip={x:side?8:-8,y:-69-bob};
