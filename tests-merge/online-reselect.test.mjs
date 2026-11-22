@@ -22,7 +22,7 @@ for (const direct of [true, false]) {
    for (const c of clients) c.run('var originalSocket=window.testTransport.session().socket;var originalChannel=window.testTransport.session().directChannel;');
    initiator.el('pause').onclick();
    await pump(f, 30);
-   assert.equal(initiator.el('back').textContent, 'ĐỔI TƯỚNG · GIỮ PHÒNG');
+   assert.equal(initiator.el('back').textContent, 'CHỌN LẠI · GIỮ PHÒNG');
    assert.equal(initiator.run('window.riftGame.getPhase()'), 'paused');
    await initiator.el('back').onclick();
    // Do not force a poll. The active transport must notify the opponent.
@@ -46,6 +46,28 @@ for (const direct of [true, false]) {
     assert.equal(c.run(`fighters[${direct?1:0}].type`), 'melanta');
    }
    equalConfirmedWorld(f);
+  } finally {
+   await f.close();
+  }
+ });
+}
+
+for (const result of ['roundover', 'matchover']) {
+ test('Choosing again from '+result+' keeps the room even if the local game mode is stale', async () => {
+  const f = await hybridPair(true, 'thunder', 'soul', 'forest');
+  try {
+   await synced(f);
+   const room = f.host.run('window.riftNet.room');
+   f.host.run(`phase='${result}';mode='pve';showMessage('ONLINE','KẾT QUẢ','','SẴN SÀNG');`);
+   assert.equal(f.host.el('back').textContent, 'CHỌN LẠI · GIỮ PHÒNG');
+   await f.host.el('back').onclick();
+   await f.wait(() => [f.host,f.guest].every(c => c.run('window.riftNet.inLobby')));
+   for (const c of [f.host,f.guest]) assert.equal(c.run('window.riftNet.room'), room);
+   const stored = await f.DB.prepare('SELECT status FROM duel_rooms WHERE code=?').bind(room).first();
+   assert.equal(stored.status, 'joined');
+   await f.host.el('leaveRoom').onclick();
+   await f.wait(() => !f.guest.run('window.riftNet.room'));
+   assert.equal((await f.DB.prepare('SELECT status FROM duel_rooms WHERE code=?').bind(room).first()).status, 'closed');
   } finally {
    await f.close();
   }

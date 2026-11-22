@@ -144,7 +144,7 @@ for(const maxMessageSize of [16384,4096])test(`large checksum recovery uses ${ma
 
   const diagnostic=await f.host.run('window.riftNet.diagnostics()');
   assert.equal(diagnostic.networkBuild,'6.36.0-pvpfix2');
-  assert.equal(diagnostic.simulation,'6360-aether31-pvpfix2');
+  assert.equal(diagnostic.simulation,'6360-aether31-pvpfix2-room2');
   assert.equal(diagnostic.session.started,true);
   assert.equal(diagnostic.session.synced,true);
   assert.equal(diagnostic.session.suspended,false);

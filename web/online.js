@@ -1,6 +1,6 @@
  'use strict';
 (()=>{
- const G=window.riftGame,el=id=>document.getElementById(id),HZ=60,STEP=1/120,BUILD='6.36.0',NET_BUILD='6.36.0-pvpfix2',SIMULATION='6360-aether31-pvpfix2';
+ const G=window.riftGame,el=id=>document.getElementById(id),HZ=60,STEP=1/120,BUILD='6.36.0',NET_BUILD='6.36.0-pvpfix2',SIMULATION='6360-aether31-pvpfix2-room2';
  if(window.SagaGameBuild!==BUILD||window.SagaRollback?.build!==BUILD){el('netError').textContent='Các file game khác phiên bản hoặc thiếu rollback-core.js. Hãy cập nhật đầy đủ bản '+BUILD+' và tải lại cả hai máy.';el('createRoom').disabled=el('joinRoom').disabled=true;return;}
  let session=null;
  const connectionChoice=el('connectionMode');let connectionMode='auto';try{if(localStorage.getItem('saga.connection.v1')==='direct')connectionMode='direct';}catch{}connectionChoice.value=connectionMode;connectionChoice.addEventListener('change',()=>{connectionMode=connectionChoice.value==='direct'?'direct':'auto';try{localStorage.setItem('saga.connection.v1',connectionMode);}catch{}});
@@ -280,7 +280,7 @@
   try{
    await roomAction('return');
    if(session===n&&!n.inLobby)message.textContent=el('netError').textContent||'Chưa thể quay về phòng. Vui lòng thử lại.';
-  }finally{button.disabled=false;}
+  }finally{if(session!==n)message.textContent='';button.disabled=false;}
  }
  async function roomAction(action,changes={},retry=0){const n=session;if(!n||n.lobbyBusy)return;const revision=n.config.lobby.revision,generation=n.config.lobby.generation,choice=JSON.stringify([n.config.p1,n.config.p2,n.config.map]);n.lobbyBusy=true;lobbyUI(n);try{const r=await api('lobby',{code:n.room,revision,action,...changes},n.token);if(session===n){n.lobbyBusy=false;applyRoomConfig(n,r.config,true);error('');if(action==='return'&&n.inLobby)send({type:'ping',roomRevision:n.config.lobby.revision});}}catch(e){if(session===n){n.lobbyBusy=false;if(e.config)applyRoomConfig(n,e.config,true);const sameChoice=choice===JSON.stringify([n.config.p1,n.config.p2,n.config.map]);if(!retry&&e.config&&n.inLobby&&n.config.lobby.generation===generation&&(action==='select'||action==='ready'&&sameChoice))return roomAction(action,changes,1);if(action==='return'&&n.inLobby){error('');return;}error(e.message);lobbyUI(n);}}}
 
@@ -364,7 +364,7 @@
    if(preserve)badge(n);else status('ONLINE · ĐANG KẾT NỐI LẠI SERVER');
   };
  }
- async function poll(n){if(session!==n||n.polling)return;clearTimeout(n.pollTimer);n.polling=true;const start=performance.now();try{
+ async function poll(n){if(!n||session!==n||n.polling)return;clearTimeout(n.pollTimer);n.polling=true;const start=performance.now();try{
   const r=await api('sync',{code:n.room},n.token);if(session!==n)return;n.metrics.apiRtt=performance.now()-start;
   if(r.status==='joined'&&!n.joined){n.joined=true;n.joinedAt=performance.now();}applyRoomConfig(n,r.config,true);maybeStart(n);
  }catch(e){if(session!==n)return;if(/đã đóng|không tồn tại|không hợp lệ|đã rời/.test(e.message)){leave();G.menu();error(e.message);return;}}finally{n.polling=false;}
