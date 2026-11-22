@@ -208,7 +208,7 @@
  }
  function resetInputs(){G.remote(0);G.resetPrediction?.();}
  function beforeStep(){}
- function confirm(){if(!session)return;if(G.getPhase()==='matchover')return roomAction('return');action(G.getPhase()==='paused'?'pause':'ready');}
+ function confirm(){if(!session)return;if(G.getPhase()==='matchover')return returnToLobby();action(G.getPhase()==='paused'?'pause':'ready');}
  function reportResult(winner){
   const n=session, id=n?.config?.lobby?.matchId;
   if(!id||n.result===id)return;
@@ -265,13 +265,24 @@
   n.config=config;n.inLobby=config.lobby.stage==='lobby';
   if(entered){
    n.epoch++;n.started=false;n.synced=false;n.suspended=false;n.rb=null;n.rbAcc=0;
-   n.initPacket=null;n.startPacket=null;n.waitingStart=false;n.lastHash=0;n.peerHashQueue=new Map();
+   n.initPacket=null;n.startPacket=null;n.directSend=null;n.directReceive=null;n.waitingStart=false;n.lastHash=0;n.peerHashQueue=new Map();
+   el('roomReturnStatus').textContent='';
    G.rollback?.resetView?.();resetInputs();
   }
   if(n.inLobby)G.roomLobby(config,n.role);
   lobbyUI(n);maybeStart(n);
  }
- async function roomAction(action,changes={},retry=0){const n=session;if(!n||n.lobbyBusy)return;const revision=n.config.lobby.revision,generation=n.config.lobby.generation,choice=JSON.stringify([n.config.p1,n.config.p2,n.config.map]);n.lobbyBusy=true;lobbyUI(n);try{const r=await api('lobby',{code:n.room,revision,action,...changes},n.token);if(session===n){n.lobbyBusy=false;applyRoomConfig(n,r.config,true);error('');}}catch(e){if(session===n){n.lobbyBusy=false;if(e.config)applyRoomConfig(n,e.config,true);const sameChoice=choice===JSON.stringify([n.config.p1,n.config.p2,n.config.map]);if(!retry&&e.config&&n.inLobby&&n.config.lobby.generation===generation&&(action==='select'||action==='ready'&&sameChoice))return roomAction(action,changes,1);if(action==='return'&&n.inLobby){error('');return;}error(e.message);lobbyUI(n);}}}
+ async function returnToLobby(){
+  const n=session;if(!n||n.inLobby||n.lobbyBusy)return;
+  const button=el('back'),message=el('roomReturnStatus');
+  button.disabled=true;
+  message.textContent='Đang quay về chọn tướng trong phòng…';
+  try{
+   await roomAction('return');
+   if(session===n&&!n.inLobby)message.textContent=el('netError').textContent||'Chưa thể quay về phòng. Vui lòng thử lại.';
+  }finally{button.disabled=false;}
+ }
+ async function roomAction(action,changes={},retry=0){const n=session;if(!n||n.lobbyBusy)return;const revision=n.config.lobby.revision,generation=n.config.lobby.generation,choice=JSON.stringify([n.config.p1,n.config.p2,n.config.map]);n.lobbyBusy=true;lobbyUI(n);try{const r=await api('lobby',{code:n.room,revision,action,...changes},n.token);if(session===n){n.lobbyBusy=false;applyRoomConfig(n,r.config,true);error('');if(action==='return'&&n.inLobby)send({type:'ping',roomRevision:n.config.lobby.revision});}}catch(e){if(session===n){n.lobbyBusy=false;if(e.config)applyRoomConfig(n,e.config,true);const sameChoice=choice===JSON.stringify([n.config.p1,n.config.p2,n.config.map]);if(!retry&&e.config&&n.inLobby&&n.config.lobby.generation===generation&&(action==='select'||action==='ready'&&sameChoice))return roomAction(action,changes,1);if(action==='return'&&n.inLobby){error('');return;}error(e.message);lobbyUI(n);}}}
 
  function maybeStart(n){if(n.role==='host'&&n.joined&&n.peerHello&&n.transportReady&&n.config.lobby?.stage==='playing'&&(n.matchGeneration||0)<n.config.lobby.generation){
   if(!window.SagaRollback||!G.rollback){error('Thiếu rollback-core.js. Hãy tải lên đầy đủ bản game.');return;}
@@ -304,7 +315,10 @@
  function channel(dc){const n=session;if(!n)return;if(n.channel&&n.channel!==dc){n.channel.onopen=n.channel.onmessage=n.channel.onclose=n.channel.onerror=null;n.channel.close();}n.channel=dc;dc.onopen=()=>{if(session!==n)return;if(!directOpen(n))n.lastPeer=performance.now();send({type:'hello',version:94,simulation:SIMULATION});};dc.onmessage=event=>{if(session!==n||typeof event.data!=='string'||event.data.length>512000)return;let m;try{m=JSON.parse(event.data);}catch{return;}if(!m||typeof m!=='object'||Array.isArray(m))return;n.metrics.bytesReceived+=event.data.length;
  if(!['hello','ping','pong','rb-input','rb-init','rb-ack','rb-start','rb-hash','rb-resync'].includes(m.type))return;n.lastPeer=performance.now();if(m.type.startsWith('rb-')){try{rollbackMessage(n,m);}catch(e){n.metrics.rollbackError=String(e.message);requestCheckpoint(n,'exception',{message:String(e.message)});}return;}
  if(m.type==='hello'){if(m.version!==94||m.simulation!==SIMULATION){n.peerHello=false;const message='Hai máy khác bản cân bằng. Hãy tải lại game trên cả hai thiết bị.';error(message);status(message);lobbyUI(n);return;}n.peerHello=true;if(!m.reply)send({type:'hello',version:94,simulation:SIMULATION,reply:true});maybeStart(n);return;}
- if(m.type==='ping'){send({type:'pong',id:m.id,stamp:m.stamp,epoch:n.epoch,peerTick:n.synced?n.rb?.tick:null});n.peerRtt=Number.isFinite(m.rtt)?m.rtt:null;return;}
+ if(m.type==='ping'){
+  // The peer only signals a refresh. The room API remains authoritative.
+  if(!n.inLobby&&m.roomRevision===n.config.lobby.revision+1&&n.lastRoomHint!==m.roomRevision){n.lastRoomHint=m.roomRevision;void poll(n);}
+  send({type:'pong',id:m.id,stamp:m.stamp,epoch:n.epoch,peerTick:n.synced?n.rb?.tick:null});n.peerRtt=Number.isFinite(m.rtt)?m.rtt:null;return;}
  if(m.type==='pong'){const sent=n.probes.get(m.id);if(sent!==undefined){n.probes.delete(m.id);const probe=n.probeTicks?.get(m.id);n.probeTicks?.delete(m.id);if(probe&&probe.epoch===n.epoch&&m.epoch===n.epoch&&n.rb&&n.synced&&!n.suspended&&Number.isSafeInteger(m.peerTick)&&m.peerTick>=0){const skew=(probe.tick+n.rb.tick)/2-m.peerTick;if(Math.abs(skew)<=120)n.clockSkew=n.clockSkew==null?skew:n.clockSkew*.5+skew*.5;n.metrics.clockSkewTicks=n.clockSkew;}const value=performance.now()-sent;n.jitter=n.peerPing==null?0:.8*n.jitter+.2*Math.abs(value-n.peerPing);n.peerPing=value;n.lastPong=performance.now();if(n.suspended)recover(n);badge(n);}return;}
  };dc.onerror=()=>{if(session===n&&!directOpen(n))suspend(n,'ws-error');};dc.onclose=()=>{if(session===n&&!directOpen(n))suspend(n,'ws-closed');};}
  function badge(n){paintPing(n);el('netBadge').title=(n.activeRoute==='direct'?'DIRECT':directRequired(n)?'CHỜ DIRECT':'SERVER WS')+' · RTT '+(n.peerPing==null?'đang đo':Math.round(n.peerPing)+' ms')+' · dao động '+Math.round(n.jitter||0)+' ms';}
@@ -350,10 +364,10 @@
    if(preserve)badge(n);else status('ONLINE · ĐANG KẾT NỐI LẠI SERVER');
   };
  }
- async function poll(n){if(session!==n)return;const start=performance.now();try{
+ async function poll(n){if(session!==n||n.polling)return;clearTimeout(n.pollTimer);n.polling=true;const start=performance.now();try{
   const r=await api('sync',{code:n.room},n.token);if(session!==n)return;n.metrics.apiRtt=performance.now()-start;
   if(r.status==='joined'&&!n.joined){n.joined=true;n.joinedAt=performance.now();}applyRoomConfig(n,r.config,true);maybeStart(n);
- }catch(e){if(session!==n)return;if(/đã đóng|không tồn tại|không hợp lệ|đã rời/.test(e.message)){leave();G.menu();error(e.message);return;}}
+ }catch(e){if(session!==n)return;if(/đã đóng|không tồn tại|không hợp lệ|đã rời/.test(e.message)){leave();G.menu();error(e.message);return;}}finally{n.polling=false;}
  if(session===n)n.pollTimer=setTimeout(()=>poll(n),n.inLobby?600:n.reliable&&connected(n)&&n.started?10000:1600);}
  function fast(n){if(session!==n)return;const now=performance.now();routeTick(n,now);if(connected(n)){
  // Keep the chosen transport stable for the current match; explicit retry still works.
@@ -375,6 +389,6 @@
  el('roomCode').addEventListener('input',()=>{el('roomCode').value=el('roomCode').value.toUpperCase().replace(/[^A-Z2-9]/g,'').slice(0,6);});el('roomCode').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();join();}});
  el('copyRoom').onclick=async()=>{if(!session)return;const url=new URL(location.href);url.search='';url.hash='';url.searchParams.set('room',session.room);try{await navigator.clipboard.writeText(url.toString());el('copyRoom').textContent='ĐÃ SAO CHÉP ✓';}catch{error('Mã phòng: '+session.room+' · Gửi mã này cho bạn bè.');}};
  el('lobbyReady').onclick=()=>{if(session)roomAction('ready',{value:!session.config.lobby.ready[session.role==='host'?0:1]});};el('select0').addEventListener('change',()=>{if(canEdit(0)&&session)roomAction('select',{fighter:el('select0').value});});
- window.riftNet={retry:retryConnection,canEdit,selectMap:map=>roomAction('select',{map}),roomAction,get inLobby(){return !!session?.inLobby;},reportResult,diagnostics:diagnosticReport,get fullRollback(){return !!session;},get room(){return session?.room||null;},get role(){return session?.role||null;},get blocked(){return !!session&&(!session.synced||session.suspended);},action,confirm,leave,frame:networkFrame,beforeStep,metrics:()=>session?.metrics||null};
+ window.riftNet={retry:retryConnection,returnToLobby,canEdit,selectMap:map=>roomAction('select',{map}),roomAction,get inLobby(){return !!session?.inLobby;},reportResult,diagnostics:diagnosticReport,get fullRollback(){return !!session;},get room(){return session?.room||null;},get role(){return session?.role||null;},get blocked(){return !!session&&(!session.synced||session.suspended);},action,confirm,leave,frame:networkFrame,beforeStep,metrics:()=>session?.metrics||null};
  const code=new URL(location.href).searchParams.get('room');if(code&&/^[A-Z2-9]{6}$/.test(code.toUpperCase())){document.querySelector('[data-mode="online"]').click();el('roomCode').value=code.toUpperCase();}
 })();
