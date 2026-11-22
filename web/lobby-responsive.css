@@ -38,6 +38,7 @@ body:has(#menu:not([hidden])) #arena{margin:0;border:0;background:#141216;min-he
 #menu .choices:has(#opponentLabel[hidden])::after{content:'?\A CHỜ ĐỐI THỦ';white-space:pre;display:flex;align-items:center;justify-content:center;text-align:center;border:1px dashed #ffffff20;border-radius:8px;color:#9b8e9e;font:600 18px/2.4 'Barlow Condensed',Impact,sans-serif;min-height:200px;align-self:center}
 #menu .lobby-setup{display:flex;flex-direction:column;gap:18px;min-width:0;padding:24px;border:1px solid #ffffff26;border-radius:12px;background:#171419e8;box-shadow:0 16px 44px #0002}
 #menu .modepick{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;margin:0;border:1px solid #ffffff2c;border-radius:6px;overflow:hidden}
+#menu :is(.modepick button,#start){font-family:'Barlow Condensed',Impact,sans-serif;font-weight:800}
 #menu .modepick button{display:flex;align-items:center;justify-content:center;min-height:48px;width:100%;padding:8px 5px;font-size:18px;letter-spacing:0;border:0;border-right:1px solid #ffffff20;border-radius:0;background:transparent;color:#d5cbd5}
 #menu .modepick [data-mode="pve"]{order:0}#menu .modepick [data-mode="pvp"]{order:1}#menu .modepick [data-mode="online"]{order:2}#menu .modepick [data-mode="sandbox"]{order:3;border-right:0}
 #menu .modepick span{display:none}
@@ -53,7 +54,7 @@ body:has(#menu:not([hidden])) #arena{margin:0;border:0;background:#141216;min-he
 #menu .lobby-launch{display:flex;flex-direction:column;gap:14px;min-width:0}
 #menu #difficultyLabel{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:48px;padding:6px 12px;border:1px solid #ffffff2a;border-radius:6px;font-size:10px;letter-spacing:.06em;color:#c4b9c4}
 #menu #difficulty{width:150px;margin:0;min-height:32px;padding:2px 22px 2px 8px;border:0;background:transparent;color:#f0e6d5;font-size:15px!important}
-#menu #start{display:flex;align-items:center;justify-content:center;gap:18px;min-height:58px;width:100%;margin:0;padding:12px 18px;border-radius:6px;font:800 27px/1.1 'Barlow Condensed',Impact,sans-serif;letter-spacing:.03em;background:linear-gradient(110deg,#edcf88,#f4d999)}
+#menu #start{display:flex;align-items:center;justify-content:center;gap:18px;min-height:58px;width:100%;margin:0;padding:12px 18px;border-radius:6px;font-size:27px;line-height:1.1;letter-spacing:.03em;background:linear-gradient(110deg,#edcf88,#f4d999)}
 #menu #start span{font-size:28px}#menu #start:hover{background:#ffe4ab}
 #menu .lobby-launch:has(#start[hidden]):has(#difficultyLabel[hidden]){display:none}
 #menu #onlinePanel{min-width:0;margin:0}#menu #lobbyCard{margin:0 0 14px}
