@@ -11,7 +11,7 @@ if(k==='w')f.action.fired=false;
 if(k==='e'){g.hover=null;g.liquid={t:0,startY:env.surface(f.x,f.y)-f.y};f.y=env.surface(f.x,f.y);f.vy=0;f.cd.e=C.e.cd;f.invulnUntil=Math.max(f.invulnUntil,env.time+C.e.duration+2*C.e.transition);f.immuneUntil=Math.max(f.immuneUntil,env.time+C.e.duration+2*C.e.transition);}
 if(k==='r'){g.hover={t:0,height:null};f.vy=Math.min(f.vy,-C.r.liftVelocity);f.ground=false;g.rain={t:0,next:C.r.windup,index:0,zones:[],lastX:null,use:u};f.cd.r=C.r.cd;}
 env.cue('aether_cast');return true;}
-function normal(f,a,env){const g=f.aether,base=env.surface(f.x,f.y),air=!f.ground,b=N.create({...point(f,base),y:air?Math.max(2,base-f.y):0}, {n:a.n,dir:a.dir},env.time,C.attack);Object.assign(b,{base,use:a.use,n:a.n,kind:b.kind});g.shots.push(b);env.cue('aether_launch');}
+function normal(f,a,env){const g=f.aether,base=env.surface(f.x,f.y),air=!f.ground,b=N.create({...point(f,base),y:air?Math.max(2,base-f.y):0}, {n:a.n,dir:a.dir},env.time,C.attack);Object.assign(b,{base,originBase:base,use:a.use,n:a.n,kind:b.kind});g.shots.push(b);env.cue('aether_launch');}
 function root(f,e,d,env,use){if(env.control(e,use))e.rootUntil=Math.max(e.rootUntil,env.time+d)}
 function strike(f,b,env,value,last=true){const e=env.enemy,amount=env.damage(f,e,value,0,false,false,{use:b.use,hitId:b.use.id+':'+b.key,last,skillHit:true});if(amount>0)env.cue('aether_break',e.x);return amount;}
 function update(f,dt,env){const g=f.aether,e=env.enemy;g.clock=env.time;g.events=g.events.filter(v=>env.time-v.born<1);if(f.hp<=0){g.q=g.rain=g.liquid=g.hover=g.cage=null;g.shots=[];return;}

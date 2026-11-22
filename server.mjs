@@ -18,7 +18,7 @@ const dataDir=process.env.DATA_DIR||path.join(root,'.data');
 fs.mkdirSync(dataDir,{recursive:true});
 const DB=localDB(path.join(dataDir,'rooms.sqlite'));
 
-const types={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'application/javascript; charset=utf-8','.json':'application/json','.webmanifest':'application/manifest+json','.png':'image/png','.jpg':'image/jpeg','.svg':'image/svg+xml','.ico':'image/x-icon','.ogg':'audio/ogg','.mp3':'audio/mpeg','.wav':'audio/wav'};
+const types={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'application/javascript; charset=utf-8','.json':'application/json','.webmanifest':'application/manifest+json','.png':'image/png','.webp':'image/webp','.jpg':'image/jpeg','.svg':'image/svg+xml','.ico':'image/x-icon','.ogg':'audio/ogg','.mp3':'audio/mpeg','.wav':'audio/wav'};
 const server=http.createServer(async(req,res)=>{
  try{
   // Render terminates HTTPS at its proxy. Preserve the public origin for

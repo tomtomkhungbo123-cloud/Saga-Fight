@@ -12,15 +12,16 @@
  const image=new Image();image.decoding='async';let loaded=false;
  const ready=new Promise(resolve=>{image.onload=async()=>{try{await image.decode?.();}catch{}loaded=true;resolve(true);};image.onerror=()=>resolve(false);});
  image.src='melanta/vfx/q-impact-source.webp?v=2-soft-edge';
+ const widthScale=1.12;
  const smooth=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);};
  window.MelantaQImpact={duration,leadIn,frameAt,ready,kind:'source-timeline',count:ends.length,
   draw(ctx,e,ground){
    const frame=frameAt(e.t);if(!loaded||frame<0)return;
    const radius=e.radius||190,scale=radius*2.45/source.originalCellWidth,y=e.worldY??(ground-(e.y||0)),impactAge=e.t-leadIn;
    ctx.save();ctx.globalAlpha=smooth(impactAge/.025)*(1-smooth((impactAge-.55)/.45))*.8;
-   ctx.drawImage(foot,e.x-radius*.95,y-13,radius*1.9,38);
+   ctx.drawImage(foot,e.x-radius*.95*widthScale,y-13,radius*1.9*widthScale,38);
    ctx.globalAlpha=1;ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
-   ctx.translate(e.x,y);ctx.scale((e.dir||1)*scale,scale);
+   ctx.translate(e.x,y);ctx.scale((e.dir||1)*scale*widthScale,scale);
    const [px,py]=source.groundPivot;
    ctx.drawImage(image,frame%COLS*W,Math.floor(frame/COLS)*H,W,H,-px,-py,W,H);ctx.restore();
   }

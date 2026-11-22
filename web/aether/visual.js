@@ -35,19 +35,34 @@ if(typeof module!=='undefined')module.exports={AETHER_ARM,AETHER_REAR_ARM,aether
 
 'use strict';
 const LIQUID_TRAVEL=(()=>{
- const clamp=x=>Math.max(0,Math.min(1,x)),ease=x=>{x=clamp(x);return x*x*(3-2*x)},spacing=20,spikeLife=.38;
+ const clamp=x=>Math.max(0,Math.min(1,x)),ease=x=>{x=clamp(x);return x*x*(3-2*x)},spacing=68,spikeLife=.38;
  let atlas=null;
  function phase(t,c){const end=c.transition+c.duration;if(t<c.transition)return {liquid:ease(t/c.transition),enter:true,exit:false};if(t<end)return {liquid:1,enter:false,exit:false};return {liquid:1-ease((t-end)/c.transition),enter:false,exit:true}}
  function mapHeight(h,liquid){const delay=.35*clamp(h/240),u=clamp((liquid-delay)/(1-delay));return h*Math.pow(1-u,1.25)}
- function advance(travel,x,dt,c){
-  travel.spikes=travel.spikes||[];for(const s of travel.spikes)s.age+=dt;travel.spikes=travel.spikes.filter(s=>s.age<spikeLife);
-  const old=travel.lastX??x,dx=x-old,dist=Math.abs(dx),dir=Math.sign(dx);travel.lastX=x;
-  if(travel.t<c.transition*.6||travel.t>=c.transition+c.duration){travel.distance=0;return}
-  let remain=travel.distance||0;
-  if(dist>0){let at=spacing-remain;while(at<=dist+1e-9){travel.spikes.push({x:old+dir*at+dir*30,dir,age:0,index:travel.serial||0});travel.serial=(travel.serial||0)+1;at+=spacing}travel.distance=(remain+dist)%spacing;if(travel.distance<1e-7||spacing-travel.distance<1e-7)travel.distance=0;}
-  if(travel.spikes.length>12)travel.spikes.splice(0,travel.spikes.length-12);
+ function advance(travel,x,dt,c,surface,base){
+  for(const spike of travel.spikes)spike.age+=dt;
+  travel.spikes=travel.spikes.filter(spike=>spike.age<spikeLife);
+  const old=travel.lastX,dx=x-old,dist=Math.abs(dx),dir=Math.sign(dx);
+  travel.lastX=x;
+  if(travel.t<c.transition*.6||travel.t>=c.transition+c.duration||dist===0)return;
+  if(dir!==travel.dir){travel.distance=0;travel.dir=dir;}
+  const first=spacing-travel.distance;
+  // After a long render gap, keep the most recent clusters along the path.
+  const start=first+Math.max(0,Math.floor((dist-first)/spacing)-3)*spacing;
+  for(let at=start;at<=dist+1e-9;at+=spacing){
+   const root=old+dir*at;
+   travel.spikes.push({x:root,base:surface(root,base),dir,age:dt*(1-at/dist)});
+  }
+  travel.distance=(travel.distance+dist)%spacing;
+  if(travel.spikes.length>4)travel.spikes.splice(0,travel.spikes.length-4);
  }
- function spikeState(s){return {height:(12+s.index%3*3)*ease(s.age/.07)*(1-ease((s.age-.18)/.2)),alpha:1-ease((s.age-.24)/.14)}}
+ function drawTrail(ctx,travel){
+  for(const spike of travel.spikes){
+   const frame=Math.min(15,Math.floor(spike.age*92));
+   const opacity=1-ease((spike.age-.18)/.2);
+   drawGroundCrystalRow(ctx,frame,spike.x,spike.base,spike.dir,spacing/(1008-335),.105,opacity);
+  }
+ }
  function ensure(body,p,g,quality){
   if(!atlas){const normal=document.createElement('canvas'),white=document.createElement('canvas');normal.width=white.width=320;normal.height=white.height=280;atlas={normal,white,token:null,quality:null};}
   if(atlas.token!==g.travel||atlas.quality!==quality){
@@ -68,11 +83,6 @@ const LIQUID_TRAVEL=(()=>{
   c.restore();
  }
  function draw(c,p,g,quality,body){const tr=g.travel,s=phase(tr.t,CONFIG.e),liquid=s.liquid;
-  // World-anchored ridges stay where they grew; direction reversals only affect new ridges.
-  for(const spike of tr.spikes||[]){const v=spikeState(spike);if(v.height<.1)continue;c.save();c.translate(spike.x,0);c.scale(spike.dir,1);c.globalAlpha=v.alpha*.9;
-   if(quality==='high'){c.globalAlpha*=.3;c.drawImage(glow,-23,-33,46,46);c.globalAlpha=v.alpha*.9;}
-   poly(c,[[-10,1],[17,-v.height],[9,1]],'#f8fff2');poly(c,[[-10,1],[17,-v.height],[1,-v.height*.2]],'#cae4d3');c.restore();
-  }
   pool(c,p,g,quality,liquid);
   if(liquid>=.999)return;
   const cached=ensure(body,p,g,quality),step=quality==='low'?12:quality==='medium'?8:6,rootY=(tr.startY||0)*(1-ease(Math.min(1,tr.t/CONFIG.e.transition)));
@@ -85,7 +95,7 @@ const LIQUID_TRAVEL=(()=>{
   // The floor surface covers the absorbed rows and joins the body into one liquid mass.
   pool(c,p,g,quality,liquid);
  }
- return {phase,mapHeight,advance,spikeState,draw,spacing,spikeLife};
+ return {phase,mapHeight,advance,draw,drawTrail};
 })();
 if(typeof module!=='undefined')module.exports=LIQUID_TRAVEL;
 
@@ -96,21 +106,81 @@ const AETHER_BODY_OUTLINE=[[[2.6,-62.4],[1.3,-9.1],[0.0,-76.7],[2.6,-72.8]],[[-2
 // All paths are original to Aether. Root at floor, +y points up in simulation.
 const crystalPath=new Path2D('M 0 -25 L 15 -8 L 9 18 L -5 25 L -15 6 L -10 -16 Z');
 const glow=document.createElement('canvas');glow.width=128;glow.height=128;{const c=glow.getContext('2d'),g=c.createRadialGradient(64,64,0,64,64,64);g.addColorStop(0,'rgba(255,255,255,.6)');g.addColorStop(.25,'rgba(245,250,246,.2)');g.addColorStop(1,'rgba(255,255,255,0)');c.fillStyle=g;c.fillRect(0,0,128,128)}
-const meteorTrail=document.createElement('canvas');meteorTrail.width=96;meteorTrail.height=512;{const c=meteorTrail.getContext('2d'),length=c.createLinearGradient(0,0,0,512);length.addColorStop(0,'rgba(216,255,228,0)');length.addColorStop(.25,'rgba(216,255,228,.04)');length.addColorStop(.65,'rgba(224,255,233,.25)');length.addColorStop(.88,'rgba(243,255,240,.85)');length.addColorStop(1,'rgba(243,255,240,0)');c.fillStyle=length;c.fillRect(0,0,96,512);c.globalCompositeOperation='destination-in';const edge=c.createLinearGradient(0,0,96,0);edge.addColorStop(0,'rgba(255,255,255,0)');edge.addColorStop(.3,'rgba(255,255,255,.2)');edge.addColorStop(.5,'white');edge.addColorStop(.7,'rgba(255,255,255,.2)');edge.addColorStop(1,'rgba(255,255,255,0)');c.fillStyle=edge;c.fillRect(0,0,96,512);c.globalCompositeOperation='source-over';}
-function drawMeteor(c,b,quality){const speed=Math.hypot(b.vx,b.v),stretch=1+Math.min(.65,speed/2200),angle=-Math.atan2(b.vx,b.v),length=160+Math.min(230,speed*.16),width=quality==='low'?65:100;
- c.save();c.translate(b.x,-b.y);c.rotate(angle);c.globalAlpha=.85;c.drawImage(meteorTrail,-width/2,-length,width,length-12);
- if(quality!=='low'){c.globalAlpha=.3;c.drawImage(meteorTrail,-width*.85,-length*1.06,width*1.7,length*1.06-8);c.globalAlpha=.5;c.drawImage(glow,-73,-93,146,186);}
- c.globalAlpha=1;c.scale(1,stretch);crystal(c,0,0,1.65,0,1,quality);c.restore();}
-const impactRing=document.createElement('canvas');impactRing.width=impactRing.height=256;{const c=impactRing.getContext('2d'),g=c.createRadialGradient(128,128,0,128,128,128);for(const [at,alpha] of [[0,0],[.61,0],[.74,.08],[.82,.55],[.86,.85],[.91,.25],[1,0]])g.addColorStop(at,`rgba(229,255,232,${alpha})`);c.fillStyle=g;c.fillRect(0,0,256,256);}
-function drawMeteorImpact(c,f,quality){const u=clamp(f.t/f.life,0,1),fade=Math.pow(1-u,1.6),r=f.radius;c.save();c.translate(f.x,0);
- // Brief contact flash flows into soft elliptical pressure waves on the floor.
- const flash=Math.exp(-f.t*20);c.globalAlpha=flash*.9;c.drawImage(glow,-r*.8,-r*.44,r*1.6,r*.88);
- c.globalAlpha=fade*.32;c.drawImage(glow,-r*(.5+u),-20,r*(1+2*u),40);
- const count=quality==='low'?1:quality==='medium'?2:3;
- for(let i=0;i<count;i++){const age=u-i*.14;if(age<0)continue;const v=clamp(age/(1-i*.14),0,1),spread=1-Math.pow(1-v,2.4),rx=r*(.18+1.24*spread),ry=rx*.23;c.globalAlpha=Math.pow(1-v,1.5)*(.85-i*.17)*Math.min(1,age/.045);c.drawImage(impactRing,-rx,-ry,rx*2,ry*2);}
- const shards=quality==='low'?3:quality==='medium'?6:9;
- for(let i=0;i<shards;i++){const a=i*2.39996,age=f.t,vx=Math.cos(a)*(90+(i%3)*35),vy=90+(i%4)*22,x=vx*age,y=-vy*age+210*age*age;if(y>3)continue;c.globalAlpha=fade;crystal(c,x,y,.075*(1-u*.5),a+age*(i%2?5:-5),1,'low');}
- c.restore();}
+// Reference cell 4, keyed, oriented and recolored into a single atlas.
+const meteorTrail = new Image();
+meteorTrail.src = 'vfx/aether-meteor-trail-4.webp';
+function drawMeteor(ctx, meteor, quality) {
+  const speed = Math.hypot(meteor.vx, meteor.v);
+  const stretch = 1 + Math.min(.65, speed / 2200);
+  const angle = -Math.atan2(meteor.vx, meteor.v);
+  ctx.save();
+  ctx.translate(meteor.x, -meteor.y);
+  ctx.rotate(angle);
+
+  if (meteorTrail.naturalWidth) {
+    const frame = Math.floor((meteor.t - meteor.delay) * 25) % 13;
+    const height = 150 + Math.min(235, speed * .16);
+    const width = height * 128 / 192;
+    ctx.drawImage(meteorTrail, (frame % 5) * 128, Math.floor(frame / 5) * 192, 128, 192,
+      -width * 65 / 128, -height * 174 / 192 - 9, width, height);
+  }
+
+  ctx.scale(1, stretch);
+  crystal(ctx, 0, 0, 1.65, 0, 1, quality);
+  ctx.restore();
+}
+// Bake a lower crystal burst and angular fragments once, at atlas resolution.
+const impactSource = new Image();
+let impactAtlas;
+impactSource.onload = () => {
+  const atlas = document.createElement('canvas');
+  const tileWidth = 256, tileHeight = 216;
+  atlas.width = tileWidth * 5;
+  atlas.height = tileHeight * 4;
+  const ctx = atlas.getContext('2d');
+  const floor = 184;
+  const fragments = [
+    [-120,116,12], [-83,176,17], [-42,221,15], [28,193,19],
+    [69,154,15], [112,108,11]
+  ];
+  for (let frame = 0; frame < 19; frame++) {
+    const t = frame / 18;
+    ctx.save();
+    ctx.translate((frame % 5) * tileWidth, Math.floor(frame / 5) * tileHeight);
+    ctx.globalAlpha = .8;
+    const plumeHeight = 145;
+    ctx.drawImage(impactSource, (frame % 5) * 192, Math.floor(frame / 5) * 216, 192, 216,
+      8, floor - plumeHeight * .959, 205, plumeHeight);
+    const spark = Math.max(0, 1 - t * 1.35);
+    if (frame > 0 && spark > 0) {
+      ctx.globalAlpha = spark * .68;
+      ctx.drawImage(glow, 32, floor - 16, 192, 34);
+      for (const [velocity, lift, size] of fragments) {
+        const rise = lift * t - 250 * t * t;
+        if (rise <= 0) continue;
+        ctx.save();
+        ctx.translate(128 + velocity * t, floor - rise);
+        ctx.rotate(velocity * (.003 + t * .007));
+        ctx.globalAlpha = spark;
+        const r = size * (1 - t * .6);
+        poly(ctx, [[0,-r],[r*.48,-r*.15],[r*.16,r*.8],[-r*.4,r*.15]], '#f7fff9');
+        poly(ctx, [[0,-r],[r*.16,r*.8],[-r*.4,r*.15]], '#a8d7c4');
+        ctx.restore();
+      }
+    }
+    ctx.restore();
+  }
+  impactAtlas = atlas;
+};
+impactSource.src = 'vfx/aether-impact-11.webp';
+function drawMeteorImpact(ctx, effect) {
+  if (!impactAtlas) return;
+  const progress = clamp(effect.t / effect.life, 0, 1);
+  const frame = Math.min(18, Math.floor(progress * 19));
+  const scale = effect.radius * 3.35 / 192;
+  ctx.drawImage(impactAtlas, (frame % 5) * 256, Math.floor(frame / 5) * 216, 256, 216,
+    effect.x - 128 * scale, -184 * scale, 256 * scale, 216 * scale);
+}
 function poly(c,pts,fill){c.beginPath();for(let i=0;i<pts.length;i++)i?c.lineTo(...pts[i]):c.moveTo(...pts[i]);c.closePath();c.fillStyle=fill;c.fill()}
 function crystal(c,x,y,s=1,angle=0,alpha=1,quality='high'){c.save();c.translate(x,y);c.rotate(angle);c.globalAlpha*=alpha;if(quality!=='low')c.drawImage(glow,-58*s,-64*s,116*s,128*s);c.scale(s,s);c.fillStyle='#ffffff';c.fill(crystalPath);poly(c,[[0,-25],[15,-8],[9,18],[1,5]],'#f3f5f2');poly(c,[[0,-25],[1,5],[-5,25],[-15,6],[-10,-16]],'#ffffff');c.restore()}
 function limb(c,sx,sy,ex,ey,hx,hy,w,color){c.strokeStyle=color;c.lineWidth=w;c.lineCap='round';c.lineJoin='round';c.beginPath();c.moveTo(sx,sy);c.lineTo(ex,ey);c.lineTo(hx,hy);c.stroke()}
@@ -225,15 +295,65 @@ const AETHER_FINISHER=(()=>{
 })();
 if(typeof module!=='undefined')module.exports=AETHER_FINISHER;
 
-function drawNormal(c,b,alpha=1){c.save();c.translate(b.x,-b.y);c.scale(b.dir,1);c.globalAlpha*=alpha;const pts=NORMALS.shape(b);if(quality!=='low'){const halo=NORMALS.glowFrame(b);c.drawImage(glow,halo.x-halo.width/2,-halo.y-halo.height/2,halo.width,halo.height)}
- if(b.kind==='bolt'){const tail=Math.min(115,25+b.travel*.2);c.globalAlpha*=.3;poly(c,[[-15,7],[-tail,1],[-tail*1.2,0],[-15,-7]],'#e7fbe9');c.globalAlpha=alpha;}
- poly(c,pts.map(p=>[p[0],-p[1]]),'#fcfff8');
- if(b.kind==='wave'){const h=b.height*smooth(b.t/.12),l=Math.min(b.length,35+b.travel*.9);poly(c,[[-l,0],[0,0],[-l*.42,-h*.25],[-l*.57,-h*.12],[-l*.75,-h*.17]],'#c8dfcc');c.strokeStyle='rgba(236,255,231,.45)';c.lineWidth=1;c.beginPath();c.ellipse(-l*.45,0,l*.52,5,0,0,Math.PI*2);c.stroke();}else poly(c,[[0,0],[-b.length*.32,0],[-b.length,0],[-b.length*.32,b.height]],'#d7e9dc');c.restore();}
-function projectile(c,b){if(b.kind==='wave'||b.kind==='bolt'){drawNormal(c,b);}else if(b.kind==='shard'){drawQCrystal(c,b,quality,QCRYSTALS.scale,b.speed,true)}else if(b.kind==='meteor'&&b.t>b.delay){drawMeteor(c,b,quality)}}
+// Each row grows in place. The advancing attack front triggers the next row.
+const groundWave = new Image();
+groundWave.src = 'vfx/aether-ground-crystal-wave.webp';
+const groundWaveFront = [356,445,501,561,658,749,800,885,980,995,1008,1008,1008,1008,1008,1008];
+function drawGroundCrystalRow(ctx, frame, x, ground, dir, scaleX, scaleY, opacity, slope=0) {
+  if (!groundWave.naturalWidth) return;
+  ctx.save();
+  ctx.translate(x, ground);
+  ctx.scale(dir, 1);
+  ctx.transform(1, slope, 0, 1, 0, 0);
+  ctx.globalAlpha *= opacity;
+  ctx.drawImage(groundWave, frame % 4 * 320, Math.floor(frame / 4) * 144, 320, 144,
+    (116 - 335) * scaleX, (196 - 540) * scaleY, 1048 * scaleX, 464 * scaleY);
+  ctx.restore();
+}
+function drawGroundWave(ctx, wave, surface) {
+  const rowLength = wave.length;
+  const latest = Math.floor(wave.travel / rowLength);
+  const scaleX = rowLength / (1008 - 335);
+  const scaleY = wave.height * .82 / 240;
+  for (let row = Math.max(0, latest - 1); row <= latest; row++) {
+    const reach = wave.travel - row * rowLength;
+    const opacity = 1 - smooth((reach - rowLength) / (rowLength * .55));
+    if (opacity <= 0) continue;
+    const tip = 335 + reach / scaleX;
+    let frame = 0;
+    while (frame < 10 && groundWaveFront[frame + 1] <= tip) frame++;
+    if (frame === 10) frame += Math.min(5, Math.floor(Math.max(0, reach - rowLength) / 8));
+
+    const x = wave.startX + wave.dir * row * rowLength;
+    const origin = wave.originBase ?? wave.base;
+    const ground = surface?.(x, origin) ?? wave.base;
+    const nextGround = surface?.(x + wave.dir * rowLength, origin) ?? ground;
+    const slope = Math.abs(nextGround - ground) <= 20 ? (nextGround - ground) / rowLength : 0;
+    drawGroundCrystalRow(ctx,frame,x,ground,wave.dir,scaleX,scaleY,opacity,slope);
+  }
+}
+function drawNormal(ctx, shot, alpha=1) {
+  ctx.save();
+  ctx.translate(shot.x, -shot.y);
+  ctx.scale(shot.dir, 1);
+  ctx.globalAlpha *= alpha;
+  if (quality !== 'low') {
+    const halo = NORMALS.glowFrame(shot);
+    ctx.drawImage(glow, halo.x-halo.width/2, -halo.y-halo.height/2, halo.width, halo.height);
+  }
+  const tail = Math.min(115, 25+shot.travel*.2);
+  ctx.globalAlpha *= .3;
+  poly(ctx, [[-15,7],[-tail,1],[-tail*1.2,0],[-15,-7]], '#e7fbe9');
+  ctx.globalAlpha = alpha;
+  poly(ctx, NORMALS.shape(shot).map(([x,y]) => [x,-y]), '#fcfff8');
+  poly(ctx, [[0,0],[-shot.length*.32,0],[-shot.length,0],[-shot.length*.32,shot.height]], '#d7e9dc');
+  ctx.restore();
+}
+function projectile(c,b){if(b.kind==='bolt'){drawNormal(c,b);}else if(b.kind==='shard'){drawQCrystal(c,b,quality,QCRYSTALS.scale,b.speed,true)}else if(b.kind==='meteor'&&b.t>b.delay){drawMeteor(c,b,quality)}}
 function effect(c,f){let u=f.t/f.life;
  if(f.type==='qaim'){c.save();c.translate(f.x,-f.y);c.globalAlpha=.25+.35*u;c.strokeStyle='#edf8df';c.lineWidth=1.2;const r=19-4*u;c.beginPath();c.moveTo(-r,-6);c.lineTo(-r,-r);c.lineTo(-6,-r);c.moveTo(6,-r);c.lineTo(r,-r);c.lineTo(r,-6);c.moveTo(r,6);c.lineTo(r,r);c.lineTo(6,r);c.moveTo(-6,r);c.lineTo(-r,r);c.lineTo(-r,6);c.stroke();c.restore()}
 
- if(f.type==='normalfade'){const b={...f.shot,x:f.x+f.shot.dir*22*u};drawNormal(c,b,(1-u)*.45)}
+ if(f.type==='normalfade'&&f.shot.kind==='bolt'){const b={...f.shot,x:f.x+f.shot.dir*22*u};drawNormal(c,b,(1-u)*.45)}
  if(f.type==='normalcast'&&f.air){c.save();c.globalAlpha=(1-u)*.55;c.strokeStyle='#f1fff0';c.lineWidth=3*(1-u)+.5;c.beginPath();c.moveTo(f.x,-f.y);c.lineTo(f.x+f.dir*35*u,-f.y);c.stroke();c.restore()}
  if(f.type==='groundflick'){
   c.save();c.translate(f.x,0);c.scale(f.dir,1);c.globalAlpha=(1-u)*.45;c.strokeStyle='#dae8d7';c.lineWidth=1.3;c.beginPath();c.ellipse(0,0,15+38*u,3+3*u,0,0,Math.PI*2);c.stroke();
@@ -254,18 +374,36 @@ function effect(c,f){let u=f.t/f.life;
   }c.restore();
  }
 
-if(f.type==='warning'){c.strokeStyle=`rgba(202,226,185,${.25+.45*u})`;c.lineWidth=2;c.beginPath();c.ellipse(f.x,0,f.radius,11,0,0,Math.PI*2);c.stroke();c.beginPath();c.ellipse(f.x,0,f.radius*u,11*u,0,0,Math.PI*2);c.stroke()}if(f.type==='burst')drawMeteorImpact(c,f,quality);
+if(f.type==='warning'){c.strokeStyle=`rgba(202,226,185,${.25+.45*u})`;c.lineWidth=2;c.beginPath();c.ellipse(f.x,0,f.radius,11,0,0,Math.PI*2);c.stroke();c.beginPath();c.ellipse(f.x,0,f.radius*u,11*u,0,0,Math.PI*2);c.stroke()}if(f.type==='burst')drawMeteorImpact(c,f);
  if(f.type==='hit'||f.type==='hurt'){c.save();c.globalAlpha=1-u;c.fillStyle=f.type==='hit'?'#edf8df':'#edbd9f';c.textAlign='center';c.font='bold 24px Manrope, sans-serif';c.fillText(f.text,f.x,-f.y-35*u);c.strokeStyle='#eaffdf';c.lineWidth=2;for(let i=0;i<4;i++){const a=i*Math.PI/2+.4;c.beginPath();c.moveTo(f.x+Math.cos(a)*8,-f.y+Math.sin(a)*8);c.lineTo(f.x+Math.cos(a)*(18+u*25),-f.y+Math.sin(a)*(18+u*25));c.stroke()}c.restore()}
 
  if(f.type==='enemyshot'){c.strokeStyle=`rgba(152,182,194,${1-u})`;c.lineWidth=3;c.beginPath();c.moveTo(f.x,-f.y);c.lineTo(f.x+(f.tx-f.x)*u,-90);c.stroke()}}
 
 let trailCache=new Map();
 function level(q){return q==='low'?'low':q==='balanced'?'medium':'high'}
-function character(c,f,e,time,surface,q,shadowOptions={}){quality=level(q);const g=f.aether,base=surface(f.x,f.y),p={x:f.x,y:base-f.y,vx:f.vx,vy:-f.vy,dir:f.dir},a=f.action,action=a?{...a,t:a.age,n:a.n||1}:null,travel=g.liquid?{...g.liquid,spikes:[]}:null;
-let simTravel=travel;if(travel){let local=trailCache.get(f.id);if(!local||g.liquid.t<local.t){local={lastX:f.x,distance:0,serial:0,spikes:[],t:0,startY:g.liquid.startY};trailCache.set(f.id,local)}const elapsed=Math.max(0,Math.min(.05,travel.t-local.t));local.t=travel.t;LIQUID_TRAVEL.advance(local,f.x,elapsed,CONFIG.e);Object.assign(travel,local);simTravel=local;}else trailCache.delete(f.id);
-window.FighterShadow?.draw(c,f,base,shadowOptions);const sim={t:time,action,travel:simTravel,q:g.q,enemy:e?{x:e.x,y:base-e.y}:{x:f.x+300,y:0}};c.save();c.translate(0,base);drawAether(c,p,sim,quality);c.restore();}
-function front(c,f,e,time,q){quality=level(q);const g=f.aether;if(g.cage){const cage=g.cage;c.save();c.translate(0,cage.base);CAGE_VFX.draw(c,cage,time,quality,'back');CAGE_VFX.draw(c,cage,time,quality,'front');c.restore()}
-for(const b of g.shots){c.save();c.translate(0,b.base);projectile(c,b);c.restore()}
+function character(c,f,e,time,surface,q,shadowOptions={}){
+ quality=level(q);
+ const g=f.aether,base=surface(f.x,f.y);
+ const p={x:f.x,y:base-f.y,vx:f.vx,vy:-f.vy,dir:f.dir};
+ const a=f.action,action=a?{...a,t:a.age,n:a.n||1}:null;
+ let travel=null;
+ if(g.liquid){
+  travel=trailCache.get(f.id);
+  if(!travel||g.liquid.t<travel.t){
+   travel={lastX:f.x,distance:0,spikes:[],t:0,startY:g.liquid.startY};
+   trailCache.set(f.id,travel);
+  }
+  const elapsed=Math.max(0,g.liquid.t-travel.t);
+  travel.t=g.liquid.t;
+  LIQUID_TRAVEL.advance(travel,f.x,elapsed,CONFIG.e,surface,base);
+  LIQUID_TRAVEL.drawTrail(c,travel);
+ }else trailCache.delete(f.id);
+ window.FighterShadow?.draw(c,f,base,shadowOptions);
+ const sim={t:time,action,travel,q:g.q,enemy:e?{x:e.x,y:base-e.y}:{x:f.x+300,y:0}};
+ c.save();c.translate(0,base);drawAether(c,p,sim,quality);c.restore();
+}
+function front(c,f,e,time,q,surface){quality=level(q);const g=f.aether;if(g.cage){const cage=g.cage;c.save();c.translate(0,cage.base);CAGE_VFX.draw(c,cage,time,quality,'back');CAGE_VFX.draw(c,cage,time,quality,'front');c.restore()}
+for(const b of g.shots){if(b.kind==='wave'){drawGroundWave(c,b,surface);continue;}c.save();c.translate(0,b.base);projectile(c,b);c.restore()}
 for(const v of g.events){const age=time-v.born,life=v.life||.6;if(age<0||age>=life)continue;c.save();c.translate(0,v.y);effect(c,{...v,type:v.kind,t:age,life,y:0});c.restore();}}
 window.AetherVisual={character,front,finisher:(c,w,h,t,q)=>AETHER_FINISHER.draw(c,w,h,t,level(q)),reset(){trailCache.clear()}};
 })();
