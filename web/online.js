@@ -382,8 +382,72 @@
  if(n.rb&&n.synced&&!n.suspended){send({type:'rb-input',epoch:n.epoch,...n.rb.packet()});const confirmed=n.rb.confirmed;if(confirmed-n.lastHash>=30){const d=n.rb.digest(Math.floor(confirmed/30)*30);if(d&&send({type:'rb-hash',epoch:n.epoch,...d}))n.lastHash=d.tick;}}
  }connectionGuard(n);if(n.inLobby)lobbyUI(n);}
  function beginSession(data){if(el('mapSelect')){el('mapSelect').disabled=true;el('mapSelect').value=data.config?.map||'cavern';}resetInputs();connectionChoice.disabled=true;el('netCurtain').querySelector('strong').textContent='ĐANG KẾT NỐI LẠI…';connectionChoice.value=data.config?.connection==='direct'?'direct':'auto';el('netCurtain').querySelector('p').textContent='Giữ game mở trên cả hai thiết bị. Trận đấu đang tạm dừng.';const now=performance.now(),n=session={...data,room:data.code,config:data.config,playerNames:data.config?.players,createdAt:now,epoch:1,inLobby:true,matchGeneration:0,started:false,synced:false,suspended:false,lastPeer:now,lastState:now,lastStateAck:now,lastProbe:-1000,lastStats:-3000,probes:new Map(),probeId:0,peerPing:null,peerRtt:null,jitter:0,metrics:{bytesSent:0,bytesReceived:0}};el('netBadge').hidden=false;el('lobbyCard').hidden=false;el('lobbyCode').textContent=n.room;el('lobbyState').textContent='Đang kết nối WebSocket server…';el('createRoom').disabled=el('joinRoom').disabled=true;G.roomLobby(n.config,n.role);lobbyUI(n);status('ONLINE · ĐANG KẾT NỐI');n.fastTimer=setInterval(()=>fast(n),1000/HZ);connectSocket(n);poll(n);}
- async function create(){if(session)return;error('');el('createRoom').disabled=el('joinRoom').disabled=true;try{const requested=connectionChoice.value==='direct'?'direct':'auto',r=await api('create',{p1:el('select0').value,p2:el('select1').value,connection:requested,map:el('mapSelect')?.value||'cavern'});if(requested==='direct'&&r.config?.connection!=='direct'){await api('leave',{code:r.code},r.token).catch(()=>{});throw Error('Server chưa cập nhật chế độ Chỉ DIRECT. Hãy cập nhật đầy đủ worker/index.mjs và scripts/relay.mjs rồi deploy lại.');}beginSession(r);}catch(e){error(e.message);el('createRoom').disabled=el('joinRoom').disabled=false;}}
- async function join(){if(session)return;error('');const code=el('roomCode').value.trim().toUpperCase();if(!/^[A-Z2-9]{6}$/.test(code)){error('Nhập mã phòng gồm 6 ký tự.');return;}el('createRoom').disabled=el('joinRoom').disabled=true;try{const r=await api('join',{code,fighter:el('select0').value});beginSession(r);}catch(e){error(e.message);el('createRoom').disabled=el('joinRoom').disabled=false;}}
+ async function create(){if(session)return;error('');el('createRoom').disabled=el('joinRoom').disabled=true;try{const requested=connectionChoice.value==='direct'?'direct':'auto',r=await api('create',{listed:el('listCreatedRoom').checked===true,p1:el('select0').value,p2:el('select1').value,connection:requested,map:el('mapSelect')?.value||'cavern'});if(requested==='direct'&&r.config?.connection!=='direct'){await api('leave',{code:r.code},r.token).catch(()=>{});throw Error('Server chưa cập nhật chế độ Chỉ DIRECT. Hãy cập nhật đầy đủ worker/index.mjs và scripts/relay.mjs rồi deploy lại.');}beginSession(r);}catch(e){error(e.message);el('createRoom').disabled=el('joinRoom').disabled=false;}}
+ let joining=false;
+ async function join(){
+  if(session||joining)return false;
+  error('');
+  const code=el('roomCode').value.trim().toUpperCase();
+  if(!/^[A-Z2-9]{6}$/.test(code)){error('Nhập mã phòng gồm 6 ký tự.');return false;}
+  joining=true;el('createRoom').disabled=el('joinRoom').disabled=true;
+  try{
+   const result=await api('join',{code,fighter:el('select0').value});
+   beginSession(result);
+   return true;
+  }catch(e){error(e.message);el('createRoom').disabled=el('joinRoom').disabled=false;return false;}
+  finally{joining=false;}
+ }
+ const browser=el('roomBrowser'),roomList=el('roomBrowserList'),roomStatus=el('roomBrowserStatus'),refreshRooms=el('refreshRoomBrowser');
+ let browserTimer,browserRequest=0,roomSignature='';
+ function renderRooms(rooms){
+  const signature=JSON.stringify(rooms);
+  if(signature===roomSignature)return;
+  roomSignature=signature;
+  roomList.replaceChildren();
+  for(const room of rooms){
+   const row=document.createElement('li'),details=document.createElement('div'),code=document.createElement('strong'),caption=document.createElement('small'),button=document.createElement('button');
+   const heading=document.createElement('span'),host=document.createElement('span');
+   heading.className='room-browser-room-heading';
+   code.textContent=room.code;host.textContent=room.hostName;heading.append(code,host);
+   caption.textContent=[room.map==='forest'?'Rừng Tiên Linh':'Hang Đá Lãng Quên',room.connection==='direct'?'Chỉ DIRECT':'Tự động'].join(' · ');
+   button.type='button';button.textContent='Tham gia';button.setAttribute('aria-label','Tham gia phòng '+room.code);
+   button.onclick=async()=>{
+    if(joining)return;
+    button.disabled=true;
+    el('roomCode').value=room.code;
+    if(await join()){if(browser.open)browser.close();return;}
+    button.disabled=false;
+    if(browser.open)loadRooms(el('netError').textContent||'Chưa thể tham gia phòng.');
+   };
+   details.append(heading,caption);row.append(details,button);roomList.append(row);
+  }
+ }
+ async function loadRooms(joinError=''){
+  clearTimeout(browserTimer);
+  const request=++browserRequest;refreshRooms.disabled=true;
+  try{
+   const {rooms}=await api('list');
+   if(!browser.open||request!==browserRequest)return;
+   renderRooms(rooms);
+   roomStatus.textContent=joinError||(rooms.length?rooms.length+' phòng đang chờ':'Chưa có phòng công khai đang chờ.');
+  }catch{
+   if(browser.open&&request===browserRequest)roomStatus.textContent=joinError||'Chưa tải được danh sách phòng. Vui lòng thử lại.';
+  }finally{
+   if(browser.open&&request===browserRequest){
+    refreshRooms.disabled=false;
+    browserTimer=setTimeout(()=>loadRooms(),5000);
+   }
+  }
+ }
+ el('openRoomBrowser').onclick=()=>{
+  if(session||browser.open)return;
+  browser.showModal();roomStatus.textContent='Đang tải danh sách phòng…';loadRooms();
+ };
+ refreshRooms.onclick=()=>loadRooms();
+ browser.addEventListener('close',()=>{
+  clearTimeout(browserTimer);browserRequest++;
+  roomSignature='';roomList.replaceChildren();
+ });
  function leave(){el('onlinePanel').classList.remove('room-session');el('lobbyReady').hidden=true;el('opponentLabel').hidden=true;for(const b of document.querySelectorAll('[data-mode]'))b.disabled=false;if(el('mapSelect'))el('mapSelect').disabled=false;connectionChoice.disabled=false;const n=session;if(!n)return;session=null;closeDirect(n);clearInterval(n.fastTimer);clearTimeout(n.pollTimer);clearTimeout(n.reconnectTimer);for(const dc of [n.channel])if(dc){dc.onopen=dc.onmessage=dc.onclose=dc.onerror=null;try{dc.close();}catch{}}const closing=api('leave',{code:n.room},n.token).catch(()=>{});G.resetPrediction?.();G.remote(0);el('netBadge').hidden=true;el('netCurtain').hidden=true;el('lobbyCard').hidden=true;el('createRoom').disabled=el('joinRoom').disabled=false;el('continue').disabled=false;return closing;}
  el('createRoom').onclick=create;el('joinRoom').onclick=join;el('leaveRoom').onclick=()=>{leave();G.menu();};el('netLeave').onclick=()=>{leave();G.menu();};el('netRetry').onclick=retryConnection;el('lobbyRetry').onclick=retryConnection;
  el('roomCode').addEventListener('input',()=>{el('roomCode').value=el('roomCode').value.toUpperCase().replace(/[^A-Z2-9]/g,'').slice(0,6);});el('roomCode').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();join();}});

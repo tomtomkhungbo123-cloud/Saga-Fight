@@ -123,10 +123,19 @@ export async function api(request,env){
    if(settled.winner!==data.winner)fail('Trận đấu đã được ghi nhận.',409);
    return json({saved:true,scoin:await matchScoin(env.DB,data.id,id,'pve')});
   }
+  if(url.pathname==='/api/rooms/list'){
+   const {results}=await env.DB.prepare(
+    "SELECT code,config FROM duel_rooms WHERE status='waiting' AND guest_key IS NULL AND expires_at>? AND host_seen>=? AND json_extract(config,'$.listed')=1 ORDER BY host_seen DESC,code LIMIT 30"
+   ).bind(now,now-30000).all();
+   return json({rooms:results.map(({code,config})=>{
+    const room=JSON.parse(config);
+    return {code,hostName:room.players?.[0]||'Khách 1',map:room.map==='forest'?'forest':'cavern',connection:room.connection==='direct'?'direct':'auto'};
+   })});
+  }
   if(url.pathname==='/api/rooms/create'){
    // Expired rooms are disposable; bounded cleanup keeps the live table small.
    await env.DB.prepare('DELETE FROM duel_rooms WHERE code IN (SELECT code FROM duel_rooms WHERE expires_at < ? LIMIT 100)').bind(now).run();
-   const secret=token(),key=await hash(secret),config={players:await roomPlayers(env.DB,[accountId(request),null]),p1:fighter(data.p1),p2:fighter(data.p2),map:data.map==='forest'?'forest':'cavern',connection:data.connection==='direct'?'direct':'auto',lobby:{stage:'lobby',revision:0,generation:0,ready:[false,false]}},alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+   const secret=token(),key=await hash(secret),config={players:await roomPlayers(env.DB,[accountId(request),null]),listed:data.listed===true,p1:fighter(data.p1),p2:fighter(data.p2),map:data.map==='forest'?'forest':'cavern',connection:data.connection==='direct'?'direct':'auto',lobby:{stage:'lobby',revision:0,generation:0,ready:[false,false]}},alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
    for(let attempt=0;attempt<4;attempt++){
     const bytes=crypto.getRandomValues(new Uint8Array(6)),code=Array.from(bytes,b=>alphabet[b%alphabet.length]).join('');
     try{await env.DB.prepare('INSERT INTO duel_rooms(code,host_key,config,status,host_seen,expires_at,host_user_id) VALUES(?,?,?,?,?,?,?)').bind(code,key,JSON.stringify(config),'waiting',now,now+7200000,accountId(request)).run();return json({code,token:secret,role:'host',config},201);}catch(e){if(!String(e).includes('UNIQUE'))throw e;}

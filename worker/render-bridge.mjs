@@ -27,7 +27,7 @@ async function bridgeAuthenticatedApi(request,env){
  try{
   if(action==='create'){
    const remote=await upstreamRoom('create',data),result=await remote.json();if(!remote.ok)return bridgeJson(result,remote.status);
-   const now=Date.now(),config={...result.config,players:await roomPlayers(env.DB,[request.headers.get('oai-authenticated-user-id'),null]),lobby:{stage:'lobby',revision:0,generation:0,ready:[false,false]}};
+   const now=Date.now(),config={...result.config,listed:data.listed===true,players:await roomPlayers(env.DB,[request.headers.get('oai-authenticated-user-id'),null]),lobby:{stage:'lobby',revision:0,generation:0,ready:[false,false]}};
    try{await env.DB.prepare('DELETE FROM duel_rooms WHERE expires_at < ?').bind(now).run();await env.DB.prepare('INSERT INTO duel_rooms(code,host_key,config,status,host_seen,expires_at,host_user_id) VALUES(?,?,?,?,?,?,?)').bind(result.code,await bridgeHash(result.token),JSON.stringify(config),'waiting',now,now+7200000,request.headers.get('oai-authenticated-user-id')).run();}
    catch(error){await upstreamRoom('leave',{code:result.code},'Bearer '+result.token).catch(()=>{});throw error;}
    return bridgeJson({...result,config},remote.status);
