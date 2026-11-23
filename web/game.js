@@ -947,16 +947,7 @@ function drawCavernScenery(g){
 }
 function drawFairiFinish(g,w,h,opaque){
  const elapsed=FINISH_CONFIG.fairiDuration-finishLeft;
- if(window.FairiFinishClip?.draw(g,w,h,elapsed,opaque))return true;
- const fallback=window.FairiFinish;
- const t=elapsed*fallback.C.duration/FINISH_CONFIG.fairiDuration;
- if(opaque&&(t<fallback.C.fadeIn||t>fallback.C.duration-fallback.C.fadeOut))return false;
- g.save();
- g.setTransform(1,0,0,1,0,0);
- const f=fighters[fairiKiller];
- fallback.draw(g,w,h,t,graphicsQuality==='low'?'low':'high',window.FairiVisual.bodyColor(f,alternateFighter(f)));
- g.restore();
- return true;
+ return window.FairiFinishClip?.draw(g,w,h,elapsed,opaque)===true;
 }
 function render(){syncKOVisual();const sceneFighters=phase==='menu'||phase==='lobby'?[]:window.riftNet?.fullRollback?rollbackSceneFighters():onlineGuest()?fighters.map((f,i)=>i===1&&predicted?{...predicted,x:predicted.x+predictionOffset.x,y:predicted.y+predictionOffset.y}:i===0&&Number.isFinite(f.netDrawX)?{...f,x:f.netDrawX,y:f.netDrawY}:f):fighters;const size=renderViewport(),cw=size.width,ch=size.height;if(canvas.width!==cw||canvas.height!==ch){canvas.width=cw;canvas.height=ch;}ctx.setTransform(1,0,0,1,0,0);if(phase==='finishing'&&moxKiller!=null){const mt=FINISH_CONFIG.moxDuration-finishLeft;if(mt>=window.MoxFinish.C.fadeIn&&mt<=FINISH_CONFIG.moxDuration-window.MoxFinish.C.fadeOut){window.MoxFinish.draw(ctx,cw,ch,mt,graphicsQuality);return;}}if(phase==='finishing'&&fairiKiller!=null&&drawFairiFinish(ctx,cw,ch,true))return;const cameraView=updateWorldCamera(sceneFighters,performance.now()/1000,cw/ch),scale=cw/cameraView.width,offsetX=-cameraView.x*scale,offsetY=-cameraView.y*scale;
 if(activeMap==='forest'){

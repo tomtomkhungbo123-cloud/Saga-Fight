@@ -315,7 +315,7 @@ function renderGacha(items){
   'Quay · '+money(gachaOffer?.cost??150);
  el('gachaFeedback').textContent=gachaMessage||
   (pendingSpin?'Kiểm tra lại lượt trước khi quay tiếp.':
-  !user?'Đăng nhập để quay.':'Skin trùng được quy đổi thành Scoin theo độ hiếm.');
+  !user?'Đăng nhập để quay và lưu phần thưởng vào Kho đồ.':'Skin mới được lưu vào Kho đồ. Nếu quay trùng, bạn nhận Scoin theo độ hiếm.');
 }
 
 function savePendingSpin(id){
