@@ -354,6 +354,7 @@ async function spin(){
   const reward=rewards.find(item=>item.id===data.reward);
   if(!reward)throw Error('Chưa xác nhận được phần thưởng.');
   account=data.account;
+  accountBadge();
   savePendingSpin('');
   if(dialog.open&&view==='gacha'){
    const target=19+rewards.indexOf(reward);
@@ -370,7 +371,6 @@ async function spin(){
    reelKey='';
   }
   if(version!==accountGeneration)return;
-  accountBadge();
   gachaMessage=data.duplicateScoin?
    'Trùng '+reward.name+' · '+reward.rarity+'. Đã cộng '+money(data.duplicateScoin)+' vào ví.':
    'Bạn nhận được '+reward.name+' · '+reward.rarity+'. Đã thêm vào Kho đồ.';
