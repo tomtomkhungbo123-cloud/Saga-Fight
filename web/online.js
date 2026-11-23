@@ -1,6 +1,6 @@
  'use strict';
 (()=>{
- const G=window.riftGame,el=id=>document.getElementById(id),HZ=60,STEP=1/120,BUILD='6.36.0',NET_BUILD='6.36.0-pvpfix2',SIMULATION='6360-aether31-pvpfix2-room2-fairiko1';
+ const G=window.riftGame,el=id=>document.getElementById(id),HZ=60,STEP=1/120,BUILD='6.36.0',NET_BUILD='6.36.0-pvpfix2',ICE_BUILD='ice-setup-retry1',SIMULATION='6360-aether31-pvpfix2-room2-fairiko1';
  if(window.SagaGameBuild!==BUILD||window.SagaRollback?.build!==BUILD){el('netError').textContent='Các file game khác phiên bản hoặc thiếu rollback-core.js. Hãy cập nhật đầy đủ bản '+BUILD+' và tải lại cả hai máy.';el('createRoom').disabled=el('joinRoom').disabled=true;return;}
  let session=null;
  const connectionChoice=el('connectionMode');let connectionMode='auto';try{if(localStorage.getItem('saga.connection.v1')==='direct')connectionMode='direct';}catch{}connectionChoice.value=connectionMode;connectionChoice.addEventListener('change',()=>{connectionMode=connectionChoice.value==='direct'?'direct':'auto';try{localStorage.setItem('saga.connection.v1',connectionMode);}catch{}});
@@ -9,7 +9,7 @@
   const n=session;if(!n)return {build:BUILD,networkBuild:NET_BUILD,simulation:SIMULATION,session:false};
   await inspectRoute(n);const d=n.metrics.directIce||{},pc=n.pc,route=n.metrics.route||{},now=performance.now();
   const age=value=>Number.isFinite(value)?Math.max(0,Math.round(now-value)):null;
-  return {build:BUILD,networkBuild:NET_BUILD,simulation:SIMULATION,origin:new URL(location.href).origin,exchangeMode:'trickle-pvpfix2',pairs:d.pairs||[],role:n.role,policy:directRequired(n)?'direct':'auto',route:n.activeRoute||'pending',ice:pc?.iceConnectionState||d.state||'unknown',gathering:pc?.iceGatheringState||d.gathering||'unknown',localCandidates:d.local||{},remoteCandidates:d.remote||{},rejectedCandidates:d.rejectedCandidates||0,candidateError:d.lastCandidateError||null,stunError:d.stunError||null,negotiationError:d.error||null,extendedWait:!!d.extendedWait,attempt:n.directGeneration||0,probeReceived:!!n.localDirectReady,peerReady:!!n.peerDirectReady,localDescriptionType:pc?.localDescription?.type||d.localDescriptionType||null,remoteDescriptionType:pc?.remoteDescription?.type||d.remoteDescriptionType||null,remoteSdpCandidates:pc?(pc.remoteDescription?.sdp?.match(/^a=candidate:/gm)||[]).length:(d.sdpCandidates||0),selectedTypes:{local:route.local||null,remote:route.remote||null,protocol:route.protocol||null},
+  return {build:BUILD,networkBuild:NET_BUILD,simulation:SIMULATION,origin:new URL(location.href).origin,exchangeMode:'trickle-pvpfix2',pairs:d.pairs||[],role:n.role,policy:directRequired(n)?'direct':'auto',route:n.activeRoute||'pending',ice:pc?.iceConnectionState||d.state||'unknown',gathering:pc?.iceGatheringState||d.gathering||'unknown',localCandidates:d.local||{},remoteCandidates:d.remote||{},rejectedCandidates:d.rejectedCandidates||0,candidateError:d.lastCandidateError||null,stunError:d.stunError||null,negotiationError:d.error||null,extendedWait:!!d.extendedWait,attempt:n.directGeneration||0,probeReceived:!!n.localDirectReady,peerReady:!!n.peerDirectReady,localDescriptionType:pc?.localDescription?.type||d.localDescriptionType||null,remoteDescriptionType:pc?.remoteDescription?.type||d.remoteDescriptionType||null,remoteSdpCandidates:pc?(pc.remoteDescription?.sdp?.match(/^a=candidate:/gm)||[]).length:(d.sdpCandidates||0),selectedTypes:{local:route.local||null,remote:route.remote||null,protocol:route.protocol||null},iceFix:ICE_BUILD,iceAutoRetries:n.autoIceRetries||0,iceRetryLimit:2,iceAttempts:d.attempts||[],iceErrors:d.errors||[],iceTransitions:d.transitions||[],
    session:{started:!!n.started,synced:!!n.synced,suspended:!!n.suspended,inLobby:!!n.inLobby,epoch:n.epoch,waitingStart:!!n.waitingStart,checkpointPending:!!n.initPacket},
    signaling:{state:n.socket?.readyState??null,reconnecting:!!n.reconnectAt,bufferedBytes:n.channel?.bufferedAmount||0},
    dataChannel:{state:n.directChannel?.readyState||'closed',bufferedBytes:n.directChannel?.bufferedAmount||0,checkpointChunksPending:n.directSend?Math.ceil((n.directSend.text.length-n.directSend.offset)/n.directSend.chunkSize):0},
@@ -42,6 +42,7 @@
   recoveryUI(n,'Đang thử kết nối lại trong phòng hiện tại. Trận đấu được giữ tạm dừng trong lúc hai máy đồng bộ.');
   if(n.channel?.readyState==='open'){
    if(directRequired(n)){
+    n.autoIceRetries=0;n.iceRetryRequestedAt=0;clearTimeout(n.iceRetryTimer);n.iceRetryTimer=null;
     if(n.role==='host'){resetRouteAttempt(n);startDirect(n,true);}
     else signal(n,'fallback',{reason:'retry'});
    }else{n.directFailed=false;n.initPacket=null;n.startPacket=null;n.waitingStart=false;n.pendingRoute=null;if(n.started)suspend(n);if(n.role==='host')selectRoute(n,'ws');else{signal(n,'fallback');requestResync(n);}}
@@ -80,8 +81,38 @@
   n.transportReady=false;n.pendingRoute={id:(n.routeSerial||0)+1,mode};n.routeSerial=n.pendingRoute.id;n.routeSelectAt=performance.now();n.routeSelectSent=performance.now();
   signal(n,'select',n.pendingRoute);
  }
+ // Retry the ICE handshake only before gameplay. Host owns the attempt counter,
+ // and the Guest requests a new offer rather than negotiating independently.
+ const MAX_SETUP_ICE_RETRIES=2;
+ function retrySetupIce(n,reason='ice-failed'){
+  if(session!==n||n.started||n.activeRoute==='direct'||n.directFailed||!directRequired(n)||!n.joined)return false;
+  if((n.autoIceRetries||0)>=MAX_SETUP_ICE_RETRIES)return false;
+  if(n.role==='guest'){
+   const now=performance.now();
+   if(now-(n.iceRetryRequestedAt??-Infinity)<1500)return true;
+   if(!signal(n,'fallback',{reason:'ice-retry'}))return false;
+   n.iceRetryRequestedAt=now;
+   recordEvent(n,'ice-retry-request',{attempt:n.directGeneration,reason});
+   return true;
+  }
+  if(n.iceRetryTimer)return true;
+  n.autoIceRetries=(n.autoIceRetries||0)+1;
+  const d=n.metrics.directIce||{},attempts=d.attempts??=[];
+  attempts.push({attempt:n.directGeneration,state:n.pc?.iceConnectionState||d.state||'unknown',reason});
+  if(attempts.length>4)attempts.shift();
+  recordEvent(n,'ice-retry-scheduled',{attempt:n.directGeneration,nextAttempt:n.directGeneration+1,reason});
+  n.iceRetryTimer=setTimeout(()=>{
+   n.iceRetryTimer=null;
+   if(session!==n||n.started||n.activeRoute==='direct'||n.directFailed)return;
+   const previous=n.metrics.directIce?.attempts||[];
+   resetRouteAttempt(n);
+   n.metrics.iceAttemptHistory=previous;
+   startDirect(n,true);
+  },650);
+  return true;
+ }
  function fallback(n,notify=true){
-  if(session!==n)return;if(directRequired(n)){directUnavailable(n,notify);return;}
+  if(session!==n)return;if(directRequired(n)){if(retrySetupIce(n,'direct-fallback'))return;directUnavailable(n,notify);return;}
   n.directDisabled=true;
   if(n.activeRoute==='ws'&&n.transportReady&&n.started&&!n.pendingRoute){closeDirect(n);n.directRetryAt=performance.now()+30000;if(notify)signal(n,'fallback');return;}
   if(n.activeRoute==='direct'&&n.started)suspend(n);
@@ -104,9 +135,9 @@
  function peerConnection(n){
   if(n.pc)return n.pc;
   if(!window.RTCPeerConnection)throw Error('No WebRTC');
-  n.metrics.directIce={local:{},remote:{}};const pc=n.pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.cloudflare.com:3478'}],bundlePolicy:'max-bundle'});
-  pc.onicecandidate=e=>{if(session!==n||n.directDisabled)return;const d=n.metrics.directIce??={local:{},remote:{}};if(!e.candidate){d.gathering='complete';return;}const c=e.candidate.toJSON?e.candidate.toJSON():e.candidate,type=e.candidate.type||/ typ (\w+)/.exec(c.candidate||'')?.[1]||'unknown';d.local[type]=(d.local[type]||0)+1;signal(n,'candidate',{candidate:c});};pc.onicecandidateerror=e=>{n.metrics.directIce??={local:{},remote:{}};n.metrics.directIce.stunError=e.errorCode;};
-  pc.oniceconnectionstatechange=()=>{if(session!==n||n.directDisabled)return;n.metrics.directIce??={local:{},remote:{}};n.metrics.directIce.state=pc.iceConnectionState;clearTimeout(n.iceDisconnectTimer);if(pc.iceConnectionState==='failed')fallback(n);else if(pc.iceConnectionState==='disconnected')n.iceDisconnectTimer=setTimeout(()=>{if(session===n&&n.pc===pc&&pc.iceConnectionState==='disconnected')fallback(n);},2500);};
+  n.metrics.directIce={local:{},remote:{},attempts:n.metrics.iceAttemptHistory||[]};const pc=n.pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.cloudflare.com:3478'},{urls:'stun:stun.l.google.com:19302'}],iceTransportPolicy:'all',bundlePolicy:'max-bundle'});
+  pc.onicecandidate=e=>{if(session!==n||n.directDisabled)return;const d=n.metrics.directIce??={local:{},remote:{}};if(!e.candidate){d.gathering='complete';return;}const c=e.candidate.toJSON?e.candidate.toJSON():e.candidate,type=e.candidate.type||/ typ (\w+)/.exec(c.candidate||'')?.[1]||'unknown';d.local[type]=(d.local[type]||0)+1;signal(n,'candidate',{candidate:c});};pc.onicecandidateerror=e=>{const d=n.metrics.directIce??={local:{},remote:{}};d.stunError=e.errorCode;const errors=d.errors??=[];errors.push({attempt:n.directGeneration,code:e.errorCode||null,url:String(e.url||'').slice(0,100),text:String(e.errorText||'').slice(0,160)});if(errors.length>12)errors.shift();recordEvent(n,'ice-server-error',{code:e.errorCode||null});};
+  pc.oniceconnectionstatechange=()=>{if(session!==n||n.directDisabled)return;n.metrics.directIce??={local:{},remote:{}};n.metrics.directIce.state=pc.iceConnectionState;const transitions=n.metrics.directIce.transitions??=[];if(transitions.at(-1)?.state!==pc.iceConnectionState){transitions.push({attempt:n.directGeneration,state:pc.iceConnectionState,atMs:Math.round(performance.now()-(n.createdAt||0))});if(transitions.length>16)transitions.shift();recordEvent(n,'ice-state',{state:pc.iceConnectionState});}clearTimeout(n.iceDisconnectTimer);if(pc.iceConnectionState==='failed')fallback(n);else if(pc.iceConnectionState==='disconnected')n.iceDisconnectTimer=setTimeout(()=>{if(session===n&&n.pc===pc&&pc.iceConnectionState==='disconnected')fallback(n);},2500);};
   pc.ondatachannel=e=>directChannel(n,e.channel);return pc;
  }
  async function addCandidate(n,pc,c){try{await pc.addIceCandidate(c);}catch(e){const d=n.metrics.directIce??={local:{},remote:{}};d.rejectedCandidates=(d.rejectedCandidates||0)+1;d.lastCandidateError=e.name||'ICEError';}}
@@ -122,7 +153,8 @@
  }
  async function directSignal(n,m){
   if(session!==n)return;
-  if(m.kind==='fallback'&&m.reason==='retry'&&n.role==='host'){if(m.attempt!==n.directGeneration||performance.now()-(n.lastPeerRetry??-Infinity)<3000)return;n.lastPeerRetry=performance.now();resetRouteAttempt(n);startDirect(n,true);return;}
+  if(m.kind==='fallback'&&m.reason==='retry'&&n.role==='host'){if(m.attempt!==n.directGeneration||performance.now()-(n.lastPeerRetry??-Infinity)<3000)return;n.lastPeerRetry=performance.now();n.autoIceRetries=0;clearTimeout(n.iceRetryTimer);n.iceRetryTimer=null;resetRouteAttempt(n);startDirect(n,true);return;}
+  if(m.kind==='fallback'&&m.reason==='ice-retry'&&n.role==='host'&&directRequired(n)&&!n.started){if(m.attempt!==n.directGeneration)return;if(!retrySetupIce(n,'guest-ice-failed'))directUnavailable(n);return;}
   if(m.kind==='select'&&n.role==='guest'){if(m.mode==='ws'&&directRequired(n)){directUnavailable(n);return;}
    if(!Number.isSafeInteger(m.id)||m.id<1||!['direct','ws'].includes(m.mode)||m.id<(n.appliedRouteSerial||0))return;
    if(m.mode==='direct'&&(!n.localDirectReady||n.directChannel?.readyState!=='open')){signal(n,'fallback');return;}
@@ -139,7 +171,9 @@
   if(m.kind==='offer'&&n.role==='guest'&&(n.activeRoute!=='direct'||n.suspended||n.directFailed)){
    if(!Number.isSafeInteger(m.attempt)||m.attempt<1||m.attempt<=(n.directGeneration||0))return;
    if(n.directFailed){n.directFailed=false;n.initPacket=null;n.startPacket=null;n.waitingStart=false;n.pendingRoute=null;}
+   const wasFailed=n.directFailed,wasAttempt=n.directGeneration||0;
    closeDirect(n);n.directCandidates=(n.earlyCandidates||[]).filter(c=>c.attempt===m.attempt).map(c=>c.candidate);n.earlyCandidates=[];n.directGeneration=m.attempt;n.directDisabled=false;n.answeringDirect=false;
+   n.autoIceRetries=wasFailed?0:wasAttempt?Math.min(MAX_SETUP_ICE_RETRIES,(n.autoIceRetries||0)+1):0;n.iceRetryRequestedAt=0;
   }
   if(m.kind==='fallback'&&m.reason==='direct-required'&&directRequired(n)){directUnavailable(n,false);return;}
   if(['offer','answer','candidate','ready','fallback'].includes(m.kind)&&m.attempt!==n.directGeneration)return;
@@ -448,7 +482,7 @@
   clearTimeout(browserTimer);browserRequest++;
   roomSignature='';roomList.replaceChildren();
  });
- function leave(){el('onlinePanel').classList.remove('room-session');el('lobbyReady').hidden=true;el('opponentLabel').hidden=true;for(const b of document.querySelectorAll('[data-mode]'))b.disabled=false;if(el('mapSelect'))el('mapSelect').disabled=false;connectionChoice.disabled=false;const n=session;if(!n)return;session=null;closeDirect(n);clearInterval(n.fastTimer);clearTimeout(n.pollTimer);clearTimeout(n.reconnectTimer);for(const dc of [n.channel])if(dc){dc.onopen=dc.onmessage=dc.onclose=dc.onerror=null;try{dc.close();}catch{}}const closing=api('leave',{code:n.room},n.token).catch(()=>{});G.resetPrediction?.();G.remote(0);el('netBadge').hidden=true;el('netCurtain').hidden=true;el('lobbyCard').hidden=true;el('createRoom').disabled=el('joinRoom').disabled=false;el('continue').disabled=false;return closing;}
+ function leave(){el('onlinePanel').classList.remove('room-session');el('lobbyReady').hidden=true;el('opponentLabel').hidden=true;for(const b of document.querySelectorAll('[data-mode]'))b.disabled=false;if(el('mapSelect'))el('mapSelect').disabled=false;connectionChoice.disabled=false;const n=session;if(!n)return;session=null;clearTimeout(n.iceRetryTimer);n.iceRetryTimer=null;closeDirect(n);clearInterval(n.fastTimer);clearTimeout(n.pollTimer);clearTimeout(n.reconnectTimer);for(const dc of [n.channel])if(dc){dc.onopen=dc.onmessage=dc.onclose=dc.onerror=null;try{dc.close();}catch{}}const closing=api('leave',{code:n.room},n.token).catch(()=>{});G.resetPrediction?.();G.remote(0);el('netBadge').hidden=true;el('netCurtain').hidden=true;el('lobbyCard').hidden=true;el('createRoom').disabled=el('joinRoom').disabled=false;el('continue').disabled=false;return closing;}
  el('createRoom').onclick=create;el('joinRoom').onclick=join;el('leaveRoom').onclick=()=>{leave();G.menu();};el('netLeave').onclick=()=>{leave();G.menu();};el('netRetry').onclick=retryConnection;el('lobbyRetry').onclick=retryConnection;
  el('roomCode').addEventListener('input',()=>{el('roomCode').value=el('roomCode').value.toUpperCase().replace(/[^A-Z2-9]/g,'').slice(0,6);});el('roomCode').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();join();}});
  el('copyRoom').onclick=async()=>{if(!session)return;const url=new URL(location.href);url.search='';url.hash='';url.searchParams.set('room',session.room);try{await navigator.clipboard.writeText(url.toString());el('copyRoom').textContent='ĐÃ SAO CHÉP ✓';}catch{error('Mã phòng: '+session.room+' · Gửi mã này cho bạn bè.');}};
