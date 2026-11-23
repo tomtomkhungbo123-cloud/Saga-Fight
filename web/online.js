@@ -42,7 +42,7 @@
   recoveryUI(n,'Đang thử kết nối lại trong phòng hiện tại. Trận đấu được giữ tạm dừng trong lúc hai máy đồng bộ.');
   if(n.channel?.readyState==='open'){
    if(directRequired(n)){
-    n.autoIceRetries=0;n.iceRetryRequestedAt=0;clearTimeout(n.iceRetryTimer);n.iceRetryTimer=null;
+    n.autoIceRetries=0;n.iceRetryRequestedAt=-Infinity;clearTimeout(n.iceRetryTimer);n.iceRetryTimer=null;
     if(n.role==='host'){resetRouteAttempt(n);startDirect(n,true);}
     else signal(n,'fallback',{reason:'retry'});
    }else{n.directFailed=false;n.initPacket=null;n.startPacket=null;n.waitingStart=false;n.pendingRoute=null;if(n.started)suspend(n);if(n.role==='host')selectRoute(n,'ws');else{signal(n,'fallback');requestResync(n);}}
@@ -170,10 +170,10 @@
   }
   if(m.kind==='offer'&&n.role==='guest'&&(n.activeRoute!=='direct'||n.suspended||n.directFailed)){
    if(!Number.isSafeInteger(m.attempt)||m.attempt<1||m.attempt<=(n.directGeneration||0))return;
-   if(n.directFailed){n.directFailed=false;n.initPacket=null;n.startPacket=null;n.waitingStart=false;n.pendingRoute=null;}
    const wasFailed=n.directFailed,wasAttempt=n.directGeneration||0;
+   if(n.directFailed){n.directFailed=false;n.initPacket=null;n.startPacket=null;n.waitingStart=false;n.pendingRoute=null;}
    closeDirect(n);n.directCandidates=(n.earlyCandidates||[]).filter(c=>c.attempt===m.attempt).map(c=>c.candidate);n.earlyCandidates=[];n.directGeneration=m.attempt;n.directDisabled=false;n.answeringDirect=false;
-   n.autoIceRetries=wasFailed?0:wasAttempt?Math.min(MAX_SETUP_ICE_RETRIES,(n.autoIceRetries||0)+1):0;n.iceRetryRequestedAt=0;
+   n.autoIceRetries=wasFailed?0:wasAttempt?Math.min(MAX_SETUP_ICE_RETRIES,(n.autoIceRetries||0)+1):0;n.iceRetryRequestedAt=-Infinity;
   }
   if(m.kind==='fallback'&&m.reason==='direct-required'&&directRequired(n)){directUnavailable(n,false);return;}
   if(['offer','answer','candidate','ready','fallback'].includes(m.kind)&&m.attempt!==n.directGeneration)return;
