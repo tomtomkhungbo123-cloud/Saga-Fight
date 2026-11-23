@@ -31,11 +31,11 @@ test('admin has unlimited Scoin, buys without debits and ordinary users cannot b
  const {call,DB}=harness(t);
  const admin=await call('account/shop',{user:'sagadmin',admin:true});assert.equal(admin.account.unlimited,true);assert.equal(admin.account.balance,null);
  assert.equal((await call('account',{user:'sagadmin',admin:true})).permissions.manageMailbox,true);
- const bought=await call('account/shop',{user:'sagadmin',admin:true,body:{action:'buy',itemId:'thunder-crimson'}});
- assert.ok(bought.account.owned.includes('thunder-crimson'));
+ const bought=await call('account/shop',{user:'sagadmin',admin:true,body:{action:'buy',itemId:'thunder-jade'}});
+ assert.ok(bought.account.owned.includes('thunder-jade'));
  assert.equal((await DB.prepare('SELECT COUNT(*) count FROM scoin_ledger').first()).count,0);
- assert.equal((await call('account/shop',{body:{action:'buy',itemId:'thunder-crimson',admin:true,unlimited:true}})).status,409);
- const equipped=await call('account/shop',{user:'sagadmin',admin:true,body:{action:'equip',itemId:'thunder-crimson'}});assert.equal(equipped.account.equipped['skin:thunder'],'thunder-crimson');
+ assert.equal((await call('account/shop',{body:{action:'buy',itemId:'thunder-jade',admin:true,unlimited:true}})).status,409);
+ const equipped=await call('account/shop',{user:'sagadmin',admin:true,body:{action:'equip',itemId:'thunder-jade'}});assert.equal(equipped.account.equipped['skin:thunder'],'thunder-jade');
 });
 
 test('targeted gifts are private, claim once, become equippable and survive retries',async t=>{

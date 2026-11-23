@@ -97,7 +97,12 @@
   const voice={source,gain,offset:musicOffset,started:context.currentTime};musicVoice=voice;source.onended=()=>{if(musicTail===voice)musicTail=null;source.disconnect();gain.disconnect();};source.start(0,musicOffset);
  }
  function setEnabled(value){unlock();enabled=!!value;setGain();if(!enabled)for(const voice of [...voices])if(!voice.loopKey)stopVoice(voice);save();refresh();if(enabled){play('ui_confirm');syncMusic(musicState);}}
- window.sagaAudio={play,unlock,stopCombat,syncZones,syncMusic,toggle:()=>setEnabled(!enabled),get status(){return {enabled,volume,sfxVolume:volume,musicVolume,ready,failed,music:!!musicVoice,musicReady:!!musicData,musicFailed,voices:voices.size,loops:zones.size,buffers:bank.size,state:context?.state||'locked'};}};
+ function connectCinematic(media){
+  unlock();
+  if(!effectsBus||context?.state==='closed')return false;
+  try{context.createMediaElementSource(media).connect(effectsBus);return true;}catch{return false;}
+ }
+ window.sagaAudio={play,unlock,stopCombat,syncZones,syncMusic,connectCinematic,toggle:()=>setEnabled(!enabled),get status(){return {enabled,volume,sfxVolume:volume,musicVolume,ready,failed,music:!!musicVoice,musicReady:!!musicData,musicFailed,voices:voices.size,loops:zones.size,buffers:bank.size,state:context?.state||'locked'};}};
  $('soundEnabled').addEventListener('change',()=>setEnabled($('soundEnabled').checked));
  $('soundVolume').addEventListener('input',()=>{unlock();volume=Math.max(0,Math.min(1,Number($('soundVolume').value)/100));setGain();save();refresh();});
  $('musicVolume').addEventListener('input',()=>{unlock();musicVolume=Math.max(0,Math.min(1,Number($('musicVolume').value)/100));setGain();save();refresh();});

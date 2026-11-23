@@ -7,7 +7,13 @@ const money=n=>n.toLocaleString('vi-VN')+' Scoin';
 const kinds={skin:'Skin',pet:'Linh thú',accessory:'Phụ kiện'};
 const shopFighters={all:'Tất cả chiến binh',thunder:'Thunder Stance',soul:'Soulblade',cylast:'Cylast',mox:'Mox',melanta:'Melanta',aether:'Aether',fairi:'Fairi'};
 const shopSorts={default:'Mặc định',asc:'Giá: thấp đến cao',desc:'Giá: cao đến thấp'};
+const raritySorts={default:'Mặc định',asc:'Độ hiếm: thấp đến cao',desc:'Độ hiếm: cao đến thấp'};
+const rarityRank={common:1,rare:2,epic:3,legendary:4};
+const rarityOrder={shop:'default',gacha:'default'};
 const catalog=new Map();
+const reel=el('gachaReel'), reelTrack=el('gachaTrack');
+const reduceMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
+let gachaOffer, reelKey='', gachaMessage='', pendingSpin='', reelAnimation;
 let rules, user=null, account=null, accountGeneration=0, refreshId=0, busyItem='', needsLoad=true;
 let view='shop', filter='all', fighterFilter='all', priceSort='default', opener, displayedMatch;
 let fighterLoadouts=[{},{}];
@@ -27,7 +33,10 @@ function accountBadge(){
  const visible=!!user&&!!account;
  for(const id of ['shopBalance','lobbyScoin','accountScoin']){
   el(id).hidden=!visible;
-  if(visible)el(id).textContent=account.unlimited?'∞ Scoin':money(account.balance);
+  if(visible){
+   const showSpinBalance=id==='shopBalance'&&view==='gacha';
+   el(id).textContent=account.unlimited&&!showSpinBalance?'∞ Scoin':money(account.gachaBalance??account.balance);
+  }
  }
  el('shopLogin').hidden=!!user;
 }
@@ -52,7 +61,7 @@ async function request(payload){
   ...(payload?{method:'POST',body:JSON.stringify(payload)}:{})
  });
  const data=await response.json();
- if(!response.ok)throw Error(data.error||'Chưa tải được cửa hàng.');
+ if(!response.ok)throw Object.assign(Error(data.error||'Chưa tải được cửa hàng.'),{status:response.status});
  return data;
 }
 
@@ -69,6 +78,7 @@ async function refresh(){
   catalog.clear();
   registerCatalog([...data.catalog,...(data.retired??[])]);
   rules=data.rules;
+  gachaOffer=data.gacha;
   if(!busyItem)account=user?data.account:null;
   needsLoad=false;
   setRules();
@@ -86,6 +96,10 @@ function signedIn(email){
  const active=email||null;
  if(active===user)return;
  user=active;
+ reelAnimation?.cancel();
+ reelKey='';
+ gachaMessage='';
+ try{pendingSpin=user?sessionStorage.getItem('saga.gacha.'+user)||'':'';}catch{pendingSpin='';}
  selectedInventoryItem='';
  accountGeneration++;
  account=null;
@@ -127,7 +141,7 @@ function itemArt(item,{scale=1,zoom=1,animate=false}={}){
  }
  return canvas;
 }
-function card(item){
+function card(item,gacha=false){
  const owned=account?.owned.includes(item.id);
  const equipped=account?.equipped[slot(item)]===item.id;
  const article=make('article','shop-card');
@@ -137,6 +151,33 @@ function card(item){
  const footer=make('div','shop-card-copy');
  const name=make('h3','',item.name);
  const text=make('p','',item.description);
+ const rarity=item.rarity?make('span','gacha-rarity',item.rarity):null;
+ if(rarity)rarity.dataset.rarity=item.tier;
+ if(gacha){
+  const odds=make('span','gacha-odds',item.weight.toLocaleString('vi-VN')+'%');
+  const refund=make('span','gacha-refund','Trùng: +'+money(item.refund));
+  const details=make('div','gacha-reward-details');
+  details.append(rarity,odds,refund);
+  footer.append(name,text,details);
+  if(owned)art.append(make('span','shop-equipped','Đã sở hữu'));
+  article.append(art,footer);
+  return article;
+ }
+ footer.append(name,text);
+ if(rarity)footer.append(rarity);
+ if(item.gachaOnly){
+  const source=make('button','shop-item-action shop-gacha-source','Nhận trong Gacha');
+  source.type='button';
+  source.addEventListener('click',()=>{
+   const tab=dialog.querySelector('[data-shop-view="gacha"]');
+   tab.focus({preventScroll:true});
+   tab.click();
+  });
+  footer.append(source);
+  if(owned)art.append(make('span','shop-equipped',equipped?'Đang dùng':'Đã sở hữu'));
+  article.append(art,footer);
+  return article;
+ }
  const button=make('button','shop-item-action',equipped?'Tháo vật phẩm':owned?'Trang bị':'Mua · '+money(item.price));
  const action=equipped?'unequip':owned?'equip':'buy';
  button.dataset.item=item.id;
@@ -144,7 +185,7 @@ function card(item){
  button.disabled=!!busyItem||!account;
  button.setAttribute('aria-label',(equipped?'Tháo ':owned?'Trang bị ':'Mua ')+item.name+(owned?'':' · '+money(item.price)));
  button.addEventListener('click',()=>act(item,action));
- footer.append(name,text,button);
+ footer.append(button);
  if(equipped)art.append(make('span','shop-equipped','Đang dùng'));
  article.append(art,footer);
  return article;
@@ -238,10 +279,127 @@ function renderInventory(){
  action.onclick=selected?()=>act(selected,equipped?'unequip':'equip'):null;
 }
 
+function rewardItems(){
+ return (gachaOffer?.rewards??[]).filter(reward=>catalog.has(reward.id))
+  .map(reward=>({...catalog.get(reward.id),...reward}));
+}
+
+function reelPosition(index){
+ return 'translateX(calc(var(--reel-cell) * '+(-index-.5)+'))';
+}
+
+function fillReel(items,length,winner,index=2){
+ const portraits=new Map(items.map(item=>[item.id,itemArt(item)]));
+ const cells=Array.from({length},(_,i)=>{
+  const item=i===index&&winner?winner:items[i%items.length];
+  const source=portraits.get(item.id);
+  const art=source.cloneNode();
+  art.getContext('2d').drawImage(source,0,0);
+  const cell=make('span','gacha-cell');
+  cell.style.setProperty('--item-color',item.color);
+  cell.append(art,make('strong','',item.name));
+  return cell;
+ });
+ reelTrack.replaceChildren(...cells);
+ reelTrack.style.transform=reelPosition(2);
+}
+
+function renderGacha(items){
+ const signature=items.map(item=>item.id).join(',');
+ if(signature&&signature!==reelKey){
+  fillReel(items,5);
+  reelKey=signature;
+ }
+ reel.disabled=!!busyItem||!items.length;
+ el('gachaSpinLabel').textContent=busyItem==='gacha'?'Đang quay…':pendingSpin?'Kiểm tra lượt quay':
+  'Quay · '+money(gachaOffer?.cost??150);
+ el('gachaFeedback').textContent=gachaMessage||
+  (pendingSpin?'Kiểm tra lại lượt trước khi quay tiếp.':
+  !user?'Đăng nhập để quay.':'Skin trùng được quy đổi thành Scoin theo độ hiếm.');
+}
+
+function savePendingSpin(id){
+ pendingSpin=id;
+ try{
+  if(id)sessionStorage.setItem('saga.gacha.'+user,id);
+  else sessionStorage.removeItem('saga.gacha.'+user);
+ }catch{}
+}
+
+async function spin(){
+ if(!user){el('shopLogin').click();return;}
+ if(busyItem||!gachaOffer)return;
+ if(!account){
+  gachaMessage='Đang tải số dư Scoin. Vui lòng thử lại.';
+  render();
+  void refresh();
+  return;
+ }
+ const {cost}=gachaOffer;
+ const balance=account.gachaBalance??account.balance;
+ if(!pendingSpin&&balance<cost){
+  gachaMessage='Bạn cần thêm '+money(cost-balance)+' để quay.';
+  render();
+  return;
+ }
+ const version=accountGeneration, rewards=rewardItems();
+ if(!pendingSpin)savePendingSpin(crypto.randomUUID());
+ busyItem='gacha';
+ refreshId++;
+ gachaMessage='Đang xác nhận lượt quay…';
+ render();
+ try{
+  const data=await request({action:'gacha',requestId:pendingSpin});
+  if(version!==accountGeneration)return;
+  const reward=rewards.find(item=>item.id===data.reward);
+  if(!reward)throw Error('Chưa xác nhận được phần thưởng.');
+  account=data.account;
+  savePendingSpin('');
+  if(dialog.open&&view==='gacha'){
+   const target=19+rewards.indexOf(reward);
+   fillReel(rewards,target+4,reward,target);
+   const finish=reelPosition(target);
+   reelTrack.style.transform=finish;
+   if(!reduceMotion.matches){
+    reelAnimation=reelTrack.animate([{transform:reelPosition(2)},{transform:finish}],{
+     duration:3600,easing:'cubic-bezier(.12,.69,.19,1)'
+    });
+    await reelAnimation.finished.catch(()=>{});
+   }
+  }else{
+   reelKey='';
+  }
+  if(version!==accountGeneration)return;
+  accountBadge();
+  gachaMessage=data.duplicateScoin?
+   'Trùng '+reward.name+' · '+reward.rarity+'. Đã cộng '+money(data.duplicateScoin)+' vào ví.':
+   'Bạn nhận được '+reward.name+' · '+reward.rarity+'. Đã thêm vào Kho đồ.';
+ }catch(error){
+  if(version!==accountGeneration)return;
+  if(error.status>=400&&error.status<500){
+   savePendingSpin('');
+   gachaMessage=error.message;
+  }else{
+   gachaMessage='Chưa xác nhận được kết quả. Bấm kiểm tra để thử lại lượt này.';
+  }
+  needsLoad=true;
+ }finally{
+  if(version===accountGeneration){
+   busyItem='';
+   if(dialog.open)render();
+   if(needsLoad)void refresh();
+  }
+ }
+}
+reel.addEventListener('click',spin);
+
 function render(){
- const inventory=view==='inventory';
+ const inventory=view==='inventory', gacha=view==='gacha';
+ accountBadge();
  dialog.dataset.view=view;
- el('shopTitle').textContent=inventory?'Kho đồ':'Cửa hàng';
+ el('shopTitle').textContent=inventory?'Kho đồ':gacha?'VÒNG QUAY THỜI KHÔNG':'Cửa hàng';
+ el('gachaPanel').hidden=!gacha;
+ el('shopSortDropdown').hidden=gacha;
  el('inventoryToolbar').hidden=!inventory;
  el('shopInventory').hidden=!inventory;
  el('shopGrid').hidden=inventory;
@@ -255,18 +413,30 @@ function render(){
   return;
  }
  const grid=el('shopGrid'), active=document.activeElement?.dataset.item;
- const available=[...catalog.values()].filter(item=>item.forSale!==false);
+ const available=gacha?rewardItems():[...catalog.values()].filter(item=>item.forSale!==false);
+ if(gacha)renderGacha(available);
  const categories=new Set(available.map(item=>item.kind));
  dialog.dataset.singleKind=String(categories.size<=1);
  if(filter!=='all'&&!categories.has(filter))filter='all';
  const visible=available.filter(item=>(filter==='all'||item.kind===filter)&&(fighterFilter==='all'||item.kind==='skin'&&item.fighter===fighterFilter));
- if(priceSort!=='default')visible.sort((a,b)=>priceSort==='asc'?a.price-b.price:b.price-a.price);
+ const raritySort=rarityOrder[view];
+ if(raritySort!=='default')visible.sort((a,b)=>{
+  const rankA=rarityRank[a.tier]??0, rankB=rarityRank[b.tier]??0;
+  if(!rankA||!rankB)return Number(!rankA)-Number(!rankB);
+  return raritySort==='asc'?rankA-rankB:rankB-rankA;
+ });
+ if(!gacha&&priceSort!=='default')visible.sort((a,b)=>{
+  const available=Number(!!a.gachaOnly)-Number(!!b.gachaOnly);
+  return available||(a.gachaOnly?0:priceSort==='asc'?a.price-b.price:b.price-a.price);
+ });
+ el('shopRarityValue').textContent=raritySorts[raritySort];
  el('shopFighterValue').textContent=shopFighters[fighterFilter];
  el('shopSortValue').textContent=shopSorts[priceSort];
  el('shopResultCount').textContent=visible.length+' vật phẩm';
  for(const option of dialog.querySelectorAll('[data-shop-fighter]'))option.setAttribute('aria-pressed',String(option.dataset.shopFighter===fighterFilter));
  for(const option of dialog.querySelectorAll('[data-shop-sort]'))option.setAttribute('aria-pressed',String(option.dataset.shopSort===priceSort));
- grid.replaceChildren(...pageItems('shop',visible,4).map(card));
+ for(const option of dialog.querySelectorAll('[data-shop-rarity]'))option.setAttribute('aria-pressed',String(option.dataset.shopRarity===raritySort));
+ grid.replaceChildren(...pageItems('shop',visible,4).map(item=>card(item,gacha)));
  for(const button of dialog.querySelectorAll('[data-shop-filter]')){
   const category=button.dataset.shopFilter;
   button.hidden=category!=='all'&&!categories.has(category);
@@ -355,6 +525,7 @@ for(const button of [...inventorySlots,...inventoryFilters]){
  });
 }
 el('shopOpen').addEventListener('click',()=>open());
+el('gachaOpen').addEventListener('click',()=>open('gacha'));
 el('openAccountInventory').addEventListener('click',()=>open('inventory'));
 el('shopLogin').addEventListener('click',()=>{
  dialog.close();
@@ -374,7 +545,7 @@ dialog.addEventListener('click',event=>{
   return;
  }
  if(!event.target.closest('.shop-dropdown'))closeShopFilters();
- const button=event.target.closest('[data-shop-view],[data-shop-filter],[data-shop-fighter],[data-shop-sort]');
+ const button=event.target.closest('[data-shop-view],[data-shop-filter],[data-shop-fighter],[data-shop-sort],[data-shop-rarity]');
  if(!button)return;
  if(button.dataset.shopView){
   if(view!==button.dataset.shopView)el('shopContent').scrollTop=0;
@@ -382,7 +553,14 @@ dialog.addEventListener('click',event=>{
   filter=fighterFilter==='all'?'all':'skin';
  }
  else if(button.dataset.shopFighter){fighterFilter=button.dataset.shopFighter;if(fighterFilter!=='all')filter='skin';}
- else if(button.dataset.shopSort)priceSort=button.dataset.shopSort;
+ else if(button.dataset.shopSort){
+  priceSort=button.dataset.shopSort;
+  if(priceSort!=='default')rarityOrder.shop='default';
+ }
+ else if(button.dataset.shopRarity){
+  rarityOrder[view]=button.dataset.shopRarity;
+  if(view==='shop'&&rarityOrder.shop!=='default')priceSort='default';
+ }
  else {filter=button.dataset.shopFilter;if(filter!=='skin')fighterFilter='all';}
  if(!button.dataset.shopView)itemPages.shop=0;
  const dropdown=button.closest('.shop-dropdown');

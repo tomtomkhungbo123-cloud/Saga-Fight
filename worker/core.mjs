@@ -31,6 +31,13 @@ async function leaderboard(DB,id,page,season){
  return {season:seasonInfo(season),entries,me:mine?map(mine):null,authenticated:!!id,total,page,pages,updatedAt:Date.now()};
 }
 async function playerStats(DB,id){const total=await DB.prepare(RESULTS+' SELECT COUNT(*) played,COALESCE(SUM(won),0) wins FROM results WHERE user_id=?').bind(id).first();const favorite=await DB.prepare(RESULTS+' SELECT fighter,COUNT(*) games FROM results WHERE user_id=? GROUP BY fighter ORDER BY games DESC,MAX(finished_at) DESC,fighter ASC LIMIT 1').bind(id).first();const rank=await DB.prepare(rankResults(await activeSeason(DB))+' SELECT position FROM ranks WHERE user_id=?').bind(id).first();return {rank:rank?.position??null,played:total.played,wins:total.wins,losses:total.played-total.wins,winRate:total.played?Math.round(total.wins/total.played*1000)/10:0,favorite:favorite?{type:favorite.fighter,games:favorite.games}:null};}
+export function videoByteRange(header,size){
+ const match=/^bytes=(\d*)-(\d*)$/.exec(header);
+ if(!match||!match[1]&&!match[2])return null;
+ const start=match[1]?Number(match[1]):Math.max(0,size-Number(match[2]));
+ const end=match[1]&&match[2]?Math.min(size-1,Number(match[2])):size-1;
+ return Number.isSafeInteger(start)&&Number.isSafeInteger(end)&&start<=end?{start,end}:null;
+}
 export async function api(request,env){
  env={...env,DB:await inventoryDatabase(env)};
  const url=new URL(request.url),now=Date.now();

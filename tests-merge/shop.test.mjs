@@ -45,7 +45,15 @@ test('catalog is public and purchases, equip slots and balances are account-boun
  assert.equal(first.account.balance,250);
  assert.equal(duplicate.account.balance,250);
  const [soul,ice]=await Promise.all([shop('a','buy','soul-amethyst'),shop('a','buy','cylast-gold')]);
- assert.deepEqual([soul.status,ice.status].sort(),[200,409]);
+ assert.deepEqual([soul.status,ice.status],[409,409]);
+ assert.match(soul.error,/Vòng Quay Thời Không/);
+ assert.deepEqual(guest.catalog.map(({name,tier})=>[name,tier]),[
+  ['Lôi Ảnh Ngọc','common'],['Sét tử linh','epic'],['Tử Tinh Kiếm','rare'],['Kim Sương','legendary']
+ ]);
+ assert.equal((await shop('a','buy','thunder-crimson')).status,409);
+ assert.equal((await shop('a')).account.balance,250);
+ assert.deepEqual(guest.catalog.filter(item=>item.gachaOnly).map(item=>item.id),
+  ['thunder-crimson','soul-amethyst','cylast-gold']);
  assert.equal((await shop('a','equip','thunder-jade')).account.equipped['skin:thunder'],'thunder-jade');
  assert.equal((await shop('a','unequip','thunder-jade')).account.equipped['skin:thunder'],undefined);
  assert.equal((await shop('b')).account.balance,0);
@@ -85,9 +93,9 @@ test('PvE pays once to the signed-in participant after an eligible completion',a
 });
 
 test('Online freezes equipped cosmetics and pays both different accounts only after agreeing',async t=>{
- const {call,shop,ageMatch,grant}=harness(t);
+ const {call,shop,ageMatch,grant,priorPurchase}=harness(t);
  await grant('a',360);
- await shop('a','buy','thunder-crimson');
+ await priorPurchase('a','thunder-crimson',240);
  await shop('a','equip','thunder-crimson');
  const host=await call('rooms/create',{user:'a',body:{p1:'thunder'}});
  const guest=await call('rooms/join',{user:'b',body:{code:host.code,fighter:'soul'}});
@@ -107,4 +115,52 @@ test('Online freezes equipped cosmetics and pays both different accounts only af
  assert.equal((await finish(host,1)).pending,false);
  assert.equal((await shop('a')).account.balance,145);
  assert.equal((await shop('b')).account.balance,70);
+});
+
+test('Gacha publishes fixed odds and charges a new reward once per spin',async t=>{
+ const {call,shop,grant}=harness(t);
+ const guest=await shop();
+ const itemIds=guest.gacha.rewards.map(item=>item.id);
+ const requestId=crypto.randomUUID();
+ const spin=(id=requestId,user='gacha-player')=>call('account/shop',{user,body:{
+  action:'gacha',requestId:id,itemId:'ember-fox',refund:149,price:0
+ }});
+ assert.equal(guest.gacha.cost,150);
+ assert.deepEqual(guest.gacha.rewards.map(({tier,weight,refund})=>[tier,weight,refund]),[
+  ['common',50,30],['rare',27,60],['epic',15,90],['legendary',8,120]
+ ]);
+ assert.equal((await spin(requestId,null)).status,401);
+ assert.equal((await spin('bad-id')).status,400);
+ assert.equal((await spin()).status,409);
+ await grant('gacha-player',150);
+ const [first,retry]=await Promise.all([spin(),spin()]);
+ assert.equal(first.status,200);
+ assert.equal(retry.reward,first.reward);
+ assert.ok(itemIds.includes(first.reward));
+ assert.equal(first.duplicateScoin,0);
+ assert.equal(retry.duplicateScoin,0);
+ assert.equal(retry.account.balance,0);
+ assert.deepEqual(retry.account.owned,[first.reward]);
+ assert.equal((await shop('gacha-player','equip',first.reward)).status,200);
+});
+
+test('A complete collection can spin and replay the same Scoin refund without a second credit',async t=>{
+ const {call,shop,grant,priorPurchase}=harness(t);
+ const guest=await shop();
+ const user='collector';
+ for(const item of guest.gacha.rewards)await priorPurchase(user,item.id,1);
+ await grant(user,154);
+ const operation=crypto.randomUUID();
+ const spin=requestId=>call('account/shop',{user,body:{action:'gacha',requestId}});
+ const [first,retry,other]=await Promise.all([spin(operation),spin(operation),spin(crypto.randomUUID())]);
+ const reward=guest.gacha.rewards.find(item=>item.id===first.reward);
+ assert.ok(reward);
+ assert.equal(first.status,200);
+ assert.equal(first.duplicateScoin,reward.refund);
+ assert.equal(retry.reward,first.reward);
+ assert.equal(retry.duplicateScoin,reward.refund);
+ assert.equal(retry.account.balance,reward.refund);
+ assert.equal(retry.account.owned.length,4);
+ assert.equal(other.status,409);
+ assert.equal((await shop(user)).account.balance,reward.refund);
 });

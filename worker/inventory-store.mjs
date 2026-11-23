@@ -35,7 +35,7 @@ export function inventoryClient(env,DB){
   }
   throw Error('Inventory rewards are still synchronizing; retry safely');
  }
- return {sync,mutate:(user,item,action,now,admin)=>sync(user,{action,data:{item:item.id,slot:item.kind==='skin'?'skin:'+item.fighter:item.kind,price:item.price,now,admin}})};
+ return {sync,spin:(user,data)=>sync(user,{action:'gacha_with_duplicates',data}),mutate:(user,item,action,now,admin)=>sync(user,{action,data:{item:item.id,slot:item.kind==='skin'?'skin:'+item.fighter:item.kind,price:item.price,now,admin}})};
 }
 export async function inventoryDatabase(env){
  const DB=env.DB;if(!DB)return DB;

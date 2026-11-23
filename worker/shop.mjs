@@ -1,6 +1,6 @@
 const shopCatalog = [
  {id:'thunder-jade', kind:'skin', fighter:'thunder', name:'Lôi Ảnh Ngọc', description:'Lôi y ánh ngọc của Thunder Stance.', price:180, color:'#65e7ce', palette:'jade', hue:113},
- {id:'thunder-crimson', kind:'skin', fighter:'thunder', name:'Thunder Stance - Sét tử linh', description:'Lôi y đỏ thẫm với ánh điện đỏ quanh chiến binh.', price:240, color:'#bd3249', palette:'thunder-crimson', hue:310},
+ {id:'thunder-crimson', kind:'skin', fighter:'thunder', name:'Sét tử linh', description:'Lôi y đỏ thẫm với ánh điện đỏ quanh chiến binh.', price:240, color:'#bd3249', palette:'thunder-crimson', hue:310},
  {id:'soul-amethyst', kind:'skin', fighter:'soul', name:'Tử Tinh Kiếm', description:'Giáp tím và lưỡi kiếm ánh tử tinh của Soulblade.', price:220, color:'#c794ff', palette:'amethyst', hue:308},
  {id:'cylast-gold', kind:'skin', fighter:'cylast', name:'Kim Sương', description:'Áo băng sắc vàng hổ phách của Cylast.', price:240, color:'#ffc77b', palette:'amber', hue:203},
  {id:'ember-fox', forSale:false, kind:'pet', name:'Cáo Hỏa Linh', description:'Cáo nhỏ đuôi lửa bay theo chiến binh.', price:280, color:'#ff9657', art:'fox'},
@@ -13,13 +13,26 @@ const shopCatalog = [
 const shopById = new Map(shopCatalog.map(item => [item.id,item]));
 const shopSlot = item => item.kind==='skin' ? 'skin:'+item.fighter : item.kind;
 const scoinRules = {pve:{win:40,loss:15},online:{win:70,loss:25},minimumSeconds:15};
+const gachaCost=150;
+const gachaRewards=[
+ {id:'thunder-jade',rarity:'Phổ biến',tier:'common',weight:50,refund:30},
+ {id:'soul-amethyst',rarity:'Hiếm',tier:'rare',weight:27,refund:60},
+ {id:'thunder-crimson',rarity:'Sử thi',tier:'epic',weight:15,refund:90},
+ {id:'cylast-gold',rarity:'Huyền thoại',tier:'legendary',weight:8,refund:120}
+];
+const gachaRewardsById=new Map(gachaRewards.map(reward=>[reward.id,reward]));
 const balanceSQL = 'SELECT COALESCE(SUM(amount),0) FROM scoin_ledger WHERE user_id=?';
 
 export function shopOffer() {
  return {
-  catalog:shopCatalog.filter(item=>item.forSale!==false),
+  catalog:shopCatalog.filter(item=>item.forSale!==false)
+   .map(item=>{
+    const reward=gachaRewardsById.get(item.id);
+    return reward?{...item,rarity:reward.rarity,tier:reward.tier,gachaOnly:reward.tier!=='common'}:item;
+   }),
   retired:shopCatalog.filter(item=>item.forSale===false),
-  rules:scoinRules
+  rules:scoinRules,
+  gacha:{cost:gachaCost,rewards:gachaRewards}
  };
 }
 
@@ -36,26 +49,75 @@ export async function shopLoadouts(DB,ids) {
 }
 
 export async function shopAccount(DB,id,admin=false) {
- if(DB.inventory?.mode==='supabase'){const state=await DB.inventory.sync(id);return {...state,balance:admin?null:state.balance,unlimited:admin};}
+ if(DB.inventory?.mode==='supabase'){const state=await DB.inventory.sync(id);return shopWallet(state,admin);}
  const state = await DB.prepare(`SELECT (${balanceSQL}) AS balance,
   (SELECT json_group_array(item_id) FROM (SELECT source_id item_id FROM scoin_ledger WHERE user_id=? AND kind='purchase' UNION SELECT item_id FROM cosmetic_inventory WHERE user_id=?)) AS owned,
   (SELECT json_group_object(slot,item_id) FROM cosmetic_loadouts WHERE user_id=?) AS equipped`).bind(id,id,id,id).first();
- return {balance:admin?null:state.balance,unlimited:admin,owned:JSON.parse(state.owned),equipped:JSON.parse(state.equipped)};
+ return shopWallet({balance:state.balance,owned:JSON.parse(state.owned),equipped:JSON.parse(state.equipped)},admin);
+}
+
+function shopWallet(state,admin){
+ return admin?{...state,balance:null,unlimited:true,gachaBalance:state.balance}:{...state,unlimited:false};
+}
+
+function rollGachaReward(){
+ const sample=new Uint32Array(1);
+ // Discard the final 96 uint32 values to give each percentage point equal probability.
+ do{crypto.getRandomValues(sample);}while(sample[0]>=4294967200);
+ let roll=sample[0]%100;
+ for(const reward of gachaRewards){
+  roll-=reward.weight;
+  if(roll<0)return reward;
+ }
+ throw Error('Gacha weights must total 100');
+}
+
+async function spinGacha(DB,id,data,now,admin){
+ if(typeof data.requestId!=='string'||!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(data.requestId)){
+  return {status:400,error:'Mã lượt quay không hợp lệ.'};
+ }
+ const requestId=data.requestId.toLowerCase(), drawn=rollGachaReward();
+ if(DB.inventory){
+  const state=await DB.inventory.spin(id,{requestId,itemId:drawn.id,refund:drawn.refund,now});
+  if(state.error)return state;
+  const {reward,duplicateScoin,...wallet}=state;
+  return {reward,duplicateScoin,account:shopWallet(wallet,admin)};
+ }
+ const spin=DB.prepare(`INSERT OR IGNORE INTO gacha_spins(user_id,request_id,item_id,created_at,refund)
+  SELECT ?,?,?,?,CASE WHEN EXISTS(
+   SELECT 1 FROM scoin_ledger WHERE user_id=? AND kind='purchase' AND source_id=?
+   UNION ALL SELECT 1 FROM cosmetic_inventory WHERE user_id=? AND item_id=?
+  ) THEN ? ELSE 0 END WHERE (${balanceSQL})>=?`)
+  .bind(id,requestId,drawn.id,now,id,drawn.id,id,drawn.id,drawn.refund,id,gachaCost);
+ const charge=DB.prepare(`INSERT OR IGNORE INTO scoin_ledger(user_id,kind,source_id,amount,created_at)
+  SELECT user_id,'gacha',request_id,refund-?,created_at FROM gacha_spins WHERE user_id=? AND request_id=?`)
+  .bind(gachaCost,id,requestId);
+ const grant=DB.prepare(`INSERT OR IGNORE INTO cosmetic_inventory(user_id,item_id,source,created_at)
+  SELECT user_id,item_id,'gacha',created_at FROM gacha_spins WHERE user_id=? AND request_id=? AND refund=0`)
+  .bind(id,requestId);
+ await DB.batch([spin,charge,grant]);
+ const result=await DB.prepare('SELECT item_id,refund FROM gacha_spins WHERE user_id=? AND request_id=?').bind(id,requestId).first();
+ if(!result)return {status:409,error:'Bạn chưa đủ Scoin.'};
+ return {reward:result.item_id,duplicateScoin:result.refund,account:await shopAccount(DB,id,admin)};
 }
 
 export async function mutateShop(DB,id,data,now,admin=false) {
+ if(DB.inventory?.mode==='migrating')return {status:503,error:'Đang chuyển hòm đồ sang Supabase. Vui lòng thử lại sau ít phút.'};
+ if(data.action==='gacha')return spinGacha(DB,id,data,now,admin);
  const item = shopById.get(data.itemId);
  if(!item)return {status:404,error:'Không tìm thấy vật phẩm.'};
+ if(data.action==='buy'){
+  if(item.forSale===false)return {status:409,error:'Vật phẩm này đang tạm ngừng bán.'};
+  const reward=gachaRewardsById.get(item.id);
+  if(reward&&reward.tier!=='common')return {status:409,error:'Vật phẩm này nhận trong Vòng Quay Thời Không.'};
+ }
  const slot = shopSlot(item);
  if(DB.inventory){
-  if(DB.inventory.mode==='migrating')return {status:503,error:'Đang chuyển hòm đồ sang Supabase. Vui lòng thử lại sau ít phút.'};
   if(!['buy','equip','unequip'].includes(data.action))return {status:400,error:'Thao tác không hợp lệ.'};
-  if(data.action==='buy'&&item.forSale===false)return {status:409,error:'Vật phẩm này đang tạm ngừng bán.'};
   const state=await DB.inventory.mutate(id,item,data.action,now,admin);
-  return state.error?state:{account:{...state,balance:admin?null:state.balance,unlimited:admin}};
+  return state.error?state:{account:shopWallet(state,admin)};
  }
  if(data.action==='buy') {
-  if(item.forSale===false)return {status:409,error:'Vật phẩm này đang tạm ngừng bán.'};
   const owned=await DB.prepare("SELECT 1 owned FROM scoin_ledger WHERE user_id=? AND kind='purchase' AND source_id=? UNION ALL SELECT 1 FROM cosmetic_inventory WHERE user_id=? AND item_id=? LIMIT 1").bind(id,item.id,id,item.id).first();
   if(owned)return {account:await shopAccount(DB,id,admin)};
   if(admin){

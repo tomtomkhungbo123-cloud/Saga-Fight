@@ -6,6 +6,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {pipeline} from 'node:stream/promises';
 import {api} from './worker/index.mjs';
+import {videoByteRange} from './worker/core.mjs';
 import {authenticatedApi} from './worker/account-auth.mjs';
 import {localDB} from './scripts/local-db.mjs';
 import {attachRelay} from './scripts/relay.mjs';
@@ -18,7 +19,7 @@ const dataDir=process.env.DATA_DIR||path.join(root,'.data');
 fs.mkdirSync(dataDir,{recursive:true});
 const DB=localDB(path.join(dataDir,'rooms.sqlite'));
 
-const types={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'application/javascript; charset=utf-8','.json':'application/json','.webmanifest':'application/manifest+json','.png':'image/png','.webp':'image/webp','.jpg':'image/jpeg','.svg':'image/svg+xml','.ico':'image/x-icon','.ogg':'audio/ogg','.mp3':'audio/mpeg','.wav':'audio/wav'};
+const types={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'application/javascript; charset=utf-8','.json':'application/json','.webmanifest':'application/manifest+json','.png':'image/png','.webp':'image/webp','.jpg':'image/jpeg','.svg':'image/svg+xml','.ico':'image/x-icon','.ogg':'audio/ogg','.mp3':'audio/mpeg','.mp4':'video/mp4','.webm':'video/webm','.wav':'audio/wav'};
 const server=http.createServer(async(req,res)=>{
  try{
   // Render terminates HTTPS at its proxy. Preserve the public origin for
@@ -53,9 +54,21 @@ const server=http.createServer(async(req,res)=>{
   if(!filename.startsWith(web+path.sep)||name.includes('\0')){res.writeHead(404);res.end();return;}
   const stat=await fs.promises.stat(filename).catch(()=>null);
   if(!stat?.isFile()){res.writeHead(404);res.end();return;}
-  res.writeHead(200,{'Content-Type':types[path.extname(filename)]||'application/octet-stream','Content-Length':stat.size,'Cache-Control':'no-cache'});
+  const type=types[path.extname(filename)]||'application/octet-stream';
+  const headers={'Content-Type':type,'Content-Length':stat.size,'Cache-Control':'no-cache'};
+  let range=null;
+  if(type.startsWith('video/')){
+   headers['Accept-Ranges']='bytes';
+   if(req.headers.range){
+    range=videoByteRange(req.headers.range,stat.size);
+    if(!range){res.writeHead(416,{...headers,'Content-Length':0,'Content-Range':'bytes */'+stat.size});res.end();return;}
+    headers['Content-Range']='bytes '+range.start+'-'+range.end+'/'+stat.size;
+    headers['Content-Length']=range.end-range.start+1;
+   }
+  }
+  res.writeHead(range?206:200,headers);
   if(req.method==='HEAD'){res.end();return;}
-  await pipeline(fs.createReadStream(filename),res);
+  await pipeline(fs.createReadStream(filename,range??undefined),res);
  }catch(error){
   console.error('Request failed:',error.message);
   if(!res.headersSent)res.writeHead(500,{'Content-Type':'text/plain'});

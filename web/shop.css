@@ -374,3 +374,121 @@ html.ios-controls .shop-content{-webkit-overflow-scrolling:touch}
   transform:translateY(-25%) rotate(225deg);
  }
 }
+
+body>header #gachaOpen,
+#shopDialog .shop-views .gacha-gold{
+ position:relative;isolation:isolate;overflow:hidden;
+ background:linear-gradient(125deg,#583119,#282020 55%,#4c331a);
+ color:#ffe3a0;font-weight:900;letter-spacing:.06em;
+}
+body>header #gachaOpen{
+ min-height:40px;padding:4px clamp(5px,1vw,12px);border:1px solid #be8b40;
+ font-size:clamp(10px,1.3vw,14px);white-space:nowrap;line-height:1.1;
+}
+#shopDialog .shop-views .gacha-gold{--control-stroke:#bb8a49}
+#shopDialog .shop-views .gacha-gold[aria-pressed=true]{background:linear-gradient(125deg,#efb95f,#fff0ba,#df9e4c);color:#351e12}
+.gacha-gold span{position:relative;z-index:1}
+.gacha-gold::before{
+ content:'';position:absolute;inset:0;background:linear-gradient(110deg,transparent 20%,#fff5d588 50%,transparent 80%);
+ transform:translateX(-110%);animation:gacha-shine 3.8s ease-in-out infinite;
+}
+.gacha-gold i{z-index:2;right:4px;top:3px}
+.gacha-gold i+i{left:4px;right:auto;top:auto;bottom:4px}
+#shopDialog .gacha-gold i{right:6px;top:6px}
+#shopDialog .gacha-gold i+i{left:6px;right:auto;top:auto;bottom:7px}
+@keyframes gacha-shine{
+ 0%,62%{transform:translateX(-110%)}
+ 86%,100%{transform:translateX(110%)}
+}
+body.playing>header #gachaOpen,
+body:has(#lobbyCard:not([hidden]))>header #gachaOpen{display:none}
+body>header #gachaOpen:focus-visible,#shopDialog #gachaReel:focus-visible{outline:2px solid #ffdf92;outline-offset:3px}
+.shop-top .shop-views{grid-template-columns:minmax(106px,max-content) 88px 72px}
+#shopDialog[data-view="gacha"] :is(.shop-rewards,.shop-compact-rewards){display:none}
+#gachaPanel{margin-top:clamp(6px,2vw,18px)}
+#shopDialog #gachaReel{
+ display:grid;float:none;gap:10px;width:100%;max-width:620px;margin:0 auto;padding:0;
+ background:none;border:0;color:#ffe5aa;justify-items:center;
+}
+#shopDialog #gachaReel:disabled{opacity:1;cursor:default}
+.gacha-window{
+ --reel-cell:clamp(86px,32cqw,175px);
+ position:relative;display:block;container-type:inline-size;width:100%;
+ height:clamp(112px,23vw,190px);overflow:hidden;border:1px solid #886139;border-radius:8px;
+ background:radial-gradient(ellipse at center,#3d2b27,#18131d 72%);
+}
+.gacha-window::after{
+ content:'';position:absolute;inset:0;pointer-events:none;
+ background:linear-gradient(90deg,#160f19ee,transparent 27% 73%,#160f19ee);
+}
+.gacha-track{display:flex;position:absolute;inset:0 auto 0 50%;transform:translateX(calc(var(--reel-cell) * -2.5))}
+.gacha-cell{
+ flex:0 0 var(--reel-cell);width:var(--reel-cell);display:grid;grid-template-rows:minmax(0,1fr) auto;
+ align-items:end;justify-items:center;gap:3px;padding:8px 5px;border-right:1px solid #f6cb8154;
+ background:radial-gradient(ellipse at 50% 58%,color-mix(in srgb,var(--item-color) 18%,transparent),transparent 72%);
+}
+.gacha-cell canvas{width:100%;height:100%;min-height:0;object-fit:contain}
+.gacha-cell strong{align-self:center;font-size:clamp(10px,1.8vw,13px);line-height:1.15;color:#fff0ce;text-align:center}
+.gacha-marker{
+ position:absolute;z-index:1;inset:0 auto 0 50%;width:var(--reel-cell);
+ transform:translateX(-50%);border:1px solid #f9d789;border-block-width:2px;pointer-events:none;
+ box-shadow:inset 0 0 18px #ffe1a32b,0 0 14px #ffda7e33;
+}
+.gacha-marker::before,.gacha-marker::after{
+ content:'';position:absolute;left:50%;transform:translateX(-50%);border:7px solid transparent;
+}
+.gacha-marker::before{top:0;border-top-color:#ffe09a}
+.gacha-marker::after{bottom:0;border-bottom-color:#ffe09a}
+#gachaSpinLabel{
+ display:inline-grid;place-items:center;min-height:42px;padding:6px 24px;border:1px solid #b38244;border-radius:5px;
+ background:linear-gradient(120deg,#edb777,#ffdfa0);color:#322013;font-weight:900;
+}
+#gachaReel:not(:disabled):hover #gachaSpinLabel{background:#ffe9bb}
+#gachaFeedback{margin:7px 0;min-height:1.3em;text-align:center;color:#ffe4aa;font-size:14px;line-height:1.3}
+#gachaRewardsTitle{margin:5px 0 8px;color:#fff0cf;font-size:17px}
+.shop-card .gacha-rarity{color:var(--rarity-color);font-size:13px;font-weight:700}
+.gacha-rarity[data-rarity="common"]{--rarity-color:#99dccc}
+.gacha-rarity[data-rarity="rare"]{--rarity-color:#a8d7ff}
+.gacha-rarity[data-rarity="epic"]{--rarity-color:#e3a8ff}
+.gacha-rarity[data-rarity="legendary"]{--rarity-color:#ffd27d}
+@media(max-width:660px){
+ .shop-top .shop-views{grid-template-columns:112px 67px 53px;gap:2px}
+}
+@media(max-width:365px) and (orientation:portrait){
+ .shop-top .shop-views{grid-template-columns:112px 59px 47px}
+ #shopDialog #shopBalance{max-width:74px}
+}
+@media(orientation:landscape) and (max-height:500px){
+ .gacha-window{height:clamp(78px,31dvh,143px)}
+}
+@media(prefers-reduced-motion:reduce){
+ .gacha-gold::before{animation:none}
+}
+
+.gacha-reward-details{display:grid;grid-template-columns:1fr auto;align-items:baseline;gap:2px 6px}
+.gacha-odds{color:#fff0cf;font-size:13px;font-weight:800;font-variant-numeric:tabular-nums}
+.gacha-refund{grid-column:1/-1;color:#d4bca8;font-size:13px}
+
+#shopDialog .shop-gacha-source{color:#ffe0a7;font-weight:700}
+#shopDialog .shop-views .gacha-gold{padding-inline:10px}
+@media(max-width:660px){
+ .gacha-label>span{display:block}
+ #shopDialog .shop-views .gacha-gold{padding-inline:3px;line-height:1.05}
+ #shopDialog .gacha-gold i{right:3px;top:4px}
+ #shopDialog .gacha-gold i+i{left:3px;bottom:5px}
+ #shopDialog[data-view="gacha"] #shopTitle{font-size:clamp(24px,7vw,34px)}
+}
+@media(max-width:450px) and (orientation:portrait){
+ #shopDialog .shop-top{grid-template-areas:"identity actions" "tabs tabs"}
+ #shopDialog[data-view="inventory"] .shop-top{grid-template-areas:"identity actions" "tabs tabs" "fighter fighter"}
+}
+@media(max-width:400px) and (orientation:portrait){
+ body>header #gachaOpen{font-size:8px}
+}
+
+#shopDialog[data-view="shop"] .shop-refine{grid-template-columns:repeat(3,minmax(0,1fr))}
+#shopDialog[data-view="shop"] .shop-card-copy>.gacha-rarity{margin-bottom:7px}
+@media(max-width:540px) and (orientation:portrait){
+ #shopDialog[data-view="shop"] .shop-refine{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #shopDialog[data-view="shop"] #shopFighterDropdown{grid-column:1/-1}
+}

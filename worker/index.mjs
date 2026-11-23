@@ -1,5 +1,5 @@
 import {inventoryMigration} from './inventory-store.mjs';
-import {api} from './core.mjs';
+import {api,videoByteRange} from './core.mjs';
 import {authConfig} from './account-auth.mjs';
 import {bridgeApi,bridgeWebSocket} from './render-bridge.mjs';
 export {api};
@@ -11,5 +11,27 @@ export default {async fetch(request,env){
  if(url.pathname.startsWith('/api/'))return bridgeApi(request,env);
  const key=url.pathname==='/'?'/index.html':url.pathname,file=FILES[key];if(!file)return new Response('Not found',{status:404});
  if(!['GET','HEAD'].includes(request.method))return new Response('Method not allowed',{status:405});
- return new Response(request.method==='HEAD'?null:Uint8Array.from(atob(file[1]),c=>c.charCodeAt(0)),{headers:{'Content-Type':file[0],'Cache-Control':'no-cache','X-Content-Type-Options':'nosniff','Referrer-Policy':'same-origin'}});
+ const headers={'Content-Type':file[0],'Cache-Control':'no-cache','X-Content-Type-Options':'nosniff','Referrer-Policy':'same-origin'};
+ const encoded=file[1];
+ const size=encoded.length/4*3-(encoded.endsWith('==')?2:encoded.endsWith('=')?1:0);
+ let status=200,body=null;
+ headers['Content-Length']=String(size);
+ if(file[0].startsWith('video/')){
+  headers['Accept-Ranges']='bytes';
+  const range=request.headers.get('Range');
+  if(range){
+   const part=videoByteRange(range,size);
+   if(!part)return new Response(null,{status:416,headers:{...headers,'Content-Length':'0','Content-Range':'bytes */'+size}});
+   const {start,end}=part,length=end-start+1;
+   status=206;
+   headers['Content-Range']='bytes '+start+'-'+end+'/'+size;
+   headers['Content-Length']=String(length);
+   if(request.method==='GET'){
+    const offset=start%3;
+    body=Uint8Array.from(atob(encoded.slice(Math.floor(start/3)*4,Math.ceil((end+1)/3)*4)).slice(offset,offset+length),c=>c.charCodeAt(0));
+   }
+  }
+ }
+ if(status===200&&request.method==='GET')body=Uint8Array.from(atob(encoded),c=>c.charCodeAt(0));
+ return new Response(body,{status,headers});
 }};
