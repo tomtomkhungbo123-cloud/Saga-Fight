@@ -41,6 +41,15 @@ function accountBadge(){
  el('shopLogin').hidden=!!user;
 }
 
+function setAccount(nextAccount){
+ account=nextAccount;
+ window.SagaRoster?.refreshSkins();
+}
+
+function equippedSkin(fighter){
+ return catalog.get(account?.equipped?.['skin:'+fighter]);
+}
+
 function registerCatalog(items){
  for(const item of items){
   catalog.set(item.id,item);
@@ -79,7 +88,7 @@ async function refresh(){
   registerCatalog([...data.catalog,...(data.retired??[])]);
   rules=data.rules;
   gachaOffer=data.gacha;
-  if(!busyItem)account=user?data.account:null;
+  if(!busyItem)setAccount(user?data.account:null);
   needsLoad=false;
   setRules();
   accountBadge();
@@ -102,7 +111,7 @@ function signedIn(email){
  try{pendingSpin=user?sessionStorage.getItem('saga.gacha.'+user)||'':'';}catch{pendingSpin='';}
  selectedInventoryItem='';
  accountGeneration++;
- account=null;
+ setAccount(null);
  busyItem='';
  needsLoad=true;
  accountBadge();
@@ -353,7 +362,7 @@ async function spin(){
   if(version!==accountGeneration)return;
   const reward=rewards.find(item=>item.id===data.reward);
   if(!reward)throw Error('Chưa xác nhận được phần thưởng.');
-  account=data.account;
+  setAccount(data.account);
   accountBadge();
   savePendingSpin('');
   if(dialog.open&&view==='gacha'){
@@ -463,7 +472,7 @@ async function act(item,action){
  try{
   const data=await request({itemId:item.id,action});
   if(version!==accountGeneration)return;
-  account=data.account;
+  setAccount(data.account);
   accountBadge();
   status((action==='buy'?'Đã mua ':action==='equip'?'Đã trang bị ':'Đã tháo ')+item.name+'.');
  }catch(error){
@@ -600,7 +609,7 @@ function decor(g,fighter,time){
  if(pet)window.SagaShopArt.draw(g,pet,fighter.x-side*87,fighter.y-112+bob*6,side,55);
  if(accessory)window.SagaShopArt.draw(g,accessory,fighter.x+side*31,fighter.y-165+bob*2,side,30);
 }
-window.SagaShop={refresh,signedIn,start,matchState,matchReward,skin,decor};
+window.SagaShop={refresh,signedIn,start,matchState,matchReward,skin,decor,equippedSkin};
 accountBadge();
 void refresh();
 })();

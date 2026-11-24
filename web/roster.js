@@ -25,8 +25,21 @@ for(let player=0;player<2;player++){
 }
 function sync(){for(const p of previews){const selected=$('select'+p.player).value===p.type;p.card.classList.toggle('selected',selected);p.card.setAttribute('aria-pressed',String(selected));p.card.removeAttribute('aria-expanded');p.card.querySelector('.card-check')?.setAttribute('aria-hidden','true');p.card.setAttribute('aria-label','Chọn '+names[p.type]);p.card.hidden=false;}
  for(let player=0;player<2;player++){panels[player].hidden=activePlayer!==player;const p=summaries[player],type=$('select'+player).value,option=previews.find(v=>v.player===player&&v.type===type);if(p.type!==type){p.type=type;p.fighter=makeFighter(type,player);p.painted=false;}
- p.card.style.setProperty('--fighter-color',colors[type]);p.card.querySelector('.card-name').textContent=names[type];p.card.querySelector('.card-style').textContent=option.card.querySelector('.card-style').textContent;p.card.querySelector('.card-index').textContent=option.card.querySelector('.card-index').textContent;
+ p.card.querySelector('.card-name').textContent=names[type];p.card.querySelector('.card-style').textContent=option.card.querySelector('.card-style').textContent;p.card.querySelector('.card-index').textContent=option.card.querySelector('.card-index').textContent;
  p.card.setAttribute('aria-expanded',String(picker.open&&activePlayer===player));p.card.setAttribute('aria-label','Đổi chiến binh '+(player?'đối thủ':'P1')+': '+names[type]);}
+ refreshSkins();
+}
+
+function refreshSkins(){
+ // The menu and online lobby both put the local account in the left seat.
+ for(const p of renderPreviews){
+  const skin=p.player===0?window.SagaShop?.equippedSkin(p.type):undefined;
+  if(p.palette!==skin?.palette){
+   p.palette=skin?.palette;
+   p.painted=false;
+  }
+  if(p.summary)p.card.style.setProperty('--fighter-color',skin?.color??colors[p.type]);
+ }
 }
 function restoreFocus(){activePlayer=null;document.body.classList.remove('fighter-picker-open');sync();summaries[returnPlayer].card.focus({preventScroll:true});}
 function close(){if(!picker.open)return;picker.close();restoreFocus();}
@@ -78,6 +91,7 @@ let last=0;function frame(now){requestAnimationFrame(frame);if(picker.open&&($('
 }
 window.SagaRoster={
  refresh:sync,
+ refreshSkins,
  portrait(canvas,type,palette,{zoom=1,animate=false}={}){
   if(!names[type])return;
   const p={canvas,type,palette,zoom,animate,pixelRatio:canvas.width/210,player:0,fighter:makeFighter(type,0)};
