@@ -4,7 +4,11 @@
  const effects=new Map(),contextTypes=new WeakMap(),tints=new WeakMap();
  const matrices={
   // Turn Thunder Stance's gold into dark reds while keeping the garment's shading.
-  'thunder-crimson':[.67,.24,-.13, -.09,.24,.04, 0,.25,-.02]
+  'thunder-crimson':[.67,.24,-.13, -.09,.24,.04, 0,.25,-.02],
+  // Silver armor, a darker steel mirror palette and a bright flame palette from the item lab.
+  'mox-white-fire':[.62,.46,.06, .63,.46,.06, .65,.46,.06],
+  'mox-white-fire-mirror':[.47,.39,.06, .54,.39,.06, .66,.39,.06],
+  'mox-white-fire-fx':[.87,.17,.05, .89,.17,.05, .93,.17,.05]
  };
  function matrix(type){if(matrices[type])return matrices[type];if(type==='defeated')return matrices[type]=[.213,.715,.072,.213,.715,.072,.213,.715,.072];const a=angles[type]*Math.PI/180,c=Math.cos(a),s=Math.sin(a);return matrices[type]=[.213+.787*c-.213*s,.715-.715*c-.715*s,.072-.072*c+.928*s,.213-.213*c+.143*s,.715+.285*c+.140*s,.072-.072*c-.283*s,.213-.213*c-.787*s,.715-.715*c+.715*s,.072+.928*c+.072*s];}
  const byte=v=>Math.max(0,Math.min(255,Math.round(v)));
@@ -50,6 +54,7 @@
   angles[type+'-mirror']=(angle+155)%360;
  }
  function registerEffect(type,reference){
+  if(Object.hasOwn(matrices,type))return;
   const rgb=[1,3,5].map(i=>parseInt(reference.slice(i,i+2),16));
   const peak=Math.max(...rgb);
   // Keep the white core and the original brightness ramp while replacing the hue of colored layers.

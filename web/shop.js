@@ -573,6 +573,8 @@ dialog.addEventListener('click',event=>{
 function start(mode,roomLoadouts){
  if(dialog.open)dialog.close();
  fighterLoadouts=mode==='online'&&Array.isArray(roomLoadouts)?roomLoadouts:[account?.equipped||{},{}];
+ const whiteFire=window.MoxWhiteFire?.palette;
+ if(whiteFire&&fighterLoadouts.some(loadout=>loadout?.['skin:mox']===whiteFire))void window.MoxVisual.warmWhiteFire();
  matchState(null);
 }
 function matchState(id){

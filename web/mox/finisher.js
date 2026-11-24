@@ -19,7 +19,8 @@ function beam(c,t,index,quality){const {u,tail,fade}=beamSample(t,index);if(u<=0
  for(let i=0;i<=n;i++){const v=i/n,q=tail+(u-tail)*v,a=beamPoint(index,Math.max(0,q-.002)),b=beamPoint(index,Math.min(1,q+.002)),r=beamPoint(index,q),dx=b.x-a.x,dy=b.y-a.y,l=Math.hypot(dx,dy)||1;pts.push({...r,nx:-dy/l,ny:dx/l,w:(index?82:62)*Math.pow(v,1.5)*(1+.07*Math.sin(v*4-t*10))});}
  const band=(mult,color,opacity)=>{c.fillStyle=color;c.globalAlpha=fade*opacity;c.beginPath();pts.forEach((p,i)=>c[i?'lineTo':'moveTo'](p.x+p.nx*p.w*mult,p.y+p.ny*p.w*mult));const tip=pts.at(-1),prev=pts.at(-2),len=Math.hypot(tip.x-prev.x,tip.y-prev.y)||1,tx=(tip.x-prev.x)/len*tip.w*mult*1.6,ty=(tip.y-prev.y)/len*tip.w*mult*1.6;c.bezierCurveTo(tip.x+tip.nx*tip.w*mult+tx,tip.y+tip.ny*tip.w*mult+ty,tip.x-tip.nx*tip.w*mult+tx,tip.y-tip.ny*tip.w*mult+ty,tip.x-tip.nx*tip.w*mult,tip.y-tip.ny*tip.w*mult);for(let i=pts.length-1;i>=0;i--){const p=pts[i];c.lineTo(p.x-p.nx*p.w*mult,p.y-p.ny*p.w*mult);}c.closePath();c.fill();};c.save();band(1.55,'#f67237',.08);band(1.15,'#e25428',.16);band(1,'#c84223',.85);band(.5,'#e8582b',.32);band(.12,'#f98a43',.25);
  c.restore();}
-function draw(ctx,w,h,t,quality='high'){prepare();const v=sample(t);if(!v.alpha||w<=0||h<=0)return;if(frame.width!==w||frame.height!==h){frame.width=w;frame.height=h;}const c=frame.getContext('2d');c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,w,h);const cover=Math.max(w/1600,h/900),drift=(t-C.duration*.5)*65;c.drawImage(background,(w-2080*cover)*.5+drift*cover,(h-1170*cover)*.5-drift*.63*cover,2080*cover,1170*cover);
+function draw(ctx,w,h,t,quality='high',skin){prepare();const v=sample(t);if(!v.alpha||w<=0||h<=0)return;if(frame.width!==w||frame.height!==h){frame.width=w;frame.height=h;}const raw=frame.getContext('2d'),whiteFire=skin&&skin===window.MoxWhiteFire?.palette;
+ const c=whiteFire?window.FighterPalette.context(raw,skin+'-fx'):raw;c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,w,h);const cover=Math.max(w/1600,h/900),drift=(t-C.duration*.5)*65;c.drawImage(background,(w-2080*cover)*.5+drift*cover,(h-1170*cover)*.5-drift*.63*cover,2080*cover,1170*cover);
  const unit=Math.min(w/1600,h/900);c.save();c.translate((w-1600*unit)/2,(h-900*unit)/2);c.scale(unit,unit);
  beam(c,t,0,quality);
  c.save();c.translate(v.x,v.y);c.translate(570,570);c.rotate(v.roll);c.translate(-570,-570);
@@ -31,6 +32,7 @@ function draw(ctx,w,h,t,quality='high'){prepare();const v=sample(t);if(!v.alpha|
  const hand={...v.hand,elx:790+110*v.strike,ely:530-50*v.raise-28*v.strike};arm(c,{x:679,y:410},hand,116,'#ff964b');glove(c,hand.x,hand.y,1.12+.05*v.strike,-.25+.18*v.strike,t);
  // Soft pressure around the active fist, with no outline on the glove.
  if(t>.6&&t<1.65){const alpha=smooth((t-.6)/.22)*(1-smooth((t-1.2)/.45));for(let i=0;i<3;i++)glow(c,hand.x-40-i*24,hand.y-36+Math.sin(t*5+i)*14,95-i*15,alpha*.19);}
+ if(whiteFire)window.MoxWhiteFire.aura(raw,530,410,t,true,2.5);
  c.restore();beam(c,t,1,quality);c.restore();ctx.save();ctx.globalAlpha*=v.alpha;ctx.drawImage(frame,0,0);ctx.restore();}
 window.MoxFinish={C,sample,beamSample,beamPoint,prepare,draw};
 })();

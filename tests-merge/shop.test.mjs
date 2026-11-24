@@ -35,7 +35,7 @@ test('catalog is public and purchases, equip slots and balances are account-boun
  const {call,shop,grant}=harness(t);
  const guest=await shop();
  assert.equal(guest.account,null);
- assert.deepEqual(guest.catalog.map(item=>item.id),['thunder-jade','thunder-crimson','soul-amethyst','cylast-gold']);
+ assert.deepEqual(guest.catalog.map(item=>item.id),['thunder-jade','thunder-crimson','soul-amethyst','cylast-gold','mox-white-fire']);
  assert.equal((await shop(null,'buy','thunder-jade')).status,401);
  assert.equal((await call('account/shop',{user:'a',body:{action:'buy',itemId:'thunder-jade'},origin:'https://other.test'})).status,403);
  assert.equal((await shop('a','buy','thunder-jade')).status,409);
@@ -48,12 +48,12 @@ test('catalog is public and purchases, equip slots and balances are account-boun
  assert.deepEqual([soul.status,ice.status],[409,409]);
  assert.match(soul.error,/Vòng Quay Thời Không/);
  assert.deepEqual(guest.catalog.map(({name,tier})=>[name,tier]),[
-  ['Lôi Ảnh Ngọc','common'],['Sét tử linh','epic'],['Tử Tinh Kiếm','rare'],['Kim Sương','legendary']
+  ['Lôi Ảnh Ngọc','common'],['Sét tử linh','epic'],['Tử Tinh Kiếm','rare'],['Kim Sương','legendary'],['Bạch Hỏa Quyền','legendary']
  ]);
  assert.equal((await shop('a','buy','thunder-crimson')).status,409);
  assert.equal((await shop('a')).account.balance,250);
  assert.deepEqual(guest.catalog.filter(item=>item.gachaOnly).map(item=>item.id),
-  ['thunder-crimson','soul-amethyst','cylast-gold']);
+  ['thunder-crimson','soul-amethyst','cylast-gold','mox-white-fire']);
  assert.equal((await shop('a','equip','thunder-jade')).account.equipped['skin:thunder'],'thunder-jade');
  assert.equal((await shop('a','unequip','thunder-jade')).account.equipped['skin:thunder'],undefined);
  assert.equal((await shop('b')).account.balance,0);
@@ -127,7 +127,7 @@ test('Gacha publishes fixed odds and charges a new reward once per spin',async t
  }});
  assert.equal(guest.gacha.cost,150);
  assert.deepEqual(guest.gacha.rewards.map(({tier,weight,refund})=>[tier,weight,refund]),[
-  ['common',50,30],['rare',27,60],['epic',15,90],['legendary',8,120]
+  ['common',50,30],['rare',27,60],['epic',15,90],['legendary',4,120],['legendary',4,120]
  ]);
  assert.equal((await spin(requestId,null)).status,401);
  assert.equal((await spin('bad-id')).status,400);
@@ -149,7 +149,7 @@ test('A complete collection can spin and replay the same Scoin refund without a 
  const guest=await shop();
  const user='collector';
  for(const item of guest.gacha.rewards)await priorPurchase(user,item.id,1);
- await grant(user,154);
+ await grant(user,155);
  const operation=crypto.randomUUID();
  const spin=requestId=>call('account/shop',{user,body:{action:'gacha',requestId}});
  const [first,retry,other]=await Promise.all([spin(operation),spin(operation),spin(crypto.randomUUID())]);
@@ -160,7 +160,27 @@ test('A complete collection can spin and replay the same Scoin refund without a 
  assert.equal(retry.reward,first.reward);
  assert.equal(retry.duplicateScoin,reward.refund);
  assert.equal(retry.account.balance,reward.refund);
- assert.equal(retry.account.owned.length,4);
+ assert.equal(retry.account.owned.length,guest.gacha.rewards.length);
  assert.equal(other.status,409);
  assert.equal((await shop(user)).account.balance,reward.refund);
+});
+
+
+test('Bạch Hỏa Quyền drops from Gacha, equips on Mox and refunds a duplicate',async t=>{
+ const {call,shop,grant}=harness(t);
+ const user='mox-collector',item='mox-white-fire';
+ t.mock.method(crypto,'getRandomValues',array=>{array[0]=98;return array;});
+ await grant(user,300);
+ assert.equal((await shop(user,'buy',item)).status,409);
+ const spin=()=>call('account/shop',{user,body:{action:'gacha',requestId:crypto.randomUUID()}});
+ const first=await spin();
+ assert.equal(first.reward,item);
+ assert.equal(first.duplicateScoin,0);
+ assert.equal(first.account.balance,150);
+ assert.equal((await shop(user,'equip',item)).account.equipped['skin:mox'],item);
+ const next=await spin();
+ assert.equal(next.reward,item);
+ assert.equal(next.duplicateScoin,120);
+ assert.equal(next.account.balance,120);
+ assert.deepEqual((await shop(user)).account.owned,[item]);
 });

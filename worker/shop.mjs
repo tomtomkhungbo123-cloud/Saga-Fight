@@ -3,6 +3,7 @@ const shopCatalog = [
  {id:'thunder-crimson', kind:'skin', fighter:'thunder', name:'Sét tử linh', description:'Lôi y đỏ thẫm với ánh điện đỏ quanh chiến binh.', price:240, color:'#bd3249', palette:'thunder-crimson', hue:310},
  {id:'soul-amethyst', kind:'skin', fighter:'soul', name:'Tử Tinh Kiếm', description:'Giáp tím và lưỡi kiếm ánh tử tinh của Soulblade.', price:220, color:'#c794ff', palette:'amethyst', hue:308},
  {id:'cylast-gold', kind:'skin', fighter:'cylast', name:'Kim Sương', description:'Áo băng sắc vàng hổ phách của Cylast.', price:240, color:'#ffc77b', palette:'amber', hue:203},
+ {id:'mox-white-fire', kind:'skin', fighter:'mox', name:'Bạch Hỏa Quyền', description:'Giáp trắng bạc, găng xám thép và bạch hỏa lấp lánh ở cả hai dạng.', price:240, color:'#e3e7ec', palette:'mox-white-fire', hue:0},
  {id:'ember-fox', forSale:false, kind:'pet', name:'Cáo Hỏa Linh', description:'Cáo nhỏ đuôi lửa bay theo chiến binh.', price:280, color:'#ff9657', art:'fox'},
  {id:'frost-owl', forSale:false, kind:'pet', name:'Cú Sương', description:'Linh cú xanh băng bay theo chiến binh.', price:300, color:'#80e2ff', art:'owl'},
  {id:'jade-familiar', forSale:false, kind:'pet', name:'Ngọc Long', description:'Rồng ngọc tí hon bay theo chiến binh.', price:360, color:'#84ecc0', art:'dragon'},
@@ -18,7 +19,8 @@ const gachaRewards=[
  {id:'thunder-jade',rarity:'Phổ biến',tier:'common',weight:50,refund:30},
  {id:'soul-amethyst',rarity:'Hiếm',tier:'rare',weight:27,refund:60},
  {id:'thunder-crimson',rarity:'Sử thi',tier:'epic',weight:15,refund:90},
- {id:'cylast-gold',rarity:'Huyền thoại',tier:'legendary',weight:8,refund:120}
+ {id:'cylast-gold',rarity:'Huyền thoại',tier:'legendary',weight:4,refund:120},
+ {id:'mox-white-fire',rarity:'Huyền thoại',tier:'legendary',weight:4,refund:120}
 ];
 const gachaRewardsById=new Map(gachaRewards.map(reward=>[reward.id,reward]));
 const balanceSQL = 'SELECT COALESCE(SUM(amount),0) FROM scoin_ledger WHERE user_id=?';

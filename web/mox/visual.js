@@ -1,5 +1,6 @@
 // Mox model refined to the supplied silhouette; arena coordinates convert only at the boundary.
 (()=>{let ctx,game;const {clamp,moxArcPoint,moxMuzzle}=window.MoxBase;
+const whiteFire=window.MoxWhiteFire;
 const glow=document.createElement('canvas');glow.width=glow.height=128;const gc=glow.getContext('2d'),gr=gc.createRadialGradient(64,64,0,64,64,64);gr.addColorStop(0,'rgba(255,125,32,.6)');gr.addColorStop(.3,'rgba(255,80,16,.15)');gr.addColorStop(1,'rgba(255,60,10,0)');gc.fillStyle=gr;gc.fillRect(0,0,128,128);
 function bloom(x,y,r=80,alpha=1){ctx.globalAlpha*=alpha;ctx.drawImage(glow,x-r,y-r,r*2,r*2);ctx.globalAlpha/=alpha||1;}
 // Gauntlet halo is baked once; one draw per fist, no live shadow/filter.
@@ -38,6 +39,11 @@ function flameHead(x,y,angle,size,clock,opacity=1,spine=[],tailOnly=false){
  ctx.save();ctx.globalAlpha=baseAlpha*fade;ctx.translate(p.x,p.y);ctx.rotate(tangent-Math.PI/2);ctx.drawImage(projectileTexture,frame%5*320,Math.floor(frame/5)*320+sourceY,320,height,-169/320*width,-stretch/2,width,stretch);ctx.restore();}
 
  ctx.restore();
+ if(game.whiteFire){
+  whiteFire.glint(ctx,x,y,13,.68*opacity);
+  const spark=lookup.sample(Math.min(length*.48,size*.70));
+  if(spark)whiteFire.glint(ctx,spark.x,spark.y-9,10,.54*opacity);
+ }
 }
 function basicFlame(b){const trail=[...b.trail,{x:b.x,y:b.y}],points=[];
  for(let i=0;i<trail.length;i++){const p=trail[i],before=trail[Math.max(0,i-1)],after=trail[Math.min(trail.length-1,i+1)],dx=after.x-before.x,dy=-(after.y-before.y),len=Math.hypot(dx,dy)||1,u=i/Math.max(1,trail.length-1);points.push({x:p.x,y:-p.y,nx:-dy/len,ny:dx/len,w:4*Math.pow(u,1.6)});}
@@ -88,7 +94,9 @@ function shootingPose(anim){const weights=[0,0],smooth=t=>{t=clamp(t,0,1);return
 // Flame is a glove coating, never a released projectile or world-space residue.
 function punchFlame(arm,active,age){
  if(!active||age<0||age>=.38)return;
- window.MoxPunch?.draw(ctx,arm.x,arm.y,age/.38);
+ const glowContext=game.effectContext||ctx;
+ window.MoxPunch?.draw(glowContext,arm.x,arm.y,age/.38);
+ if(game.whiteFire)whiteFire.glint(ctx,arm.x+5,arm.y-6,17,.8*Math.sin(age/.38*Math.PI));
 }
 // Visual-only unfolding follows the shift event even if another attack replaces anim.q.
 function wingPose(form,elapsed,index){
@@ -138,6 +146,10 @@ function fighter(entity,enemy=false,ghost=false){const p=entity,t=game.t,anim=ga
  const drawLower=a=>{limb(a.elx,a.ely,a.x,a.y,12.5,col);ctx.save();ctx.translate(a.x,a.y);ctx.rotate(-.1+a.active*.1);
  const glove='M -9 -7 L -5 -16 Q -3 -17 -1 -11 L 4 -12 Q 9 -9 10 -3 L 10 5 Q 9 11 3 12 L -5 11 Q -11 10 -11 4 Z';
  if(!enemy)gauntBloom(34,.72+a.active*.25+shift*.15);path(glove,gaunt);
+ if(game.whiteFire&&!enemy&&!ghost){
+  line([[-7,-5],[-2,-9],[5,-7]],'#f6f8fa',1.9);
+  line([[-6,7],[3,8],[7,4]],'#687481',1.5);
+ }
  ctx.restore();if(!enemy&&!ghost)punchFlame(a,anim.k==='attack'&&!anim.form&&a.hand===(anim.hand||0),age,toWorld,toLocal);};
  ctx.save();ctx.translate(0,-69);ctx.rotate(torsoAngle);ctx.translate(0,81-bob);
  for(const a of arms)drawUpper(a);ctx.restore();
@@ -147,6 +159,11 @@ function fighter(entity,enemy=false,ghost=false){const p=entity,t=game.t,anim=ga
  ctx.bezierCurveTo(lc.x,lc.y,-18.5,-76-bob,-18.5,-69-bob);ctx.lineTo(18.5,-69-bob);ctx.bezierCurveTo(18.5,-76-bob,rc.x,rc.y,rw.x,rw.y);
  edge(26,-108);curve(27,-117,21,-126);curve(16,-134,9,-137);ctx.closePath();ctx.fill();
  ctx.save();ctx.translate(0,-69);ctx.rotate(torsoAngle);ctx.translate(0,81-bob);
+ if(game.whiteFire&&!enemy&&!ghost){
+  path('M -16 -122 L 0 -115 L 16 -122 L 12 -113 L 0 -108 L -12 -113 Z','#959faa');
+  line([[-14,-119],[0,-113],[14,-119]],'#f8fafc',1.8);
+  line([[-12,-85],[0,-82],[12,-85]],'#acb5be',2);
+ }
  ctx.save();ctx.translate(0,-148);ctx.rotate(-lean*.35+Math.sin(t*2)*.012);ctx.scale(.92,.9);path('M -16 -9 L -21 -25 Q -17 -27 -11 -22 L -13 -30 Q -4 -31 1 -24 L -2 -32 Q 7 -31 12 -25 L 12 -29 Q 21 -25 21 -13 Q 21 4 13 14 Q 5 20 -7 15 Q -16 9 -17 -2 Z',col);ctx.restore();
  // Forearms and gloves render in action order, with the striking hand foremost.
  for(const a of armOrder){if(a.hand===0||a.active>.02)drawUpper(a);drawLower(a);}
@@ -163,7 +180,17 @@ function softFlare(c,width,opacity){
  for(let i=0;i<=26;i++){const t=i/26,q=1-t,x=3*q*q*t*c[0]+3*q*t*t*c[2]+t*t*t*c[4],y=3*q*q*t*c[1]+3*q*t*t*c[3]+t*t*t*c[5],dx=3*q*q*c[0]+6*q*t*(c[2]-c[0])+3*t*t*(c[4]-c[2]),dy=3*q*q*c[1]+6*q*t*(c[3]-c[1])+3*t*t*(c[5]-c[3]),len=Math.hypot(dx,dy)||1,w=width*Math.pow(Math.sin(Math.PI*t),.85)*(.3+.7*t);points.push({x,y,nx:-dy/len,ny:dx/len,w});}
  for(const [mult,alpha,color] of [[3.5,.045,'#ff652c'],[2,.11,'#ff7c38'],[1,.65,'#f98342'],[.22,.55,'#ffd99a']]){ctx.globalAlpha=opacity*alpha;ctx.fillStyle=color;ctx.beginPath();for(let i=0;i<points.length;i++){const p=points[i];ctx[i?'lineTo':'moveTo'](p.x+p.nx*p.w*mult,p.y+p.ny*p.w*mult);}for(let i=points.length-1;i>=0;i--){const p=points[i];ctx.lineTo(p.x-p.nx*p.w*mult,p.y-p.ny*p.w*mult);}ctx.closePath();ctx.fill();}
 }
-function effect(f){if(f.k==='slam'){window.MoxSlam.impact(ctx,f.x,-f.y,f.max-f.life);return;}if(f.k==='debris'||f.k==='diveTrail')return;if(f.k==='shift'){window.MoxShift.draw(ctx,f.x,-f.y,1-f.life/f.max,f.dir,f.form);return;}if(f.k==='detonate'){window.MoxExplosion.draw(ctx,f.x,-f.y,1-f.life/f.max,f.radius,f.dir,f.seed);return;}if(f.k==='punch')return;if(f.k==='ribbon')return;let u=1-f.life/f.max,fade=1-u;ctx.save();ctx.translate(f.x,-f.y);ctx.globalAlpha=fade;
+function effectSparkles(f){
+ if(!game.whiteFire)return;
+ const age=1-f.life/f.max;
+ const reach=(f.k==='slam'?420:f.k==='shift'?100:50)*Math.min(1,age*3);
+ for(let i=0;i<5;i++){
+  const angle=i*2.39996+age*.85;
+  whiteFire.glint(ctx,f.x+Math.cos(angle)*reach,-f.y-14+Math.sin(angle)*reach*.45,
+   8+i%3*4,(1-age)*.8);
+ }
+}
+function effect(f){if(f.k==='slam'){window.MoxSlam.impact(ctx,f.x,-f.y,f.max-f.life);effectSparkles(f);return;}if(f.k==='debris'||f.k==='diveTrail')return;if(f.k==='shift'){window.MoxShift.draw(ctx,f.x,-f.y,1-f.life/f.max,f.dir,f.form);effectSparkles(f);return;}if(f.k==='detonate'){window.MoxExplosion.draw(ctx,f.x,-f.y,1-f.life/f.max,f.radius,f.dir,f.seed);effectSparkles(f);return;}if(f.k==='punch')return;if(f.k==='ribbon')return;let u=1-f.life/f.max,fade=1-u;ctx.save();ctx.translate(f.x,-f.y);ctx.globalAlpha=fade;
  if(f.k==='ghost'){fighter({x:0,y:0,vx:400,dir:f.dir,form:f.form},false,true);}
  if(['impact','muzzle','grab'].includes(f.k)){bloom(0,0,100,1);for(let i=0;i<8;i++){let a=i*.785+.2,r=u*70;line([[Math.cos(a)*r*.4,Math.sin(a)*r*.4],[Math.cos(a)*r,Math.sin(a)*r]],i%2?'#ffbc6a':'#fa4b25',3*fade);}}
 
@@ -191,11 +218,33 @@ function effect(f){if(f.k==='slam'){window.MoxSlam.impact(ctx,f.x,-f.y,f.max-f.l
 
  ctx.restore();}
 
-function bind(context,f,e,clock,ground=0){ctx=context;const g=f.mox;game={shiftAge:(()=>{const fx=[...g.fx].reverse().find(v=>v.k==='shift');return fx?fx.max-fx.life:null;})(),motion:locomotion(f,clock),t:clock,p:{...g.p,x:f.x,y:ground-f.y,vx:f.vx,vy:-f.vy,grounded:f.ground,dir:f.dir,turn:f.turn||0,hp:f.hp,cc:Math.max(0,(f.stunUntil||0)-clock,(f.freezeUntil||0)-clock),immune:Math.max(0,(f.immuneUntil||0)-clock),invuln:Math.max(0,(f.invulnUntil||0)-clock)},e:{x:e.x,y:ground-e.y,hp:e.hp},anim:g.anim,action:g.action,punchPose:g.punchPose};}
+function bind(context,f,e,clock,ground=0,skin,effectContext){ctx=context;const g=f.mox;game={whiteFire:!!whiteFire&&skin===whiteFire.palette,effectContext,shiftAge:(()=>{const fx=[...g.fx].reverse().find(v=>v.k==='shift');return fx?fx.max-fx.life:null;})(),motion:locomotion(f,clock),t:clock,p:{...g.p,x:f.x,y:ground-f.y,vx:f.vx,vy:-f.vy,grounded:f.ground,dir:f.dir,turn:f.turn||0,hp:f.hp,cc:Math.max(0,(f.stunUntil||0)-clock,(f.freezeUntil||0)-clock),immune:Math.max(0,(f.immuneUntil||0)-clock),invuln:Math.max(0,(f.invulnUntil||0)-clock)},e:{x:e.x,y:ground-e.y,hp:e.hp},anim:g.anim,action:g.action,punchPose:g.punchPose};}
+let warmingWhiteFire=false;
+async function warmWhiteFire(){
+ if(warmingWhiteFire)return;
+ warmingWhiteFire=true;
+ const atlases=[window.MoxPunch.prepare(),projectileTexture,window.MoxShift.prepare(),
+  window.MoxExplosion.prepare(),...Object.values(window.MoxSlam.assets).map(asset=>asset.image)];
+ const whenIdle=window.requestIdleCallback||window.requestAnimationFrame;
+ for(const atlas of atlases){
+  try {
+   await atlas.decode();
+   await new Promise(resolve=>whenIdle.call(window,resolve));
+   window.FighterPalette.image(atlas,whiteFire.palette+'-fx');
+  } catch {
+   // A failed texture should never block the item picker.
+  }
+ }
+}
 window.MoxVisual={
- character(context,f,e,clock,ground=f.y){bind(context,f,e,clock,ground);ctx.save();ctx.translate(0,ground);fighter(game.p);ctx.restore();},
- back(context,f,e,clock){bind(context,f,e,clock);for(const fx of f.mox.fx)if(fx.k==='ghost')effect(fx);},
- front(context,f,e,clock){bind(context,f,e,clock);const melee=f.mox.action;if(melee?.grab&&!melee.slammed)window.MoxSlam.travel(context,f.x,f.y-90,melee.age,f.dir);if(game.action?.k==='r'&&game.action.form){ctx.save();ctx.translate(e.x,e.y-85);ctx.rotate(clock*.7);ctx.strokeStyle='#ff7745';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,58,0,7);ctx.stroke();for(let i=0;i<4;i++){ctx.rotate(Math.PI/2);line([[45,0],[72,0]],'#ff7745',2);}ctx.restore();}
+ warmWhiteFire,
+ character(context,f,e,clock,ground=f.y,skin,effectContext){
+  bind(context,f,e,clock,ground,skin,effectContext);
+  ctx.save();ctx.translate(0,ground);fighter(game.p);ctx.restore();
+  if(game.whiteFire&&f.hp>0)whiteFire.aura(context,f.x,f.y-88,clock,game.p.form);
+ },
+ back(context,f,e,clock,skin){bind(context,f,e,clock,0,skin);for(const fx of f.mox.fx)if(fx.k==='ghost')effect(fx);},
+ front(context,f,e,clock,skin){bind(context,f,e,clock,0,skin);const melee=f.mox.action;if(melee?.grab&&!melee.slammed)window.MoxSlam.travel(context,f.x,f.y-90,melee.age,f.dir);if(game.action?.k==='r'&&game.action.form){ctx.save();ctx.translate(e.x,e.y-85);ctx.rotate(clock*.7);ctx.strokeStyle='#ff7745';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,58,0,7);ctx.stroke();for(let i=0;i<4;i++){ctx.rotate(Math.PI/2);line([[45,0],[72,0]],'#ff7745',2);}ctx.restore();}
  for(const b of f.mox.balls){if(b.age<0)continue;if(b.k==='w'||b.k==='r'){fireRibbon(b,b.age/b.duration);continue;}basicFlame(b);}
  for(const fx of f.mox.fx)if(!['ghost','dash','ribbon'].includes(fx.k))effect(fx);
  if(e.burn?.owner===f.id&&e.burn.remaining>0)burnFlames(ctx,e.x,e.y,clock,e.burn.remaining,e.id);},

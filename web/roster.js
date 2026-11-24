@@ -50,7 +50,7 @@ function draw(p,clock){
  g.scale(.58*zoom,.58*zoom);
  f.x=181;f.y=258;f.dir=1;
 const pool=g.createRadialGradient(181,237,1,181,237,91);pool.addColorStop(0,colors[p.type]+'30');pool.addColorStop(1,colors[p.type]+'00');g.fillStyle=pool;g.fillRect(85,145,192,125);
-if(p.type==='aether')window.AetherVisual.character(g,f,null,clock,()=>258,'high',{preview:true});else if(p.type==='melanta')window.MelantaVisual.character(g,f,f,clock,258);else if(p.type==='fairi')window.FairiVisual.character(g,f,null,clock,{surface:()=>258,viewer:'enemy'});else if(p.type==='mox')window.MoxVisual.character(g,f,f,clock,258);
+if(p.type==='aether')window.AetherVisual.character(g,f,null,clock,()=>258,'high',{preview:true});else if(p.type==='melanta')window.MelantaVisual.character(g,f,f,clock,258);else if(p.type==='fairi')window.FairiVisual.character(g,f,null,clock,{surface:()=>258,viewer:'enemy'});else if(p.type==='mox')window.MoxVisual.character(g,f,f,clock,258,p.palette,p.palette?window.FighterPalette.context(raw,p.palette+'-fx'):raw);
 else if(p.type==='soul'){
  if(p.animate){
   const motion=f.soulMotion??={};
